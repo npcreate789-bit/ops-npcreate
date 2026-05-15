@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { canManageFinance } from '../../../../shared/auth/access'
+import {
+  canManageFinance,
+  canViewFinance,
+  canViewFinanceDocuments,
+  isFinanceReadOnly,
+} from '../../../../shared/auth/access'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
-import { getFinanceSummary, listPayments } from '../api/payments'
+import { getFinanceSummary, listFinanceDocuments, listPayments } from '../api/payments'
 import type { FinanceSummary, Payment } from '../types'
 import { serviceTypeLabel } from '../constants'
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge'
@@ -13,20 +18,34 @@ import '../finance.css'
 
 export function FinancePage() {
   const { configured, profile } = useAuth()
-  const canManage = canManageFinance(profile?.roles ?? []) || !configured
+  const roles = profile?.roles ?? []
+  const canView = canViewFinance(roles) || !configured
+  const canManage = canManageFinance(roles) || !configured
+  const readOnly = isFinanceReadOnly(roles) && configured
+  const canViewDocs = canViewFinanceDocuments(roles) || !configured
   const navigate = useNavigate()
   const [rows, setRows] = useState<Payment[]>([])
+  const [documents, setDocuments] = useState<Payment[]>([])
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!canView) {
+      setLoading(false)
+      return
+    }
     let cancelled = false
-    Promise.all([listPayments(), getFinanceSummary()])
-      .then(([payments, sum]) => {
+    Promise.all([
+      listPayments(),
+      getFinanceSummary(),
+      canViewDocs ? listFinanceDocuments() : Promise.resolve([]),
+    ])
+      .then(([payments, sum, docs]) => {
         if (!cancelled) {
           setRows(payments)
           setSummary(sum)
+          setDocuments(docs)
         }
       })
       .catch((e) => {
@@ -38,7 +57,16 @@ export function FinancePage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [canView, canViewDocs])
+
+  if (!canView) {
+    return (
+      <div className="page">
+        <h1>การเงิน</h1>
+        <p className="crm-error">ไม่มีสิทธิ์ดูข้อมูลการเงิน</p>
+      </div>
+    )
+  }
 
   return (
     <div className="page finance-page">
@@ -57,6 +85,12 @@ export function FinancePage() {
       {!configured && (
         <p className="crm-banner crm-banner--warn">
           โหมดพัฒนา — ข้อมูลเก็บในเครื่อง (localStorage)
+        </p>
+      )}
+
+      {readOnly && (
+        <p className="crm-banner crm-banner--warn phase2-scope-banner">
+          โหมดดูอย่างเดียว — บันทึกและยืนยันชำระเงินได้เฉพาะ Admin / CEO
         </p>
       )}
 
@@ -120,6 +154,39 @@ export function FinancePage() {
           </div>
         )}
       </section>
+
+      {canViewDocs && (
+        <section className="card card--wide">
+          <h2 className="crm-section-title">ใบเสร็จ / ใบกำกับที่ออกแล้ว</h2>
+          {documents.length === 0 && <p className="muted">ยังไม่มีเอกสารที่ออกเลขแล้ว</p>}
+          {documents.length > 0 && (
+            <div className="crm-table-wrap">
+              <table className="crm-table crm-table--clickable">
+                <thead>
+                  <tr>
+                    <th>ลูกค้า</th>
+                    <th>ใบเสร็จ</th>
+                    <th>ใบกำกับ</th>
+                    <th>ยอดรวม</th>
+                    <th>ชำระเมื่อ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.map((row) => (
+                    <tr key={row.id} onClick={() => navigate(`/app/finance/payments/${row.id}`)}>
+                      <td>{row.customer_brand_name ?? '—'}</td>
+                      <td>{row.receipt_number ?? '—'}</td>
+                      <td>{row.tax_invoice_number ?? '—'}</td>
+                      <td>{row.total_amount.toLocaleString('th-TH')} บาท</td>
+                      <td>{formatBangkokDate(row.payment_date)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }

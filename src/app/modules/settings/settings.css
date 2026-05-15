@@ -1,0 +1,25 @@
+.settings-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.35rem;
+}
+
+.settings-role-chip {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--npc-glass-border);
+  color: var(--npc-text-muted);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.settings-form .crm-input:disabled {
+  color: var(--npc-text-muted);
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+.settings-form .task-field + .task-field {
+  margin-top: 0.85rem;
+}

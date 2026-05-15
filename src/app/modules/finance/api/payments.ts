@@ -23,6 +23,12 @@ export async function listPayments(): Promise<Payment[]> {
   })
 }
 
+/** รายการที่ออกใบเสร็จหรือใบกำกับแล้ว */
+export async function listFinanceDocuments(): Promise<Payment[]> {
+  const rows = await listPayments()
+  return rows.filter((p) => Boolean(p.receipt_number || p.tax_invoice_number))
+}
+
 export async function getPayment(id: string): Promise<Payment | null> {
   if (!isSupabaseConfigured || !supabase) return mockFinanceApi.getPayment(id)
 

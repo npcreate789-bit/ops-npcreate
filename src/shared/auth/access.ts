@@ -216,6 +216,49 @@ export function isClientPortalAiStaffPreview(roles: AppRole[]): boolean {
   return !roles.includes('client') && hasClientPortalStaffPreview(roles)
 }
 
+// --- Phase 6: Operations timeline & profile ---
+
+/** ไทม์ไลน์งานค้าง — Operations / Account / Sales */
+export const TIMELINE_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'account',
+  'sales',
+  'admin',
+  'dev',
+]
+
+export function canViewTimeline(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.every((r) => r === 'client')) return false
+  return hasNavFullAccess(roles) || roles.some((r) => TIMELINE_VIEW_ROLES.includes(r))
+}
+
+/** อ่านการเงิน — ตรง payments_select */
+export const FINANCE_VIEW_ROLES: AppRole[] = ['ceo', 'admin', 'dev', 'sales', 'account']
+
+export function canViewFinance(roles: AppRole[]): boolean {
+  return (
+    hasDbPrivilegedRole(roles) ||
+    roles.some((r) => FINANCE_VIEW_ROLES.includes(r))
+  )
+}
+
+/** ดูใบเสร็จ/ใบกำกับที่ออกแล้ว — ตรง payments_select */
+export function canViewFinanceDocuments(roles: AppRole[]): boolean {
+  return canViewFinance(roles)
+}
+
+/** บันทึก/แก้ไขการเงิน — ตรง payments_insert/update */
+export function isFinanceReadOnly(roles: AppRole[]): boolean {
+  return canViewFinance(roles) && !canManageFinance(roles)
+}
+
+/** ตั้งค่าโปรไฟล์ — ทุกบทบาทที่ login ได้ */
+export function canAccessSettings(_roles: AppRole[]): boolean {
+  return true
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',

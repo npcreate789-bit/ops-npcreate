@@ -27,6 +27,7 @@ interface AuthContextValue {
   profileLoadError: string | null
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  refreshProfile: () => Promise<void>
   hasRole: (role: AppRole) => boolean
   hasAnyRole: (roles: AppRole[]) => boolean
 }
@@ -146,6 +147,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null)
   }, [])
 
+  const refreshProfile = useCallback(async () => {
+    if (!session) return
+    await loadProfile(session)
+  }, [session, loadProfile])
+
   const hasRole = useCallback(
     (role: AppRole) => profile?.roles.includes(role) ?? false,
     [profile],
@@ -166,10 +172,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profileLoadError,
       signIn,
       signOut,
+      refreshProfile,
       hasRole,
       hasAnyRole,
     }),
-    [session, profile, loading, profileLoadError, signIn, signOut, hasRole, hasAnyRole],
+    [session, profile, loading, profileLoadError, signIn, signOut, refreshProfile, hasRole, hasAnyRole],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
