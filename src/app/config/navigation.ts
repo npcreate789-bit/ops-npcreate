@@ -1,4 +1,4 @@
-import { hasNavFullAccess } from '../../shared/auth/access'
+import { hasNavFullAccess, STAFF_ASSISTANT_ROLES } from '../../shared/auth/access'
 import type { AppRole } from '../../shared/types/roles'
 
 export interface NavItem {
@@ -16,6 +16,8 @@ export interface NavItem {
   phase3?: boolean
   /** Phase 4 modules (Sprint 14+) */
   phase4?: boolean
+  /** Phase 5 modules (Sprint 16+) — L9 AI */
+  phase5?: boolean
   ready: boolean
 }
 
@@ -162,11 +164,22 @@ export const NAV_ITEMS: NavItem[] = [
     phase4: true,
     ready: true,
   },
+  {
+    path: '/app/assistant',
+    label: 'AI Assistant',
+    labelTh: 'ผู้ช่วย AI',
+    icon: '✦',
+    roles: [...STAFF_ASSISTANT_ROLES],
+    phase: 16,
+    phase5: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
 export const PHASE3_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase3)
 export const PHASE4_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase4)
+export const PHASE5_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase5)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

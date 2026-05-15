@@ -28,6 +28,7 @@ import { CreatorsListPage } from './modules/creators/pages/CreatorsListPage'
 import { CreatorEditorPage } from './modules/creators/pages/CreatorEditorPage'
 import { RenewalsPage } from './modules/renewals/pages/RenewalsPage'
 import { ReportsPage } from './modules/reports/pages/ReportsPage'
+import { AssistantPage } from './modules/assistant/pages/AssistantPage'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -97,6 +98,7 @@ export function AppRoutes() {
         />
         <Route path="renewals" element={<Module path="/app/renewals" element={<RenewalsPage />} />} />
         <Route path="reports" element={<Module path="/app/reports" element={<ReportsPage />} />} />
+        <Route path="assistant" element={<Module path="/app/assistant" element={<AssistantPage />} />} />
       </Route>
       <Route path="/" element={<Navigate to="/app" replace />} />
       <Route path="*" element={<Navigate to="/app" replace />} />

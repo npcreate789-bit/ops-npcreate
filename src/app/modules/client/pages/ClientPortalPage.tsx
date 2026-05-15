@@ -6,6 +6,7 @@ import { formatBangkokDate, formatBangkokDateTime } from '../../../../shared/dat
 import { listCustomersForSelect } from '../../finance/api/payments'
 import type { CustomerOption } from '../../finance/types'
 import { fetchClientReport } from '../api/clientReport'
+import { ClientAiPanel } from '../components/ClientAiPanel'
 import type { ClientReport } from '../types'
 import '../../crm/crm.css'
 import '../../tasks/tasks.css'
@@ -230,6 +231,8 @@ export function ClientPortalPage() {
           ))}
         </ul>
       </section>
+
+      <ClientAiPanel report={data} />
     </div>
   )
 }

@@ -183,6 +183,39 @@ export function canViewReportFinanceMetrics(roles: AppRole[]): boolean {
   )
 }
 
+// --- Phase 5: AI Assistant (L9) ---
+
+/** สอดคล้องเมนู `/app/assistant` */
+export const STAFF_ASSISTANT_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'sales',
+  'account',
+  'ads',
+  'senior_ads',
+  'content',
+  'admin',
+  'dev',
+]
+
+/** ผู้ช่วยทีมภายใน — ตรง NAV_ITEMS; บัญชี client เท่านั้นใช้ไม่ได้ */
+export function canAccessStaffAssistant(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.every((r) => r === 'client')) return false
+  return hasNavFullAccess(roles) || roles.some((r) => STAFF_ASSISTANT_ROLES.includes(r))
+}
+
+/** Q&A ใน Client Portal — ลูกค้าจริง หรือทีมที่มีสิทธิ์ดูรายงานลูกค้า */
+export function canUseClientPortalAi(roles: AppRole[]): boolean {
+  if (roles.includes('client')) return true
+  return hasClientPortalStaffPreview(roles)
+}
+
+/** ทีม preview รายงานลูกค้า — แสดงแบนเนอร์ขอบเขต */
+export function isClientPortalAiStaffPreview(roles: AppRole[]): boolean {
+  return !roles.includes('client') && hasClientPortalStaffPreview(roles)
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',

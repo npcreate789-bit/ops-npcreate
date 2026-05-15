@@ -4,6 +4,7 @@ import {
   PHASE2_NAV_ITEMS,
   PHASE3_NAV_ITEMS,
   PHASE4_NAV_ITEMS,
+  PHASE5_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import './pages.css'
@@ -18,6 +19,8 @@ export function HomePage() {
   const phase3Total = PHASE3_NAV_ITEMS.length
   const phase4Ready = PHASE4_NAV_ITEMS.filter((i) => i.ready).length
   const phase4Total = PHASE4_NAV_ITEMS.length
+  const phase5Ready = PHASE5_NAV_ITEMS.filter((i) => i.ready).length
+  const phase5Total = PHASE5_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -98,6 +101,19 @@ export function HomePage() {
         </p>
         <p className="muted">
           ติดตามสัญญาใกล้หมดอายุ ขยายสัญญาได้จากระบบ — รายงานรายเดือนพร้อมคำแนะนำอัตโนมัติ
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 5</h2>
+        <p>
+          ครบ {phase5Ready}/{phase5Total} โมดูลหลัก —{' '}
+          <Link to="/app/assistant">ผู้ช่วย AI</Link>
+          {' · '}
+          <Link to="/app/client">รายงานลูกค้า + ถามผู้ช่วย</Link>
+        </p>
+        <p className="muted">
+          เทมเพลตอัจฉริยะจากข้อมูลในระบบ (ไม่ใช้ OpenAI) — ลูกค้าถามได้เฉพาะในรายงานของตัวเอง
         </p>
       </section>
 
