@@ -103,6 +103,40 @@ export function canViewAdminAudit(roles: AppRole[]): boolean {
   return hasDbPrivilegedRole(roles)
 }
 
+// --- Phase 3: Notifications ---
+
+/** ทีมภายใน (ไม่รวม client เท่านั้น) */
+export function canAccessNotifications(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.length === 1 && roles[0] === 'client') return false
+  return roles.some((r) => r !== 'client')
+}
+
+// --- Phase 3: Creators ---
+
+export const CREATORS_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'content',
+  'account',
+]
+
+/** สร้าง/แก้ไข — ตรง creators_insert/update (00031 + 00032) */
+export const CREATORS_MANAGE_ROLES: AppRole[] = ['operations', 'content', 'account']
+
+export function canViewCreators(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles) || roles.some((r) => CREATORS_VIEW_ROLES.includes(r))
+}
+
+export function canManageCreators(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles) || roles.some((r) => CREATORS_MANAGE_ROLES.includes(r))
+}
+
+/** ดูรายการได้แต่ RLS ไม่ให้แก้ (ยังไม่มี role แบบนี้ — เก็บ pattern เดียวกับ content) */
+export function isCreatorsReadOnly(roles: AppRole[]): boolean {
+  return canViewCreators(roles) && !canManageCreators(roles)
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',

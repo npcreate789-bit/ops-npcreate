@@ -259,6 +259,49 @@ function isExecutiveView(roles: AppRole[]): boolean {
   return hasDbPrivilegedRole(roles) || hasNavFullAccess(roles)
 }
 
+const EMPTY_FINANCE: ExecutiveDashboard['finance'] = {
+  revenue_this_month: 0,
+  pending_total: 0,
+  overdue_count: 0,
+  paid_count_this_month: 0,
+}
+
+const EMPTY_CUSTOMERS: CustomerStats = {
+  active: 0,
+  pending_onboarding: 0,
+  ready_for_ads: 0,
+}
+
+const EMPTY_ADS: AdsStats = {
+  spend_today: 0,
+  gmv_today: 0,
+  avg_roi: null,
+  reports_submitted: 0,
+  reports_expected: 0,
+}
+
+const EMPTY_TASKS: ExecutiveDashboard['tasks'] = {
+  open_count: 0,
+  blocked_count: 0,
+  overdue_count: 0,
+  done_this_week: 0,
+}
+
+const EMPTY_CONTENT: ExecutiveDashboard['content'] = {
+  open_count: 0,
+  in_production_count: 0,
+  review_count: 0,
+  overdue_count: 0,
+}
+
+async function safeDashboardPart<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn()
+  } catch {
+    return fallback
+  }
+}
+
 export async function fetchExecutiveDashboard(
   userId: string,
   roles: AppRole[] = [],
@@ -267,14 +310,17 @@ export async function fetchExecutiveDashboard(
   const contentTeamView = hasContentTeamView(roles) || !isSupabaseConfigured
 
   const [finance, leads, customers, tasks, content] = await Promise.all([
-    getFinanceSummary(),
-    listLeads({}),
-    fetchCustomerStats(),
-    getTaskSummary(userId, teamView),
-    getContentSummary(userId, contentTeamView),
+    safeDashboardPart(() => getFinanceSummary(), EMPTY_FINANCE),
+    safeDashboardPart(() => listLeads({}), [] as Lead[]),
+    safeDashboardPart(() => fetchCustomerStats(), EMPTY_CUSTOMERS),
+    safeDashboardPart(() => getTaskSummary(userId, teamView), EMPTY_TASKS),
+    safeDashboardPart(() => getContentSummary(userId, contentTeamView), EMPTY_CONTENT),
   ])
 
-  const ads = await fetchAdsStats(customers.ready_for_ads)
+  const ads = await safeDashboardPart(
+    () => fetchAdsStats(customers.ready_for_ads),
+    { ...EMPTY_ADS, reports_expected: customers.ready_for_ads },
+  )
   const lead = leadStats(leads)
   const alerts = buildAlerts(finance, customers, ads, tasks, content)
 

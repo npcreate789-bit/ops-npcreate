@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { NAV_ITEMS, PHASE2_NAV_ITEMS } from '../config/navigation'
+import { NAV_ITEMS, PHASE2_NAV_ITEMS, PHASE3_NAV_ITEMS } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import './pages.css'
 
@@ -9,6 +9,8 @@ export function HomePage() {
   const moduleCount = NAV_ITEMS.filter((i) => i.path !== '/app').length
   const phase2Ready = PHASE2_NAV_ITEMS.filter((i) => i.ready).length
   const phase2Total = PHASE2_NAV_ITEMS.length
+  const phase3Ready = PHASE3_NAV_ITEMS.filter((i) => i.ready).length
+  const phase3Total = PHASE3_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -65,6 +67,18 @@ export function HomePage() {
         <p className="muted">
           CEO ดูสรุปคอนเทนต์และแจ้งเตือนได้ที่{' '}
           <Link to="/app/dashboard">ภาพรวมผู้บริหาร</Link>
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 3</h2>
+        <p>
+          ครบ {phase3Ready}/{phase3Total} โมดูล —{' '}
+          <Link to="/app/notifications">แจ้งเตือน</Link>,{' '}
+          <Link to="/app/creators">ครีเอเตอร์</Link>
+        </p>
+        <p className="muted">
+          แจ้งเตือนซิงก์จากงานค้างในระบบอัตโนมัติ — ฐานข้อมูล Creator สำหรับ UGC / TikTok One
         </p>
       </section>
 

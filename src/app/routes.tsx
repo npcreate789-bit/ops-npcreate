@@ -23,6 +23,9 @@ import { AdminUsersPage } from './modules/admin/pages/AdminUsersPage'
 import { ContentListPage } from './modules/content/pages/ContentListPage'
 import { ContentJobEditorPage } from './modules/content/pages/ContentJobEditorPage'
 import { ClientPortalPage } from './modules/client/pages/ClientPortalPage'
+import { NotificationsPage } from './modules/notifications/pages/NotificationsPage'
+import { CreatorsListPage } from './modules/creators/pages/CreatorsListPage'
+import { CreatorEditorPage } from './modules/creators/pages/CreatorEditorPage'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -81,6 +84,15 @@ export function AppRoutes() {
           element={<Module path="/app/content" element={<ContentJobEditorPage />} />}
         />
         <Route path="client" element={<Module path="/app/client" element={<ClientPortalPage />} />} />
+        <Route
+          path="notifications"
+          element={<Module path="/app/notifications" element={<NotificationsPage />} />}
+        />
+        <Route path="creators" element={<Module path="/app/creators" element={<CreatorsListPage />} />} />
+        <Route
+          path="creators/:id"
+          element={<Module path="/app/creators" element={<CreatorEditorPage />} />}
+        />
       </Route>
       <Route path="/" element={<Navigate to="/app" replace />} />
       <Route path="*" element={<Navigate to="/app" replace />} />

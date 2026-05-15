@@ -2,12 +2,17 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { ROLE_LABELS } from '../../shared/types/roles'
 import { navItemsForRoles } from '../config/navigation'
+import { useNotificationUnread } from '../modules/notifications/useNotificationUnread'
 import './Sidebar.css'
+
+const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function Sidebar() {
   const { profile, signOut, configured } = useAuth()
   const roles = profile?.roles ?? (configured ? [] : ['ceo' as const])
   const items = navItemsForRoles(roles)
+  const userId = profile?.id ?? DEV_OWNER
+  const unreadNotif = useNotificationUnread(userId, roles)
 
   return (
     <aside className="sidebar">
@@ -36,6 +41,11 @@ export function Sidebar() {
             </span>
             <span className="sidebar__label">
               {item.labelTh}
+              {item.path === '/app/notifications' && unreadNotif > 0 && (
+                <span className="sidebar__badge-count" aria-label={`${unreadNotif} ยังไม่อ่าน`}>
+                  {unreadNotif > 99 ? '99+' : unreadNotif}
+                </span>
+              )}
               {!item.ready && (
                 <small className="sidebar__badge">Sprint {item.phase}</small>
               )}
