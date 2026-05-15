@@ -31,6 +31,8 @@ import { ReportsPage } from './modules/reports/pages/ReportsPage'
 import { AssistantPage } from './modules/assistant/pages/AssistantPage'
 import { TimelinePage } from './modules/timeline/pages/TimelinePage'
 import { SettingsPage } from './modules/settings/pages/SettingsPage'
+import { ActivityLogPage } from './modules/activity/pages/ActivityLogPage'
+import { WeeklyReportPage } from './modules/weekly/pages/WeeklyReportPage'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -103,6 +105,8 @@ export function AppRoutes() {
         <Route path="assistant" element={<Module path="/app/assistant" element={<AssistantPage />} />} />
         <Route path="timeline" element={<Module path="/app/timeline" element={<TimelinePage />} />} />
         <Route path="settings" element={<Module path="/app/settings" element={<SettingsPage />} />} />
+        <Route path="activity" element={<Module path="/app/activity" element={<ActivityLogPage />} />} />
+        <Route path="weekly" element={<Module path="/app/weekly" element={<WeeklyReportPage />} />} />
       </Route>
       <Route path="/" element={<Navigate to="/app" replace />} />
       <Route path="*" element={<Navigate to="/app" replace />} />

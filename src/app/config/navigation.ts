@@ -1,8 +1,10 @@
 import {
+  ACTIVITY_LOG_VIEW_ROLES,
   FINANCE_VIEW_ROLES,
   hasNavFullAccess,
   STAFF_ASSISTANT_ROLES,
   TIMELINE_VIEW_ROLES,
+  WEEKLY_REPORT_VIEW_ROLES,
 } from '../../shared/auth/access'
 import type { AppRole } from '../../shared/types/roles'
 
@@ -25,6 +27,8 @@ export interface NavItem {
   phase5?: boolean
   /** Phase 6 modules (Sprint 18+) — Ops & account */
   phase6?: boolean
+  /** Phase 7 modules (Sprint 20+) — Activity & weekly */
+  phase7?: boolean
   ready: boolean
 }
 
@@ -201,6 +205,26 @@ export const NAV_ITEMS: NavItem[] = [
     phase6: true,
     ready: true,
   },
+  {
+    path: '/app/activity',
+    label: 'Activity',
+    labelTh: 'บันทึกกิจกรรม',
+    icon: '◷',
+    roles: [...ACTIVITY_LOG_VIEW_ROLES, 'ceo', 'dev'],
+    phase: 20,
+    phase7: true,
+    ready: true,
+  },
+  {
+    path: '/app/weekly',
+    label: 'Weekly',
+    labelTh: 'สรุปรายสัปดาห์',
+    icon: '▥',
+    roles: [...WEEKLY_REPORT_VIEW_ROLES],
+    phase: 21,
+    phase7: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -208,6 +232,7 @@ export const PHASE3_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase3)
 export const PHASE4_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase4)
 export const PHASE5_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase5)
 export const PHASE6_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase6)
+export const PHASE7_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase7)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

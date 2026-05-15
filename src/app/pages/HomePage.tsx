@@ -6,6 +6,7 @@ import {
   PHASE4_NAV_ITEMS,
   PHASE5_NAV_ITEMS,
   PHASE6_NAV_ITEMS,
+  PHASE7_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import './pages.css'
@@ -24,6 +25,8 @@ export function HomePage() {
   const phase5Total = PHASE5_NAV_ITEMS.length
   const phase6Ready = PHASE6_NAV_ITEMS.filter((i) => i.ready).length
   const phase6Total = PHASE6_NAV_ITEMS.length
+  const phase7Ready = PHASE7_NAV_ITEMS.filter((i) => i.ready).length
+  const phase7Total = PHASE7_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -130,6 +133,19 @@ export function HomePage() {
         </p>
         <p className="muted">
           รวมงานค้าง สัญญา นัด Lead และครบกำหนดชำระ — ดูเอกสารการเงินที่ออกแล้วในหน้าการเงิน
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 7</h2>
+        <p>
+          ครบ {phase7Ready}/{phase7Total} โมดูล —{' '}
+          <Link to="/app/activity">บันทึกกิจกรรม</Link>
+          {' · '}
+          <Link to="/app/weekly">สรุปรายสัปดาห์</Link>
+        </p>
+        <p className="muted">
+          ติดตามการเปลี่ยนแปลงในระบบและสรุป KPI 7 วัน พร้อมคำแนะนำอัตโนมัติ
         </p>
       </section>
 

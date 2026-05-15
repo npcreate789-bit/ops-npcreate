@@ -1,0 +1,10 @@
+.weekly-range {
+  font-size: 0.9rem;
+  color: var(--npc-text-muted);
+  margin-top: 0.25rem;
+}
+
+.weekly-insights-intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}

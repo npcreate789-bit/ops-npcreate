@@ -259,6 +259,31 @@ export function canAccessSettings(_roles: AppRole[]): boolean {
   return true
 }
 
+// --- Phase 7: Activity log & weekly summary ---
+
+/** อ่าน audit log — privileged หรือ operations/account/admin (ตรง 00036) */
+export const ACTIVITY_LOG_VIEW_ROLES: AppRole[] = ['operations', 'account', 'admin']
+
+export function canViewActivityLog(roles: AppRole[]): boolean {
+  return (
+    canViewAdminAudit(roles) ||
+    roles.some((r) => ACTIVITY_LOG_VIEW_ROLES.includes(r))
+  )
+}
+
+/** สรุปรายสัปดาห์ — ทีมบริหารและ Account */
+export const WEEKLY_REPORT_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'account',
+  'admin',
+  'dev',
+]
+
+export function canViewWeeklyReport(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles) || roles.some((r) => WEEKLY_REPORT_VIEW_ROLES.includes(r))
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',

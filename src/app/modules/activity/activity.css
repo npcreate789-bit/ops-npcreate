@@ -1,0 +1,9 @@
+.activity-meta {
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+  margin-top: 0.2rem;
+}
+
+.activity-table td {
+  vertical-align: top;
+}
