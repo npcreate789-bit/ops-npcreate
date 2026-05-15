@@ -7,6 +7,7 @@ import {
   PHASE5_NAV_ITEMS,
   PHASE6_NAV_ITEMS,
   PHASE7_NAV_ITEMS,
+  PHASE8_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import './pages.css'
@@ -27,6 +28,8 @@ export function HomePage() {
   const phase6Total = PHASE6_NAV_ITEMS.length
   const phase7Ready = PHASE7_NAV_ITEMS.filter((i) => i.ready).length
   const phase7Total = PHASE7_NAV_ITEMS.length
+  const phase8Ready = PHASE8_NAV_ITEMS.filter((i) => i.ready).length
+  const phase8Total = PHASE8_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -146,6 +149,17 @@ export function HomePage() {
         </p>
         <p className="muted">
           ติดตามการเปลี่ยนแปลงในระบบและสรุป KPI 7 วัน พร้อมคำแนะนำอัตโนมัติ
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 8</h2>
+        <p>
+          ครบ {phase8Ready}/{phase8Total} โมดูล —{' '}
+          <Link to="/app/customers">ลูกค้า 360</Link>
+        </p>
+        <p className="muted">
+          ศูนย์กลางข้อมูลลูกค้าเชื่อมทุกโมดูล พร้อมส่งออก CSV ในรายงานและบันทึกกิจกรรม
         </p>
       </section>
 

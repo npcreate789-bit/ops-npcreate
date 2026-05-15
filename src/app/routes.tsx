@@ -33,6 +33,8 @@ import { TimelinePage } from './modules/timeline/pages/TimelinePage'
 import { SettingsPage } from './modules/settings/pages/SettingsPage'
 import { ActivityLogPage } from './modules/activity/pages/ActivityLogPage'
 import { WeeklyReportPage } from './modules/weekly/pages/WeeklyReportPage'
+import { CustomersListPage } from './modules/customers/pages/CustomersListPage'
+import { Customer360Page } from './modules/customers/pages/Customer360Page'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -107,6 +109,14 @@ export function AppRoutes() {
         <Route path="settings" element={<Module path="/app/settings" element={<SettingsPage />} />} />
         <Route path="activity" element={<Module path="/app/activity" element={<ActivityLogPage />} />} />
         <Route path="weekly" element={<Module path="/app/weekly" element={<WeeklyReportPage />} />} />
+        <Route
+          path="customers"
+          element={<Module path="/app/customers" element={<CustomersListPage />} />}
+        />
+        <Route
+          path="customers/:id"
+          element={<Module path="/app/customers" element={<Customer360Page />} />}
+        />
       </Route>
       <Route path="/" element={<Navigate to="/app" replace />} />
       <Route path="*" element={<Navigate to="/app" replace />} />

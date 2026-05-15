@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canViewReports } from '../../../../shared/auth/access'
 import { bangkokYearMonthPrefix } from '../../../../shared/dates/bangkok'
+import { downloadCsv } from '../../../../shared/export/csv'
 import { buildReportInsights } from '../api/insights'
 import { fetchAdvancedReport } from '../api/reports'
 import type { AdvancedReport, ReportInsight } from '../types'
@@ -70,15 +71,42 @@ export function ReportsPage() {
           <h1>รายงานขั้นสูง</h1>
           <p className="muted">สรุปรายเดือนและคำแนะนำอัตโนมัติจากข้อมูลในระบบ (ไม่ใช้ AI ภายนอก)</p>
         </div>
-        <label className="task-field">
-          <span className="task-field__label">เดือน</span>
-          <input
-            type="month"
-            className="crm-input"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-          />
-        </label>
+        <div className="crm-page__actions">
+          {report && (
+            <button
+              type="button"
+              className="crm-btn crm-btn--ghost"
+              onClick={() => {
+                const r = report!
+                downloadCsv(
+                  `report-${month}`,
+                  ['รายการ', 'ค่า'],
+                  [
+                    ['รายรับเดือน', r.revenue_paid],
+                    ['ลูกหนี้ค้าง', r.pending_receivables],
+                    ['ลูกค้า Active', r.active_customers],
+                    ['สัญญาหมด 30 วัน', r.contracts_expiring_30d],
+                    ['Spend แอด', r.ads_spend],
+                    ['GMV แอด', r.ads_gmv],
+                    ['คอนเทนต์ส่งมอบ', r.content_delivered],
+                    ['งานเปิด', r.open_tasks],
+                  ],
+                )
+              }}
+            >
+              ส่งออก CSV
+            </button>
+          )}
+          <label className="task-field">
+            <span className="task-field__label">เดือน</span>
+            <input
+              type="month"
+              className="crm-input"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+            />
+          </label>
+        </div>
       </header>
 
       {!configured && (

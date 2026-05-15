@@ -284,6 +284,30 @@ export function canViewWeeklyReport(roles: AppRole[]): boolean {
   return hasDbPrivilegedRole(roles) || roles.some((r) => WEEKLY_REPORT_VIEW_ROLES.includes(r))
 }
 
+// --- Phase 8: Customer 360 & exports ---
+
+/** ศูนย์กลางลูกค้า — ตาม customers_select + RLS แอด/คอนเทนต์ */
+export const CUSTOMER_360_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'sales',
+  'account',
+  'admin',
+  'dev',
+  'ads',
+  'senior_ads',
+  'content',
+]
+
+export function canViewCustomer360(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  return (
+    hasNavFullAccess(roles) ||
+    hasDbPrivilegedRole(roles) ||
+    roles.some((r) => CUSTOMER_360_VIEW_ROLES.includes(r))
+  )
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',

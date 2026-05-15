@@ -1,5 +1,6 @@
 import {
   ACTIVITY_LOG_VIEW_ROLES,
+  CUSTOMER_360_VIEW_ROLES,
   FINANCE_VIEW_ROLES,
   hasNavFullAccess,
   STAFF_ASSISTANT_ROLES,
@@ -29,6 +30,8 @@ export interface NavItem {
   phase6?: boolean
   /** Phase 7 modules (Sprint 20+) — Activity & weekly */
   phase7?: boolean
+  /** Phase 8 modules (Sprint 22+) — Customer 360 & export */
+  phase8?: boolean
   ready: boolean
 }
 
@@ -225,6 +228,16 @@ export const NAV_ITEMS: NavItem[] = [
     phase7: true,
     ready: true,
   },
+  {
+    path: '/app/customers',
+    label: 'Customers 360',
+    labelTh: 'ลูกค้า 360',
+    icon: '◎',
+    roles: [...CUSTOMER_360_VIEW_ROLES],
+    phase: 22,
+    phase8: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -233,6 +246,7 @@ export const PHASE4_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase4)
 export const PHASE5_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase5)
 export const PHASE6_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase6)
 export const PHASE7_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase7)
+export const PHASE8_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase8)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

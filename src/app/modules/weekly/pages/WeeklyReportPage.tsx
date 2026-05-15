@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canViewReportFinanceMetrics, canViewWeeklyReport } from '../../../../shared/auth/access'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
+import { downloadCsv } from '../../../../shared/export/csv'
 import {
   canViewWeeklyAdsMetrics,
   canViewWeeklyLeadMetrics,
@@ -78,9 +79,38 @@ export function WeeklyReportPage() {
             ข้อมูลจากระบบ (ไม่ใช้ AI ภายนอก)
           </p>
         </div>
-        <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
-          รีเฟรช
-        </button>
+        <div className="crm-page__actions">
+          {report && (
+            <button
+              type="button"
+              className="crm-btn crm-btn--ghost"
+              onClick={() => {
+                const r = report!
+                downloadCsv(
+                  `weekly-${r.week_start}`,
+                  ['รายการ', 'ค่า'],
+                  [
+                    ['รายรับสัปดาห์', r.revenue_paid],
+                    ['รายการชำระ', r.payments_paid_count],
+                    ['Spend แอด', r.ads_spend],
+                    ['GMV แอด', r.ads_gmv],
+                    ['ROI เฉลี่ย', r.ads_avg_roi ?? ''],
+                    ['งานเสร็จ', r.tasks_done],
+                    ['งานเปิด', r.open_tasks],
+                    ['Lead ใหม่', r.new_leads],
+                    ['คอนเทนต์ส่งมอบ', r.content_delivered],
+                    ['สัญญาใกล้หมด 14 วัน', r.contracts_expiring_14d],
+                  ],
+                )
+              }}
+            >
+              ส่งออก CSV
+            </button>
+          )}
+          <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
+            รีเฟรช
+          </button>
+        </div>
       </header>
 
       {!configured && (

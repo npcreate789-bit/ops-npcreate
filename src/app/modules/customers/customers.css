@@ -1,0 +1,30 @@
+.customer-status--active {
+  color: #86efac;
+}
+
+.customer-status--pending {
+  color: #fcd34d;
+}
+
+.customer-status--at_risk {
+  color: #f87171;
+}
+
+.customer-status--ended {
+  color: var(--npc-text-muted);
+}
+
+.customer-360-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.customer-360-meta {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--npc-text-muted);
+}

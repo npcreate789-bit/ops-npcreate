@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canViewActivityLog,
+  canViewCustomer360,
   canViewWeeklyReport,
 } from '../../../../shared/auth/access'
 import { bangkokTodayIsoDate } from '../../../../shared/dates/bangkok'
@@ -24,6 +25,7 @@ export function DashboardPage() {
   const roles = profile?.roles ?? []
   const showWeekly = canViewWeeklyReport(roles) || !configured
   const showActivity = canViewActivityLog(roles) || !configured
+  const showCustomers = canViewCustomer360(roles) || !configured
   const today = bangkokTodayIsoDate()
 
   const [data, setData] = useState<ExecutiveDashboard | null>(null)
@@ -171,6 +173,7 @@ export function DashboardPage() {
           <Link to="/app/content">งานคอนเทนต์</Link>
           <Link to="/app/admin">จัดการผู้ใช้</Link>
           <Link to="/app/client">รายงานลูกค้า</Link>
+          {showCustomers && <Link to="/app/customers">ลูกค้า 360</Link>}
           {showWeekly && <Link to="/app/weekly">สรุปรายสัปดาห์</Link>}
           {showActivity && <Link to="/app/activity">บันทึกกิจกรรม</Link>}
           <Link to="/app/reports">รายงานขั้นสูง</Link>

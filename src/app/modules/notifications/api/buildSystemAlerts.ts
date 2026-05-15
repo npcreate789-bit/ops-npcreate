@@ -3,7 +3,11 @@ import type { DashboardAlert } from '../../dashboard/types'
 import type { ExecutiveDashboard } from '../../dashboard/types'
 import { listLeads } from '../../crm/api/leads'
 import { bangkokTodayIsoDate } from '../../../../shared/dates/bangkok'
-import { canViewRenewals, hasDbPrivilegedRole } from '../../../../shared/auth/access'
+import {
+  canViewRenewals,
+  canViewWeeklyReport,
+  hasDbPrivilegedRole,
+} from '../../../../shared/auth/access'
 import { countExpiringContracts } from '../../renewals/api/renewals'
 import type { AppRole } from '../../../../shared/types/roles'
 
@@ -89,6 +93,16 @@ export async function buildSystemAlerts(
     } catch {
       /* ignore */
     }
+  }
+
+  if (canViewWeeklyReport(roles) && canAccessNavPath(roles, '/app/weekly')) {
+    extra.push({
+      dedupe_key: 'weekly-summary',
+      title: 'สรุปรายสัปดาห์',
+      body: 'ตรวจ KPI 7 วันและคำแนะนำประจำสัปดาห์',
+      link: '/app/weekly',
+      severity: 'info',
+    })
   }
 
   const today = bangkokTodayIsoDate()

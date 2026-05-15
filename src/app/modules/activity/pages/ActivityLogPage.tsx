@@ -6,6 +6,7 @@ import {
   canViewAdminAudit,
 } from '../../../../shared/auth/access'
 import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
+import { downloadCsv } from '../../../../shared/export/csv'
 import { auditActionLabel } from '../../admin/constants'
 import { canViewSensitiveAudit } from '../access'
 import { activityEntityTypes, listActivityLogs } from '../api/activityLogs'
@@ -83,9 +84,31 @@ export function ActivityLogPage() {
             </p>
           )}
         </div>
-        <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
-          รีเฟรช
-        </button>
+        <div className="crm-page__actions">
+          <button
+            type="button"
+            className="crm-btn crm-btn--ghost"
+            disabled={rows.length === 0}
+            onClick={() =>
+              downloadCsv(
+                'activity-log',
+                ['เวลา', 'การกระทำ', 'ประเภท', 'entity_id', 'ผู้ทำ'],
+                rows.map((row) => [
+                  formatBangkokDateTime(row.created_at),
+                  auditActionLabel(row.action),
+                  row.entity_type,
+                  row.entity_id ?? '',
+                  row.actor_name ?? row.actor_email ?? '',
+                ]),
+              )
+            }
+          >
+            ส่งออก CSV
+          </button>
+          <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
+            รีเฟรช
+          </button>
+        </div>
       </header>
 
       {!configured && (
