@@ -10,6 +10,7 @@ import {
   PHASE8_NAV_ITEMS,
   PHASE9_NAV_ITEMS,
   PHASE10_NAV_ITEMS,
+  PHASE11_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import './pages.css'
@@ -36,6 +37,8 @@ export function HomePage() {
   const phase9Total = PHASE9_NAV_ITEMS.length
   const phase10Ready = PHASE10_NAV_ITEMS.filter((i) => i.ready).length
   const phase10Total = PHASE10_NAV_ITEMS.length
+  const phase11Ready = PHASE11_NAV_ITEMS.filter((i) => i.ready).length
+  const phase11Total = PHASE11_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -188,6 +191,19 @@ export function HomePage() {
         </p>
         <p className="muted">
           รวมเหตุการณ์งาน การเงิน คอนเทนต์ สัญญา และกิจกรรมต่อลูกค้า — กรองตามบทบาท
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 11</h2>
+        <p>
+          ครบ {phase11Ready}/{phase11Total} โมดูล —{' '}
+          <Link to="/app/ops">ศูนย์ Ops</Link>
+          {' · '}
+          กด <kbd>⌘K</kbd> เพื่อค้นหาด่วน
+        </p>
+        <p className="muted">
+          Command palette ค้นหารวมทุกหน้า + เช็กลิสต์ deploy สำหรับทีม Ops
         </p>
       </section>
 

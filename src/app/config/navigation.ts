@@ -3,6 +3,7 @@ import {
   CUSTOMER_360_VIEW_ROLES,
   FINANCE_VIEW_ROLES,
   GLOBAL_SEARCH_VIEW_ROLES,
+  OPS_CENTER_VIEW_ROLES,
   hasNavFullAccess,
   STAFF_ASSISTANT_ROLES,
   TIMELINE_VIEW_ROLES,
@@ -37,6 +38,8 @@ export interface NavItem {
   phase9?: boolean
   /** Phase 10 modules (Sprint 25+) — Customer 360 timeline */
   phase10?: boolean
+  /** Phase 11 modules (Sprint 26+) — Command palette & Ops center */
+  phase11?: boolean
   ready: boolean
 }
 
@@ -254,6 +257,16 @@ export const NAV_ITEMS: NavItem[] = [
     phase9: true,
     ready: true,
   },
+  {
+    path: '/app/ops',
+    label: 'Ops Center',
+    labelTh: 'ศูนย์ Ops',
+    icon: '⚙',
+    roles: [...OPS_CENTER_VIEW_ROLES],
+    phase: 26,
+    phase11: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -265,6 +278,7 @@ export const PHASE7_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase7)
 export const PHASE8_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase8)
 export const PHASE9_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase9)
 export const PHASE10_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase10)
+export const PHASE11_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase11)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

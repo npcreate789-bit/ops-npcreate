@@ -1,0 +1,58 @@
+.ops-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ops-checklist li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.ops-checklist__status {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.ops-checklist__status--ok {
+  color: #86efac;
+}
+
+.ops-checklist__status--warn {
+  color: #fbbf24;
+}
+
+.ops-checklist__status--manual {
+  color: var(--npc-text-muted);
+}
+
+.ops-checklist__intro {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.ops-checklist__body strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.ops-checklist__body code {
+  font-size: 0.8rem;
+  color: var(--npc-accent);
+}
+
+.ops-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

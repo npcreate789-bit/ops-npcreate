@@ -323,6 +323,16 @@ export const GLOBAL_SEARCH_VIEW_ROLES: AppRole[] = [
   'dev',
 ]
 
+// --- Phase 11: Ops center ---
+
+/** ศูนย์ Ops / deploy — CEO, Operations, Dev */
+export const OPS_CENTER_VIEW_ROLES: AppRole[] = [...DB_PRIVILEGED_ROLES]
+
+export function canViewOpsCenter(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  return roles.some((r) => OPS_CENTER_VIEW_ROLES.includes(r))
+}
+
 /** ค้นหารวม — สอดคล้องเมนู: บทบาทภายใน ไม่รวม client อย่างเดียว */
 export function canUseGlobalSearch(roles: AppRole[]): boolean {
   if (roles.length === 0) return true

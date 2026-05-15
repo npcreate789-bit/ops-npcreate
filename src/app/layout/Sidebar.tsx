@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
+import { canUseGlobalSearch } from '../../shared/auth/access'
 import { ROLE_LABELS } from '../../shared/types/roles'
 import { navItemsForRoles } from '../config/navigation'
 import { useNotificationUnread } from '../modules/notifications/useNotificationUnread'
@@ -7,12 +8,17 @@ import './Sidebar.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
-export function Sidebar() {
+interface SidebarProps {
+  onOpenSearch?: () => void
+}
+
+export function Sidebar({ onOpenSearch }: SidebarProps) {
   const { profile, signOut, configured } = useAuth()
   const roles = profile?.roles ?? (configured ? [] : ['ceo' as const])
   const items = navItemsForRoles(roles)
   const userId = profile?.id ?? DEV_OWNER
   const unreadNotif = useNotificationUnread(userId, roles)
+  const showQuickSearch = (canUseGlobalSearch(roles) || !configured) && onOpenSearch
 
   return (
     <aside className="sidebar">
@@ -53,6 +59,18 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {showQuickSearch && (
+        <button type="button" className="sidebar__search" onClick={onOpenSearch}>
+          <span className="sidebar__icon" aria-hidden>
+            ⌕
+          </span>
+          <span className="sidebar__label">
+            ค้นหาด่วน
+            <kbd className="sidebar__kbd">⌘K</kbd>
+          </span>
+        </button>
+      )}
 
       <div className="sidebar__footer">
         <div className="sidebar__user">
