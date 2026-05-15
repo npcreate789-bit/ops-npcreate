@@ -308,6 +308,28 @@ export function canViewCustomer360(roles: AppRole[]): boolean {
   )
 }
 
+// --- Phase 9: Global search ---
+
+/** เมนูค้นหารวม — ทุกบทบาทภายในยกเว้น client อย่างเดียว */
+export const GLOBAL_SEARCH_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'sales',
+  'account',
+  'ads',
+  'senior_ads',
+  'content',
+  'admin',
+  'dev',
+]
+
+/** ค้นหารวม — สอดคล้องเมนู: บทบาทภายใน ไม่รวม client อย่างเดียว */
+export function canUseGlobalSearch(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.every((r) => r === 'client')) return false
+  return roles.some((r) => GLOBAL_SEARCH_VIEW_ROLES.includes(r))
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',

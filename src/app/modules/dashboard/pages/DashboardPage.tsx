@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
+  canUseGlobalSearch,
   canViewActivityLog,
   canViewCustomer360,
   canViewWeeklyReport,
@@ -26,6 +27,7 @@ export function DashboardPage() {
   const showWeekly = canViewWeeklyReport(roles) || !configured
   const showActivity = canViewActivityLog(roles) || !configured
   const showCustomers = canViewCustomer360(roles) || !configured
+  const showSearch = canUseGlobalSearch(roles) || !configured
   const today = bangkokTodayIsoDate()
 
   const [data, setData] = useState<ExecutiveDashboard | null>(null)
@@ -176,6 +178,7 @@ export function DashboardPage() {
           {showCustomers && <Link to="/app/customers">ลูกค้า 360</Link>}
           {showWeekly && <Link to="/app/weekly">สรุปรายสัปดาห์</Link>}
           {showActivity && <Link to="/app/activity">บันทึกกิจกรรม</Link>}
+          {showSearch && <Link to="/app/search">ค้นหารวม</Link>}
           <Link to="/app/reports">รายงานขั้นสูง</Link>
           <Link to="/app/timeline">ไทม์ไลน์งาน</Link>
         </div>

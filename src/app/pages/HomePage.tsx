@@ -8,6 +8,7 @@ import {
   PHASE6_NAV_ITEMS,
   PHASE7_NAV_ITEMS,
   PHASE8_NAV_ITEMS,
+  PHASE9_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import './pages.css'
@@ -30,6 +31,8 @@ export function HomePage() {
   const phase7Total = PHASE7_NAV_ITEMS.length
   const phase8Ready = PHASE8_NAV_ITEMS.filter((i) => i.ready).length
   const phase8Total = PHASE8_NAV_ITEMS.length
+  const phase9Ready = PHASE9_NAV_ITEMS.filter((i) => i.ready).length
+  const phase9Total = PHASE9_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -160,6 +163,17 @@ export function HomePage() {
         </p>
         <p className="muted">
           ศูนย์กลางข้อมูลลูกค้าเชื่อมทุกโมดูล พร้อมส่งออก CSV ในรายงานและบันทึกกิจกรรม
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 9</h2>
+        <p>
+          ครบ {phase9Ready}/{phase9Total} โมดูล —{' '}
+          <Link to="/app/search">ค้นหารวม</Link>
+        </p>
+        <p className="muted">
+          ค้นหา Lead · ลูกค้า · งาน ตาม RLS ของบทบาท — พร้อม deploy SPA บน Vercel
         </p>
       </section>
 

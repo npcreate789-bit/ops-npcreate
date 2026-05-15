@@ -2,6 +2,7 @@ import {
   ACTIVITY_LOG_VIEW_ROLES,
   CUSTOMER_360_VIEW_ROLES,
   FINANCE_VIEW_ROLES,
+  GLOBAL_SEARCH_VIEW_ROLES,
   hasNavFullAccess,
   STAFF_ASSISTANT_ROLES,
   TIMELINE_VIEW_ROLES,
@@ -32,6 +33,8 @@ export interface NavItem {
   phase7?: boolean
   /** Phase 8 modules (Sprint 22+) — Customer 360 & export */
   phase8?: boolean
+  /** Phase 9 modules (Sprint 24+) — Global search & deploy */
+  phase9?: boolean
   ready: boolean
 }
 
@@ -238,6 +241,16 @@ export const NAV_ITEMS: NavItem[] = [
     phase8: true,
     ready: true,
   },
+  {
+    path: '/app/search',
+    label: 'Search',
+    labelTh: 'ค้นหา',
+    icon: '⌕',
+    roles: [...GLOBAL_SEARCH_VIEW_ROLES],
+    phase: 23,
+    phase9: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -247,6 +260,7 @@ export const PHASE5_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase5)
 export const PHASE6_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase6)
 export const PHASE7_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase7)
 export const PHASE8_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase8)
+export const PHASE9_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase9)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

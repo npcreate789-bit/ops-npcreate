@@ -35,6 +35,7 @@ import { ActivityLogPage } from './modules/activity/pages/ActivityLogPage'
 import { WeeklyReportPage } from './modules/weekly/pages/WeeklyReportPage'
 import { CustomersListPage } from './modules/customers/pages/CustomersListPage'
 import { Customer360Page } from './modules/customers/pages/Customer360Page'
+import { SearchPage } from './modules/search/pages/SearchPage'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -117,6 +118,7 @@ export function AppRoutes() {
           path="customers/:id"
           element={<Module path="/app/customers" element={<Customer360Page />} />}
         />
+        <Route path="search" element={<Module path="/app/search" element={<SearchPage />} />} />
       </Route>
       <Route path="/" element={<Navigate to="/app" replace />} />
       <Route path="*" element={<Navigate to="/app" replace />} />
