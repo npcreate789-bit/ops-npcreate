@@ -3,8 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canDeleteContentJob,
+  canEditContentJob,
   canManageContentJobs,
-  isContentReadOnly,
 } from '../../../../shared/auth/access'
 import { isSupabaseConfigured } from '../../../../shared/supabase/client'
 import { listCustomersForSelect } from '../../finance/api/payments'
@@ -34,9 +34,6 @@ export function ContentJobEditorPage() {
   const { profile } = useAuth()
   const ownerId = profile?.id ?? DEV_OWNER
   const roles = profile?.roles ?? []
-  const canManage = canManageContentJobs(roles) || !isSupabaseConfigured
-  const readOnly = isContentReadOnly(roles) && isSupabaseConfigured
-
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -45,6 +42,9 @@ export function ContentJobEditorPage() {
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [saved, setSaved] = useState(false)
 
+  const canCreate = canManageContentJobs(roles) || !isSupabaseConfigured
+  const canEdit = canEditContentJob(roles, initial, ownerId) || !isSupabaseConfigured
+  const readOnly = !canEdit && isSupabaseConfigured
   const canDelete =
     canDeleteContentJob(roles, initial?.created_by, ownerId) || !isSupabaseConfigured
 
@@ -80,7 +80,7 @@ export function ContentJobEditorPage() {
   }, [id, isNew])
 
   async function handleSubmit(form: ContentJobFormState) {
-    if (!canManage) return
+    if (!canEdit) return
     setSaving(true)
     setError(null)
     setSaved(false)
@@ -122,7 +122,7 @@ export function ContentJobEditorPage() {
     )
   }
 
-  if (isNew && !canManage) {
+  if (isNew && !canCreate) {
     return (
       <div className="page">
         <p className="crm-error">ไม่มีสิทธิ์สร้างงานคอนเทนต์</p>
@@ -145,10 +145,12 @@ export function ContentJobEditorPage() {
       </header>
 
       {readOnly && (
-        <p className="crm-banner crm-banner--warn">โหมดดูอย่างเดียว — ไม่สามารถแก้ไขงานนี้ได้</p>
+        <p className="crm-banner crm-banner--warn phase2-scope-banner">
+          โหมดดูอย่างเดียว — คุณไม่มีสิทธิ์แก้ไขงานคอนเทนต์นี้
+        </p>
       )}
       {error && <p className="crm-error">{error}</p>}
-      {saved && canManage && <p className="phase2-banner--ok">บันทึกเรียบร้อยแล้ว</p>}
+      {saved && canEdit && <p className="phase2-banner--ok">บันทึกเรียบร้อยแล้ว</p>}
 
       <section className="card card--wide">
         <ContentJobForm
@@ -157,7 +159,7 @@ export function ContentJobEditorPage() {
           customers={customers}
           ownerId={ownerId}
           saving={saving}
-          readOnly={readOnly || !canManage}
+          readOnly={readOnly}
           onSubmit={(f) => void handleSubmit(f)}
           onCancel={() => navigate('/app/content')}
         />

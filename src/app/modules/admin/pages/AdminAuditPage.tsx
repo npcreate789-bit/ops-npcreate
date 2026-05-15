@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { hasDbPrivilegedRole } from '../../../../shared/auth/access'
+import { canViewAdminAudit } from '../../../../shared/auth/access'
 import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
 import { auditActionLabel } from '../constants'
 import { listAuditLogs, type AuditLogRow } from '../api/auditLogs'
@@ -12,7 +12,7 @@ import '../admin.css'
 
 export function AdminAuditPage() {
   const { profile, configured } = useAuth()
-  const canView = hasDbPrivilegedRole(profile?.roles ?? []) || !configured
+  const canView = canViewAdminAudit(profile?.roles ?? []) || !configured
 
   const [rows, setRows] = useState<AuditLogRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -44,13 +44,16 @@ export function AdminAuditPage() {
 
   return (
     <div className="page admin-page">
-      <header className="page__header admin-page__header">
+      <header className="page__header admin-page__header phase2-page__header">
         <div>
           <Link to="/app/admin" className="crm-back">
             ← จัดการผู้ใช้
           </Link>
           <h1>Audit Log</h1>
           <p className="muted">บันทึกการเปลี่ยนแปลงสำคัญในระบบ</p>
+          <nav className="phase2-subnav" aria-label="เมนู admin">
+            <Link to="/app/admin">จัดการผู้ใช้</Link>
+          </nav>
         </div>
         <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
           รีเฟรช

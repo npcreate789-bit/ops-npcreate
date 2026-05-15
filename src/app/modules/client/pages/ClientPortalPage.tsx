@@ -41,6 +41,7 @@ export function ClientPortalPage() {
       const report = await fetchClientReport(
         userId,
         canPreview && previewId ? previewId : undefined,
+        roles,
       )
       setData(report)
     } catch (e) {
@@ -49,7 +50,7 @@ export function ClientPortalPage() {
     } finally {
       setLoading(false)
     }
-  }, [userId, canPreview, previewId])
+  }, [userId, canPreview, previewId, roles])
 
   useEffect(() => {
     if (!canPreview) return
@@ -77,6 +78,12 @@ export function ClientPortalPage() {
           <h1>รายงานลูกค้า</h1>
           <p className="muted">สรุปผลแอด ความคืบหน้า และคอนเทนต์ที่ส่งมอบ</p>
         </header>
+
+        {!configured && (
+          <p className="crm-banner crm-banner--warn">
+            โหมดพัฒนา — ข้อมูลตัวอย่างในเครื่อง
+          </p>
+        )}
 
         {canPreview && customers.length > 0 && (
           <section className="card card--wide">

@@ -68,7 +68,8 @@ export async function listContentJobs(
     .order('due_at', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false })
 
-  if (!privileged && filters.scope !== 'all') {
+  const showTeamAll = privileged && filters.scope !== 'mine'
+  if (!showTeamAll) {
     query = query.or(`assignee_id.eq.${userId},created_by.eq.${userId}`)
   }
   if (filters.status) query = query.eq('status', filters.status)
@@ -92,12 +93,13 @@ export async function getContentJob(id: string): Promise<ContentJob | null> {
 export async function getContentSummary(
   userId: string,
   privileged: boolean,
+  scope: ContentJobFilters['scope'] = 'all',
 ): Promise<ContentJobSummary> {
   if (!isSupabaseConfigured || !supabase) {
     return mockContentApi.getSummary(userId, privileged)
   }
 
-  const rows = await listContentJobs(userId, {}, privileged)
+  const rows = await listContentJobs(userId, { scope }, privileged)
   return {
     open_count: rows.filter((r) => r.status === 'briefed').length,
     in_production_count: rows.filter((r) => r.status === 'in_production').length,

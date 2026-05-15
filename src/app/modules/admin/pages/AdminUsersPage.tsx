@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { hasDbPrivilegedRole } from '../../../../shared/auth/access'
+import { canManageAdminUsers } from '../../../../shared/auth/access'
 import { APP_ROLES, ROLE_LABELS, type AppRole } from '../../../../shared/types/roles'
 import { listCustomersForSelect } from '../../finance/api/payments'
 import type { CustomerOption } from '../../finance/types'
@@ -22,7 +22,7 @@ const MANAGEABLE_ROLES = APP_ROLES.filter((r) => r !== 'dev')
 export function AdminUsersPage() {
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
-  const canManage = hasDbPrivilegedRole(roles) || !configured
+  const canManage = canManageAdminUsers(roles) || !configured
 
   const [rows, setRows] = useState<AdminUserRow[]>([])
   const [query, setQuery] = useState('')

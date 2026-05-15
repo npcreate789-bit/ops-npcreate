@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canManageContentJobs,
@@ -52,7 +52,7 @@ export function ContentListPage() {
     try {
       const [jobs, sum, people] = await Promise.all([
         listContentJobs(userId, filters, teamView),
-        getContentSummary(userId, teamView),
+        getContentSummary(userId, teamView, filters.scope),
         listContentAssignees(),
       ])
       setRows(jobs)
@@ -86,6 +86,12 @@ export function ContentListPage() {
           </button>
         )}
       </header>
+
+      {!configured && (
+        <p className="crm-banner crm-banner--warn">
+          โหมดพัฒนา — ข้อมูลเก็บในเครื่อง (localStorage)
+        </p>
+      )}
 
       {readOnly && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
@@ -185,7 +191,7 @@ export function ContentListPage() {
 
         {!loading && rows.length > 0 && (
           <div className="crm-table-wrap">
-            <table className="crm-table">
+            <table className="crm-table crm-table--clickable">
               <thead>
                 <tr>
                   <th>งาน</th>
@@ -202,9 +208,10 @@ export function ContentListPage() {
                     className={
                       isContentOverdue(row.due_at, row.status) ? 'content-row--overdue' : undefined
                     }
+                    onClick={() => navigate(`/app/content/${row.id}`)}
                   >
                     <td>
-                      <Link to={`/app/content/${row.id}`}>{row.title}</Link>
+                      <strong>{row.title}</strong>
                       {row.assignee_name && (
                         <>
                           <br />

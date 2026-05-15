@@ -1,4 +1,6 @@
 import { logAudit } from '../../../../shared/audit/logAudit'
+import { hasClientPortalStaffPreview } from '../../../../shared/auth/access'
+import type { AppRole } from '../../../../shared/types/roles'
 import { bangkokTodayIsoDate } from '../../../../shared/dates/bangkok'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { contentFormatLabel } from '../../content/constants'
@@ -111,10 +113,14 @@ async function buildClientReport(customerId: string): Promise<ClientReport | nul
 export async function fetchClientReport(
   userId: string,
   previewCustomerId?: string | null,
+  roles: AppRole[] = [],
 ): Promise<ClientReport | null> {
   if (!isSupabaseConfigured || !supabase) return mockClientApi.getClientReport()
 
   if (previewCustomerId) {
+    if (!hasClientPortalStaffPreview(roles)) {
+      throw new Error('ไม่มีสิทธิ์ดูตัวอย่างรายงานลูกค้า')
+    }
     return buildClientReport(previewCustomerId)
   }
 

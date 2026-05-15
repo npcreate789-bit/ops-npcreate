@@ -77,6 +77,32 @@ export function canDeleteContentJob(
   return Boolean(createdBy && createdBy === userId)
 }
 
+/** แก้ไขงานคอนเทนต์ — ตรง content_jobs_update (00029) */
+export function canEditContentJob(
+  roles: AppRole[],
+  job:
+    | { assignee_id: string; created_by: string }
+    | null
+    | undefined,
+  userId: string,
+): boolean {
+  if (isContentReadOnly(roles)) return false
+  if (hasDbPrivilegedRole(roles)) return true
+  if (!job) return canManageContentJobs(roles)
+  if (roles.includes('content') || roles.includes('account')) return true
+  return job.assignee_id === userId || job.created_by === userId
+}
+
+// --- Phase 2: Admin ---
+
+export function canManageAdminUsers(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles)
+}
+
+export function canViewAdminAudit(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles)
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',
