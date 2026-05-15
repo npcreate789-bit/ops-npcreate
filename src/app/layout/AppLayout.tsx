@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
-import { canUseGlobalSearch, canUseQuickAccess } from '../../shared/auth/access'
+import { canUseGlobalSearch, canUseQuickAccess, canViewHelp } from '../../shared/auth/access'
 import { BreadcrumbNav } from '../components/BreadcrumbNav'
 import { CommandPalette } from '../components/CommandPalette'
 import { useCommandPalette } from '../hooks/useCommandPalette'
@@ -18,7 +18,7 @@ export function AppLayout() {
   const paletteEnabled = canUseGlobalSearch(roles) || !configured
   const trackHistory = canUseQuickAccess(roles) || !configured
   const { open, close, openPalette } = useCommandPalette(paletteEnabled)
-  useKeyboardHelp(true)
+  useKeyboardHelp(canViewHelp(roles))
 
   return (
     <div className="app-shell">

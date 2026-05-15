@@ -7,6 +7,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || target.isContentEditable
 }
 
+/** เปิดศูนย์ช่วยเหลือด้วย ? (ไม่รวมตอนพิมพ์ในช่อง input) */
 export function useKeyboardHelp(enabled: boolean) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -16,11 +17,15 @@ export function useKeyboardHelp(enabled: boolean) {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (e.key !== '?') return
+      if (e.key !== '?' && !(e.shiftKey && e.key === '/')) return
       if (isEditableTarget(e.target)) return
 
       e.preventDefault()
-      if (location.pathname !== '/app/help') {
+      const normalized =
+        location.pathname.length > 1 && location.pathname.endsWith('/')
+          ? location.pathname.slice(0, -1)
+          : location.pathname
+      if (normalized !== '/app/help') {
         navigate('/app/help')
       }
     }

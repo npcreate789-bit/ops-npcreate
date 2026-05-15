@@ -25,3 +25,7 @@
 .breadcrumb__current {
   color: var(--npc-text);
 }
+
+.breadcrumb__muted {
+  color: var(--npc-text-muted);
+}
