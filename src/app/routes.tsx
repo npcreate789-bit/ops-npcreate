@@ -37,6 +37,8 @@ import { CustomersListPage } from './modules/customers/pages/CustomersListPage'
 import { Customer360Page } from './modules/customers/pages/Customer360Page'
 import { SearchPage } from './modules/search/pages/SearchPage'
 import { OpsCenterPage } from './modules/ops/pages/OpsCenterPage'
+import { WorkHubPage } from './modules/work-hub/pages/WorkHubPage'
+import { HelpPage } from './modules/help/pages/HelpPage'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -121,6 +123,8 @@ export function AppRoutes() {
         />
         <Route path="search" element={<Module path="/app/search" element={<SearchPage />} />} />
         <Route path="ops" element={<Module path="/app/ops" element={<OpsCenterPage />} />} />
+        <Route path="work" element={<Module path="/app/work" element={<WorkHubPage />} />} />
+        <Route path="help" element={<Module path="/app/help" element={<HelpPage />} />} />
       </Route>
       <Route path="/" element={<Navigate to="/app" replace />} />
       <Route path="*" element={<Navigate to="/app" replace />} />

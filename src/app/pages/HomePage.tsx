@@ -11,12 +11,18 @@ import {
   PHASE9_NAV_ITEMS,
   PHASE10_NAV_ITEMS,
   PHASE11_NAV_ITEMS,
+  PHASE13_NAV_ITEMS,
+  PHASE14_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
+import { canUseQuickAccess } from '../../shared/auth/access'
+import { QuickAccessPanel } from '../modules/quick-access/components/QuickAccessPanel'
 import './pages.css'
 
 export function HomePage() {
   const { configured, profile, profileLoadError } = useAuth()
+  const roles = profile?.roles ?? []
+  const showQuickAccess = canUseQuickAccess(roles) || !configured
   const readyCount = NAV_ITEMS.filter((i) => i.ready && i.path !== '/app').length
   const moduleCount = NAV_ITEMS.filter((i) => i.path !== '/app').length
   const phase2Ready = PHASE2_NAV_ITEMS.filter((i) => i.ready).length
@@ -39,6 +45,10 @@ export function HomePage() {
   const phase10Total = PHASE10_NAV_ITEMS.length
   const phase11Ready = PHASE11_NAV_ITEMS.filter((i) => i.ready).length
   const phase11Total = PHASE11_NAV_ITEMS.length
+  const phase13Ready = PHASE13_NAV_ITEMS.filter((i) => i.ready).length
+  const phase13Total = PHASE13_NAV_ITEMS.length
+  const phase14Ready = PHASE14_NAV_ITEMS.filter((i) => i.ready).length
+  const phase14Total = PHASE14_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -204,6 +214,50 @@ export function HomePage() {
         </p>
         <p className="muted">
           Command palette ค้นหารวมทุกหน้า + เช็กลิสต์ deploy สำหรับทีม Ops
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 12</h2>
+        <p>
+          หน้าล่าสุดและปักหมุด — บันทึกอัตโนมัติตามที่คุณเปิดดู · กด ☆ เพื่อปักหมุด · แสดงใน{' '}
+          <kbd>⌘K</kbd> เมื่อยังไม่พิมพ์ค้นหา
+        </p>
+        {showQuickAccess ? (
+          <>
+            {configured && (
+              <p className="muted" style={{ marginBottom: '0.75rem' }}>
+                เก็บในเบราว์เซอร์ของคุณ — กรองตามเมนูที่เข้าถึงได้
+              </p>
+            )}
+            <QuickAccessPanel variant="home" />
+          </>
+        ) : (
+          <p className="muted">บทบาท client อย่างเดียวไม่มีการเข้าถึงด่วน</p>
+        )}
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 13</h2>
+        <p>
+          ครบ {phase13Ready}/{phase13Total} โมดูล —{' '}
+          <Link to="/app/work">งานของฉัน</Link>
+        </p>
+        <p className="muted">
+          รวมงานค้าง นัด Lead สัญญา การเงิน และแจ้งเตือน — เรียงตามความเร่งด่วน กรองตามบทบาท
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 14</h2>
+        <p>
+          ครบ {phase14Ready}/{phase14Total} โมดูล —{' '}
+          <Link to="/app/help">ช่วยเหลือ</Link>
+          {' · '}
+          กด <kbd>?</kbd> จากทุกหน้า
+        </p>
+        <p className="muted">
+          Breadcrumb ด้านบน + ปุ่มลัด + เมนูตามบทบาท
         </p>
       </section>
 

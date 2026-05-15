@@ -4,6 +4,7 @@ import {
   FINANCE_VIEW_ROLES,
   GLOBAL_SEARCH_VIEW_ROLES,
   OPS_CENTER_VIEW_ROLES,
+  WORK_HUB_VIEW_ROLES,
   hasNavFullAccess,
   STAFF_ASSISTANT_ROLES,
   TIMELINE_VIEW_ROLES,
@@ -40,6 +41,10 @@ export interface NavItem {
   phase10?: boolean
   /** Phase 11 modules (Sprint 26+) — Command palette & Ops center */
   phase11?: boolean
+  /** Phase 13 modules (Sprint 29+) — Work hub inbox */
+  phase13?: boolean
+  /** Phase 14 modules (Sprint 30+) — Help & breadcrumbs */
+  phase14?: boolean
   ready: boolean
 }
 
@@ -267,6 +272,26 @@ export const NAV_ITEMS: NavItem[] = [
     phase11: true,
     ready: true,
   },
+  {
+    path: '/app/work',
+    label: 'Work Hub',
+    labelTh: 'งานของฉัน',
+    icon: '◫',
+    roles: [...WORK_HUB_VIEW_ROLES],
+    phase: 27,
+    phase13: true,
+    ready: true,
+  },
+  {
+    path: '/app/help',
+    label: 'Help',
+    labelTh: 'ช่วยเหลือ',
+    icon: '?',
+    roles: [],
+    phase: 28,
+    phase14: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -279,6 +304,8 @@ export const PHASE8_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase8)
 export const PHASE9_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase9)
 export const PHASE10_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase10)
 export const PHASE11_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase11)
+export const PHASE13_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase13)
+export const PHASE14_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase14)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

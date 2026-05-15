@@ -1,0 +1,43 @@
+.work-hub__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.work-hub__filters {
+  margin-bottom: 1rem;
+}
+
+.work-hub__summary {
+  margin-bottom: 1rem;
+}
+
+.work-hub__list .timeline-item {
+  align-items: flex-start;
+}
+
+.work-hub__item--notif {
+  border-left: 3px solid var(--npc-accent-2);
+}
+
+.timeline-item__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.timeline-item__link:hover strong {
+  color: var(--npc-accent);
+}
+
+.timeline-item__static {
+  display: block;
+}
+
+.work-hub__locked {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #fbbf24;
+}

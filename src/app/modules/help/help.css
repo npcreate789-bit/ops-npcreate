@@ -1,0 +1,108 @@
+.help-shortcuts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.help-shortcuts li {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.help-shortcuts__keys {
+  flex-shrink: 0;
+  min-width: 5.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(110, 231, 255, 0.08);
+  font-family: inherit;
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--npc-accent);
+}
+
+.help-shortcuts strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.help-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+.help-links__item {
+  display: block;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.help-links__item:hover {
+  border-color: rgba(110, 231, 255, 0.4);
+  background: rgba(110, 231, 255, 0.06);
+}
+
+.help-links__item strong {
+  display: block;
+}
+
+.help-modules__intro {
+  margin: 0 0 0.75rem;
+}
+
+.help-modules {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.5rem;
+}
+
+.help-modules__item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.help-modules__item:hover {
+  border-color: rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.06);
+}
+
+.help-modules__icon {
+  font-size: 1.1rem;
+  opacity: 0.85;
+}
+
+.help-modules__item strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.help-modules__item .muted {
+  font-size: 0.75rem;
+}

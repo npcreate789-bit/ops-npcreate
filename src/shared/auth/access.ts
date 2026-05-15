@@ -340,6 +340,31 @@ export function canUseGlobalSearch(roles: AppRole[]): boolean {
   return roles.some((r) => GLOBAL_SEARCH_VIEW_ROLES.includes(r))
 }
 
+// --- Phase 12: Quick access ---
+
+/** หน้าล่าสุดและปักหมุด — สอดคล้องค้นหาด่วน (ทีมภายใน) */
+export function canUseQuickAccess(roles: AppRole[]): boolean {
+  return canUseGlobalSearch(roles)
+}
+
+// --- Phase 13: Work hub ---
+
+/** ศูนย์งานของฉัน — ทีมภายใน (สอดคล้องค้นหารวม) */
+export const WORK_HUB_VIEW_ROLES: AppRole[] = [...GLOBAL_SEARCH_VIEW_ROLES]
+
+export function canViewWorkHub(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.every((r) => r === 'client')) return false
+  return roles.some((r) => WORK_HUB_VIEW_ROLES.includes(r))
+}
+
+// --- Phase 14: Help center ---
+
+/** ศูนย์ช่วยเหลือ — ผู้ใช้ที่ login ได้ทุกบทบาท */
+export function canViewHelp(_roles: AppRole[]): boolean {
+  return true
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',

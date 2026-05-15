@@ -1,0 +1,27 @@
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.breadcrumb__link {
+  color: var(--npc-text-muted);
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.breadcrumb__link:hover {
+  color: var(--npc-accent);
+}
+
+.breadcrumb__sep {
+  opacity: 0.5;
+}
+
+.breadcrumb__current {
+  color: var(--npc-text);
+}

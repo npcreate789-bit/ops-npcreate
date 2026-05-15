@@ -1,0 +1,139 @@
+.quick-access__section + .quick-access__section {
+  margin-top: 1rem;
+}
+
+.quick-access__section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.quick-access__label {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quick-access__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.quick-access__row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.quick-access__link {
+  flex: 1;
+  display: block;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--npc-text);
+  text-decoration: none;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.quick-access__link--btn {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.quick-access__link:hover,
+.quick-access__link--btn:hover {
+  border-color: rgba(110, 231, 255, 0.4);
+  background: rgba(110, 231, 255, 0.08);
+}
+
+.quick-access__link strong {
+  display: block;
+}
+
+.quick-access__link span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.quick-access__time {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  font-style: normal;
+  color: var(--npc-text-muted);
+}
+
+.quick-access__pin {
+  flex-shrink: 0;
+  width: 2.25rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--npc-text-muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.quick-access__pin:hover {
+  color: var(--npc-accent);
+  border-color: rgba(110, 231, 255, 0.35);
+}
+
+.quick-access__pin--active {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.45);
+}
+
+.quick-access__empty {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.quick-access-summary {
+  margin: 0 0 0.65rem;
+  font-size: 0.85rem;
+}
+
+.quick-access__notice {
+  margin: 0 0 0.65rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.quick-access__link--static {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.quick-access__locked {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: #fbbf24;
+}
+
+.quick-access--palette .quick-access__link {
+  border-color: transparent;
+  background: transparent;
+  padding: 0.55rem 0.75rem;
+}
+
+.quick-access--palette .quick-access__pin {
+  border-color: transparent;
+  background: transparent;
+}
+
+.quick-access--home {
+  margin-top: 0.5rem;
+}

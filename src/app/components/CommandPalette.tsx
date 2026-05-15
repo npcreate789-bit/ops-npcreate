@@ -9,6 +9,8 @@ import {
   scopedSearchKindLabels,
 } from '../modules/search/access'
 import { globalSearch, searchResultTypeLabel } from '../modules/search/api/search'
+import { QuickAccessPanel } from '../modules/quick-access/components/QuickAccessPanel'
+import { canUseQuickAccess } from '../../shared/auth/access'
 import '../modules/crm/crm.css'
 import './command-palette.css'
 
@@ -26,6 +28,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const allowed = canUseGlobalSearch(roles) || !configured
+  const showQuickAccess = canUseQuickAccess(roles) || !configured
   const hasKinds = hasGlobalSearchKinds(roles) || !configured
   const scoped = isGlobalSearchScoped(roles) && configured
 
@@ -198,8 +201,12 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
             </ul>
           )}
 
+          {!loading && !queryReady && showQuickAccess && (
+            <QuickAccessPanel variant="palette" onNavigate={onClose} />
+          )}
+
           {!loading && !queryReady && hasKinds && (
-            <p className="muted">
+            <p className="muted command-palette__search-link">
               <Link to="/app/search" onClick={() => onClose()}>
                 เปิดหน้าค้นหารวม
               </Link>

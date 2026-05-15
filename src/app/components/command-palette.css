@@ -128,6 +128,10 @@
   color: #fbbf24;
 }
 
+.command-palette__search-link {
+  margin-top: 0.75rem;
+}
+
 .command-palette__footer {
   padding: 0.5rem 1rem;
   border-top: 1px solid var(--npc-glass-border);
