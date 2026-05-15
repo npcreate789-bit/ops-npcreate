@@ -9,6 +9,7 @@ import {
   PHASE7_NAV_ITEMS,
   PHASE8_NAV_ITEMS,
   PHASE9_NAV_ITEMS,
+  PHASE10_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import './pages.css'
@@ -33,6 +34,8 @@ export function HomePage() {
   const phase8Total = PHASE8_NAV_ITEMS.length
   const phase9Ready = PHASE9_NAV_ITEMS.filter((i) => i.ready).length
   const phase9Total = PHASE9_NAV_ITEMS.length
+  const phase10Ready = PHASE10_NAV_ITEMS.filter((i) => i.ready).length
+  const phase10Total = PHASE10_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -174,6 +177,17 @@ export function HomePage() {
         </p>
         <p className="muted">
           ค้นหา Lead · ลูกค้า · งาน ตาม RLS ของบทบาท — พร้อม deploy SPA บน Vercel
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 10</h2>
+        <p>
+          ครบ {phase10Ready}/{phase10Total} ฟีเจอร์ —{' '}
+          <Link to="/app/customers">ลูกค้า 360 + ไทม์ไลน์</Link>
+        </p>
+        <p className="muted">
+          รวมเหตุการณ์งาน การเงิน คอนเทนต์ สัญญา และกิจกรรมต่อลูกค้า — กรองตามบทบาท
         </p>
       </section>
 

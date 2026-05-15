@@ -35,6 +35,8 @@ export interface NavItem {
   phase8?: boolean
   /** Phase 9 modules (Sprint 24+) — Global search & deploy */
   phase9?: boolean
+  /** Phase 10 modules (Sprint 25+) — Customer 360 timeline */
+  phase10?: boolean
   ready: boolean
 }
 
@@ -239,6 +241,7 @@ export const NAV_ITEMS: NavItem[] = [
     roles: [...CUSTOMER_360_VIEW_ROLES],
     phase: 22,
     phase8: true,
+    phase10: true,
     ready: true,
   },
   {
@@ -261,6 +264,7 @@ export const PHASE6_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase6)
 export const PHASE7_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase7)
 export const PHASE8_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase8)
 export const PHASE9_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase9)
+export const PHASE10_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase10)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

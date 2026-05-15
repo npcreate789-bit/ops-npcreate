@@ -19,6 +19,7 @@ import {
   customer360MetricKeysForRoles,
   isCustomer360Scoped,
 } from '../access'
+import { CustomerTimelineSection } from '../components/CustomerTimelineSection'
 import { getCustomer360 } from '../api/customers'
 import { customerStatusLabel } from '../constants'
 import type { Customer360 } from '../types'
@@ -44,6 +45,19 @@ export function Customer360Page() {
   const [data, setData] = useState<Customer360 | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const timelineContext = useMemo(
+    () =>
+      data?.customer
+        ? {
+            customerId: data.customer.id,
+            leadId: data.customer.lead_id,
+            contractEnd: data.customer.contract_end,
+            brandName: data.customer.brand_name,
+          }
+        : null,
+    [data?.customer],
+  )
 
   const load = useCallback(async () => {
     if (!allowed || !id) return
@@ -256,6 +270,8 @@ export function Customer360Page() {
               </article>
             )}
           </section>
+
+          {timelineContext && <CustomerTimelineSection context={timelineContext} />}
         </>
       )}
     </div>

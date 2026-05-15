@@ -36,3 +36,34 @@ export interface CustomerListFilters {
   search: string
   status: CustomerStatus | ''
 }
+
+export type CustomerTimelineKind =
+  | 'task'
+  | 'payment'
+  | 'content'
+  | 'contract'
+  | 'activity'
+  | 'lead'
+
+export interface CustomerTimelineEntry {
+  id: string
+  kind: CustomerTimelineKind
+  at: string
+  title: string
+  detail: string
+  href: string
+  overdue: boolean
+}
+
+export interface CustomerTimelineFilters {
+  within_days: number
+  lookback_days: number
+  kind: CustomerTimelineKind | ''
+}
+
+export interface CustomerTimelineContext {
+  customerId: string
+  leadId: string | null
+  contractEnd: string | null
+  brandName: string
+}

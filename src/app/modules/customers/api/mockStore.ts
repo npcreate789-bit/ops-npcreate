@@ -1,4 +1,13 @@
-import type { Customer360, CustomerListFilters, CustomerListRow } from '../types'
+import type { AppRole } from '../../../../shared/types/roles'
+import { customer360TimelineKindsForContext } from '../access'
+import type {
+  Customer360,
+  CustomerListFilters,
+  CustomerListRow,
+  CustomerTimelineContext,
+  CustomerTimelineEntry,
+  CustomerTimelineFilters,
+} from '../types'
 
 const MOCK_CUSTOMERS: CustomerListRow[] = [
   {
@@ -56,5 +65,62 @@ export const mockCustomersApi = {
         renewal_status: null,
       },
     }
+  },
+
+  async listTimeline(
+    ctx: CustomerTimelineContext,
+    roles: AppRole[],
+    filters: CustomerTimelineFilters,
+  ): Promise<CustomerTimelineEntry[]> {
+    const kinds = new Set(customer360TimelineKindsForContext(roles, ctx.leadId))
+    const mock: CustomerTimelineEntry[] = []
+    if (kinds.has('task')) {
+      mock.push({
+        id: 'task-mock-1',
+        kind: 'task',
+        at: new Date().toISOString(),
+        title: 'ติดตามลูกค้าใหม่',
+        detail: 'รอทำ',
+        href: '/app/tasks/task-mock-1',
+        overdue: false,
+      })
+    }
+    if (kinds.has('payment')) {
+      mock.push({
+        id: 'payment-mock-1',
+        kind: 'payment',
+        at: new Date().toISOString(),
+        title: 'การชำระ — 45,000 บาท',
+        detail: 'ชำระแล้ว',
+        href: '/app/finance',
+        overdue: false,
+      })
+    }
+    if (kinds.has('content')) {
+      mock.push({
+        id: 'content-mock-1',
+        kind: 'content',
+        at: new Date().toISOString(),
+        title: 'คลิปรีวิวสินค้า',
+        detail: 'กำลังผลิต',
+        href: '/app/content',
+        overdue: false,
+      })
+    }
+    if (kinds.has('contract') && ctx.contractEnd) {
+      mock.push({
+        id: 'contract-mock',
+        kind: 'contract',
+        at: ctx.contractEnd,
+        title: `สิ้นสุดสัญญา — ${ctx.brandName}`,
+        detail: 'สัญญา',
+        href: '/app/renewals',
+        overdue: false,
+      })
+    }
+    let rows = mock
+    if (filters.kind) rows = rows.filter((r) => r.kind === filters.kind)
+    if (!ctx.leadId) rows = rows.filter((r) => r.kind !== 'lead')
+    return rows.sort((a, b) => b.at.localeCompare(a.at))
   },
 }

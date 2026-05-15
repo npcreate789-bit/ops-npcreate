@@ -39,6 +39,57 @@
   line-height: 1.4;
 }
 
+.customer-timeline__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.customer-timeline__header h2 {
+  margin: 0 0 0.35rem;
+}
+
+.customer-timeline-summary {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+.timeline-item__locked {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--npc-warn, #fbbf24);
+}
+
+.timeline-item__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.timeline-item__link:hover strong {
+  color: var(--npc-accent);
+}
+
+.timeline-item__static {
+  display: block;
+  opacity: 0.9;
+}
+
+.timeline-item__body strong {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.timeline-item__body .muted {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+}
+
 .customer-status--active,
 .customer-status--pending,
 .customer-status--at_risk,
