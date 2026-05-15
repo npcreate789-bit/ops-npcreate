@@ -137,6 +137,52 @@ export function isCreatorsReadOnly(roles: AppRole[]): boolean {
   return canViewCreators(roles) && !canManageCreators(roles)
 }
 
+// --- Phase 4: Contract renewals ---
+
+export const RENEWALS_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'account',
+  'sales',
+  'admin',
+]
+
+/** จัดการต่อสัญญา — ตรง contract_renewals_insert/update + extend_customer_contract */
+export const RENEWALS_MANAGE_ROLES: AppRole[] = ['operations', 'account']
+
+export function canViewRenewals(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles) || roles.some((r) => RENEWALS_VIEW_ROLES.includes(r))
+}
+
+export function canManageRenewals(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles) || roles.some((r) => RENEWALS_MANAGE_ROLES.includes(r))
+}
+
+export function isRenewalsReadOnly(roles: AppRole[]): boolean {
+  return canViewRenewals(roles) && !canManageRenewals(roles)
+}
+
+// --- Phase 4: Reports & insights ---
+
+export const REPORTS_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'account',
+  'admin',
+]
+
+export function canViewReports(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles) || roles.some((r) => REPORTS_VIEW_ROLES.includes(r))
+}
+
+/** แสดงตัวเลขการเงินในรายงาน — ตรง payments_select */
+export function canViewReportFinanceMetrics(roles: AppRole[]): boolean {
+  return (
+    hasDbPrivilegedRole(roles) ||
+    roles.some((r) => (['admin', 'sales', 'account'] as AppRole[]).includes(r))
+  )
+}
+
 /** ดูรายงานลูกค้าแบบ staff (เลือกลูกค้า preview) */
 export const CLIENT_PORTAL_STAFF_ROLES: AppRole[] = [
   'ceo',

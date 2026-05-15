@@ -14,6 +14,8 @@ export interface NavItem {
   phase2?: boolean
   /** Phase 3 modules (Sprint 12+) */
   phase3?: boolean
+  /** Phase 4 modules (Sprint 14+) */
+  phase4?: boolean
   ready: boolean
 }
 
@@ -140,10 +142,31 @@ export const NAV_ITEMS: NavItem[] = [
     phase3: true,
     ready: true,
   },
+  {
+    path: '/app/renewals',
+    label: 'Renewals',
+    labelTh: 'ต่อสัญญา',
+    icon: '↻',
+    roles: ['ceo', 'operations', 'account', 'sales', 'admin', 'dev'],
+    phase: 14,
+    phase4: true,
+    ready: true,
+  },
+  {
+    path: '/app/reports',
+    label: 'Reports',
+    labelTh: 'รายงานขั้นสูง',
+    icon: '▦',
+    roles: ['ceo', 'operations', 'account', 'admin', 'dev'],
+    phase: 15,
+    phase4: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
 export const PHASE3_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase3)
+export const PHASE4_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase4)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

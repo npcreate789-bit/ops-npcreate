@@ -14,6 +14,7 @@ const SYSTEM_DEDUPE_PREFIXES = [
   'content-',
   'crm-reminders',
   'daily-check-',
+  'contract-expiring',
 ] as const
 
 function isSystemDedupeKey(key: string): boolean {

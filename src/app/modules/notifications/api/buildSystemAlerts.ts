@@ -3,7 +3,8 @@ import type { DashboardAlert } from '../../dashboard/types'
 import type { ExecutiveDashboard } from '../../dashboard/types'
 import { listLeads } from '../../crm/api/leads'
 import { bangkokTodayIsoDate } from '../../../../shared/dates/bangkok'
-import { hasDbPrivilegedRole } from '../../../../shared/auth/access'
+import { canViewRenewals, hasDbPrivilegedRole } from '../../../../shared/auth/access'
+import { countExpiringContracts } from '../../renewals/api/renewals'
 import type { AppRole } from '../../../../shared/types/roles'
 
 export interface SystemAlertInput {
@@ -66,6 +67,23 @@ export async function buildSystemAlerts(
           body: `มี ${due.length} Lead ถึงเวลา Reminder แล้ว`,
           link: '/app/crm',
           severity: 'warn',
+        })
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (canViewRenewals(roles) && canAccessNavPath(roles, '/app/renewals')) {
+    try {
+      const expiring = await countExpiringContracts(30)
+      if (expiring > 0) {
+        extra.push({
+          dedupe_key: 'contract-expiring-30d',
+          title: 'สัญญาใกล้หมดอายุ',
+          body: `มี ${expiring} ลูกค้าที่สัญญาหมดภายใน 30 วัน`,
+          link: '/app/renewals',
+          severity: expiring >= 3 ? 'danger' : 'warn',
         })
       }
     } catch {

@@ -1,0 +1,19 @@
+.renewal-days--expired {
+  color: var(--crm-muted, #616161);
+  font-weight: 600;
+}
+
+.renewal-days--urgent {
+  color: var(--crm-danger, #c62828);
+  font-weight: 600;
+}
+
+.renewal-days--soon {
+  color: var(--crm-warn, #e65100);
+}
+
+.renewal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}

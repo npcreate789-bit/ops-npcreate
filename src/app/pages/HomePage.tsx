@@ -1,5 +1,10 @@
 import { Link } from 'react-router-dom'
-import { NAV_ITEMS, PHASE2_NAV_ITEMS, PHASE3_NAV_ITEMS } from '../config/navigation'
+import {
+  NAV_ITEMS,
+  PHASE2_NAV_ITEMS,
+  PHASE3_NAV_ITEMS,
+  PHASE4_NAV_ITEMS,
+} from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import './pages.css'
 
@@ -11,6 +16,8 @@ export function HomePage() {
   const phase2Total = PHASE2_NAV_ITEMS.length
   const phase3Ready = PHASE3_NAV_ITEMS.filter((i) => i.ready).length
   const phase3Total = PHASE3_NAV_ITEMS.length
+  const phase4Ready = PHASE4_NAV_ITEMS.filter((i) => i.ready).length
+  const phase4Total = PHASE4_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -79,6 +86,18 @@ export function HomePage() {
         </p>
         <p className="muted">
           แจ้งเตือนซิงก์จากงานค้างในระบบอัตโนมัติ — ฐานข้อมูล Creator สำหรับ UGC / TikTok One
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 4</h2>
+        <p>
+          ครบ {phase4Ready}/{phase4Total} โมดูล —{' '}
+          <Link to="/app/renewals">ต่อสัญญา</Link>,{' '}
+          <Link to="/app/reports">รายงานขั้นสูง</Link>
+        </p>
+        <p className="muted">
+          ติดตามสัญญาใกล้หมดอายุ ขยายสัญญาได้จากระบบ — รายงานรายเดือนพร้อมคำแนะนำอัตโนมัติ
         </p>
       </section>
 
