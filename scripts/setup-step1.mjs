@@ -83,31 +83,39 @@ const checks = [
   { name: 'tasks', table: 'tasks', sprint: 7 },
   { name: 'content_jobs', table: 'content_jobs', sprint: 10 },
   { name: 'client_customer_access', table: 'client_customer_access', sprint: 11 },
+  { name: 'user_notifications', table: 'user_notifications', migration: '00030_phase3_notifications.sql' },
+  { name: 'creators', table: 'creators', migration: '00031_phase3_creators.sql' },
+  { name: 'contract_renewals', table: 'contract_renewals', migration: '00033_phase4_contract_renewals.sql' },
+  { name: 'assistant_usage_logs', table: 'assistant_usage_logs', migration: '00035_phase5_ai_assistant.sql' },
 ]
 
 let allOk = true
-for (const { name, table, sprint } of checks) {
+const missingMigrations = new Set()
+
+for (const { name, table, sprint, migration } of checks) {
   const { error } = await supabase.from(table).select('*', { head: true, count: 'exact' })
   if (error) {
     console.log(`✗ ตาราง ${name}: ${error.message}`)
     if (error.message.includes('does not exist') || error.code === 'PGRST205') {
       const hint =
-        sprint === 11
+        migration ??
+        (sprint === 11
           ? '00027_phase2_client_portal.sql'
           : sprint === 10
             ? '00026_phase2_content_jobs.sql'
             : sprint === 7
-          ? '00009_tasks.sql'
-          : sprint === 6
-            ? '00008_ads.sql'
-            : sprint === 5
-            ? '00007_onboarding.sql'
-            : sprint === 4
-              ? '00006_finance.sql'
-              : sprint === 3
-                ? '00005_sales.sql'
-                : 'migrations ใน SQL Editor'
-      console.log(`  → รัน ${hint} หรือ: npm run db:push`)
+              ? '00009_tasks.sql'
+              : sprint === 6
+                ? '00008_ads.sql'
+                : sprint === 5
+                  ? '00007_onboarding.sql'
+                  : sprint === 4
+                    ? '00006_finance.sql'
+                    : sprint === 3
+                      ? '00005_sales.sql'
+                      : 'migrations ใน SQL Editor')
+      console.log(`  → รัน ${hint}`)
+      if (migration?.startsWith('0003')) missingMigrations.add('phase4-7')
     }
     allOk = false
   } else {
@@ -116,12 +124,19 @@ for (const { name, table, sprint } of checks) {
 }
 
 if (!allOk) {
-  console.log('\n⚠ Migrations ยังไม่ครบ — ดูคำสั่งด้านบน\n')
+  console.log('\n⚠ Migrations ยังไม่ครบ')
+  if (missingMigrations.has('phase4-7')) {
+    console.log('  → คัดลอก SQL: npm run db:sql:phase4-7')
+    console.log('  → วางใน Supabase SQL Editor (00030 ถึง 00036)\n')
+  } else {
+    console.log('  → npm run db:push หรือรันไฟล์ตาม hint ด้านบน\n')
+  }
   process.exit(1)
 }
 
-console.log('\n✓ ขั้นตอนที่ 1 (ฐานข้อมูล) พร้อมแล้ว')
-console.log('\nขั้นต่อไป:')
-console.log('  1. Dashboard → Authentication → Users → Add user')
-console.log('  2. รัน SQL ใน supabase/snippets/assign_ceo_role.sql (แทน USER_ID)')
-console.log('  3. npm run dev → เปิด /login\n')
+console.log('\n✓ ฐานข้อมูลครบถึง Phase 7 (รวมตาราง Phase 3–5)')
+console.log('\nถ้ายังไม่เคยรัน Phase 7 RLS สำหรับ audit log:')
+console.log('  npm run db:sql:phase4-7  → รันเฉพาะ 00036_phase7_activity_audit_rls.sql')
+console.log('\nทดสอบแอป:')
+console.log('  npm run dev → /app/activity และ /app/weekly')
+console.log('\nผู้ใช้ใหม่: Authentication → Users + assign_ceo_role.sql\n')

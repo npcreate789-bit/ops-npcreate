@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
+import {
+  canViewActivityLog,
+  canViewWeeklyReport,
+} from '../../../../shared/auth/access'
 import { bangkokTodayIsoDate } from '../../../../shared/dates/bangkok'
 import { fetchExecutiveDashboard } from '../api/dashboard'
 import type { ExecutiveDashboard } from '../types'
@@ -18,6 +22,8 @@ export function DashboardPage() {
   const { profile, configured } = useAuth()
   const userId = profile?.id ?? DEV_OWNER
   const roles = profile?.roles ?? []
+  const showWeekly = canViewWeeklyReport(roles) || !configured
+  const showActivity = canViewActivityLog(roles) || !configured
   const today = bangkokTodayIsoDate()
 
   const [data, setData] = useState<ExecutiveDashboard | null>(null)
@@ -165,6 +171,10 @@ export function DashboardPage() {
           <Link to="/app/content">งานคอนเทนต์</Link>
           <Link to="/app/admin">จัดการผู้ใช้</Link>
           <Link to="/app/client">รายงานลูกค้า</Link>
+          {showWeekly && <Link to="/app/weekly">สรุปรายสัปดาห์</Link>}
+          {showActivity && <Link to="/app/activity">บันทึกกิจกรรม</Link>}
+          <Link to="/app/reports">รายงานขั้นสูง</Link>
+          <Link to="/app/timeline">ไทม์ไลน์งาน</Link>
         </div>
       </section>
     </div>
