@@ -1,0 +1,46 @@
+:root {
+  --npc-bg-deep: #050810;
+  --npc-bg-mid: #0c1224;
+  --npc-accent: #6ee7ff;
+  --npc-accent-2: #a78bfa;
+  --npc-text: #e8edf7;
+  --npc-text-muted: #8b95ad;
+  --npc-glass: rgba(12, 18, 36, 0.72);
+  --npc-glass-border: rgba(110, 231, 255, 0.18);
+  --npc-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  --npc-taskbar-h: 52px;
+  --font-sans: 'SF Pro Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--npc-text);
+  background: var(--npc-bg-deep);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(110, 231, 255, 0.35);
+}

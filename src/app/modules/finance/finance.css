@@ -1,0 +1,78 @@
+.pay-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.pay-badge--amber {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fcd34d;
+}
+.pay-badge--green {
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
+}
+.pay-badge--red {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+.pay-badge--gray {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+.finance-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.finance-checkboxes {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.finance-checkboxes label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--npc-text);
+}
+
+.finance-slip-preview-wrap {
+  margin-top: 0.75rem;
+}
+
+.finance-slip-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  width: auto;
+  border-radius: 8px;
+  border: 1px solid var(--npc-border, rgba(148, 163, 184, 0.25));
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.finance-slip-preview--pdf {
+  width: 100%;
+  height: 480px;
+  max-height: 70vh;
+}
+
+.finance-slip-actions {
+  margin-top: 0.5rem;
+}
+
+.finance-slip-empty {
+  margin: 0.25rem 0 0;
+}
+
+.finance-slip-upload-label {
+  margin: 0.75rem 0 0.35rem;
+}

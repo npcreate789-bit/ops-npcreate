@@ -1,0 +1,15 @@
+.app-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--npc-bg-deep);
+}
+
+.app-main {
+  flex: 1;
+  overflow: auto;
+  padding: 1.5rem 2rem;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(110, 231, 255, 0.08), transparent),
+    var(--npc-bg-mid);
+}

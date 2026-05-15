@@ -1,0 +1,41 @@
+.client-hero {
+  margin-bottom: 1.25rem;
+}
+
+.client-hero h1 {
+  margin: 0.25rem 0 0;
+}
+
+.client-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.client-metric {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.client-metric strong {
+  display: block;
+  font-size: 1.15rem;
+}
+
+.client-content-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.client-content-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--npc-glass-border);
+}
+
+.client-content-list li:last-child {
+  border-bottom: none;
+}

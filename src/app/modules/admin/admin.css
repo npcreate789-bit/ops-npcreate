@@ -1,0 +1,99 @@
+.admin-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.admin-toolbar .crm-input {
+  min-width: 14rem;
+  flex: 1;
+}
+
+.admin-user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.admin-user-table th,
+.admin-user-table td {
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--npc-glass-border);
+  vertical-align: top;
+}
+
+.admin-user-table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--npc-text-muted);
+}
+
+.admin-user-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-user-table tr.is-inactive td {
+  opacity: 0.55;
+}
+
+.admin-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.admin-role-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.78rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-role-chip input {
+  margin: 0;
+  accent-color: var(--npc-accent, #6ee7ff);
+}
+
+.admin-role-chip--on {
+  border-color: rgba(110, 231, 255, 0.45);
+  background: rgba(110, 231, 255, 0.1);
+}
+
+.admin-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.admin-toggle input {
+  accent-color: #4ade80;
+}
+
+.admin-hint {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.admin-audit-code {
+  font-size: 0.72rem;
+  color: #64748b;
+}

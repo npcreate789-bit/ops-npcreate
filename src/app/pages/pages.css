@@ -1,0 +1,72 @@
+.page__header h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.page__header p {
+  margin: 0 0 1.5rem;
+  color: var(--npc-text-muted);
+  font-size: 0.95rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.card {
+  background: var(--npc-glass);
+  border: 1px solid var(--npc-glass-border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: var(--npc-shadow);
+}
+
+.card--accent {
+  border-color: rgba(110, 231, 255, 0.35);
+}
+
+.card--wide {
+  margin-top: 1rem;
+}
+
+.card--warn {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--npc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.card .stat {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--npc-accent);
+}
+
+.card .muted,
+.muted {
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.flow-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  line-height: 1.8;
+  color: var(--npc-text-muted);
+}
+
+.flow-list li::marker {
+  color: var(--npc-accent);
+}

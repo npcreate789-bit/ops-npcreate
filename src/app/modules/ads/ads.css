@@ -1,0 +1,357 @@
+.ads-report-status {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ads-report-status--done {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.ads-report-status--pending {
+  background: rgba(234, 179, 8, 0.2);
+  color: #a16207;
+}
+
+.ads-report-status--unassigned {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+.ads-save-success {
+  margin-bottom: 1rem;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  color: #86efac;
+}
+
+.ads-report-form .crm-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ads-report-full {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.ads-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ads-report-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.ads-report-form .crm-form-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ads-report-form input,
+.ads-report-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ads-metric-grid input,
+.ads-metric-grid textarea,
+.ads-report-full textarea {
+  width: 100%;
+}
+
+/* ไอคอนปฏิทิน/ตัวเลข — สีคงที่ ไม่เปลี่ยนเมื่อ error หรือเปลี่ยนค่า */
+.ads-report-form input[type='date'] {
+  color-scheme: dark;
+  accent-color: var(--npc-accent, #6ee7ff);
+}
+
+.ads-report-form input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+.ads-report-form input[type='date'].crm-input--invalid::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  opacity: 0.9;
+}
+
+.ads-report-form input[type='date']:invalid {
+  box-shadow: none;
+}
+
+.ads-report-form input[type='number']::-webkit-inner-spin-button,
+.ads-report-form input[type='number']::-webkit-outer-spin-button {
+  filter: invert(0.75);
+  opacity: 0.85;
+}
+
+.ads-report-form input[type='number'].crm-input--invalid::-webkit-inner-spin-button,
+.ads-report-form input[type='number'].crm-input--invalid::-webkit-outer-spin-button {
+  filter: invert(0.75);
+  opacity: 0.85;
+}
+
+.crm-input--invalid {
+  border-color: rgba(248, 113, 113, 0.65);
+  box-shadow: none;
+}
+
+.crm-field-error {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: #f87171;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .ads-report-form .crm-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ads-history-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+.ads-roi-warn {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.ads-brief-budget-card {
+  margin-bottom: 1rem;
+}
+
+.ads-brief-budget {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ads-brief-budget__label {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  color: var(--npc-text-muted);
+}
+
+.ads-brief-budget__value {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.ads-brief-budget__link {
+  flex-shrink: 0;
+}
+
+.ads-brief-budget__usage {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.ads-brief-budget__usage--over {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.ads-report-date-only {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 16rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.ads-reported-at {
+  font-size: 0.75rem;
+}
+
+.ads-section-report-time {
+  font-weight: 500;
+  color: var(--npc-text-muted);
+  font-size: 0.85em;
+}
+
+.ads-history-reported-at {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ads-sku-spend-section {
+  margin-bottom: 1.25rem;
+}
+
+.ads-product-lines-total-row td {
+  font-weight: 600;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 0.65rem;
+}
+
+.ads-history-table .crm-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--color-accent, #2563eb);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+}
+
+.ads-product-lines-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.ads-product-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ads-product-lines-hint {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.ads-product-lines-table th,
+.ads-product-lines-table td {
+  vertical-align: middle;
+}
+
+.ads-product-lines-table .crm-input {
+  min-width: 0;
+}
+
+.ads-product-lines-scroll {
+  overflow-x: auto;
+}
+
+.ads-product-lines-table {
+  min-width: 36rem;
+}
+
+.ads-product-lines-table .ads-col-sku {
+  min-width: 7rem;
+}
+
+.ads-product-lines-table .ads-col-amount {
+  min-width: 9.5rem;
+  width: 9.5rem;
+}
+
+.ads-product-lines-table .ads-col-actions {
+  width: 3.25rem;
+  text-align: center;
+}
+
+.ads-product-lines-input--amount {
+  width: 100%;
+  min-width: 9rem;
+  max-width: 11rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  box-sizing: border-box;
+}
+
+.ads-product-lines-total-row .ads-col-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ads-product-lines-sku-count {
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.ads-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ads-summary-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.ads-summary-metric__label {
+  font-size: 0.7rem;
+  color: var(--npc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ads-summary-metric__value {
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.ads-sku-field-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.35rem;
+}
+
+.ads-product-lines-remove {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.ads-product-lines-summary {
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.ads-history-products {
+  max-width: 14rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .ads-product-lines-table {
+    font-size: 0.85rem;
+  }
+
+  .ads-history-products {
+    max-width: 8rem;
+  }
+}

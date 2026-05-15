@@ -1,0 +1,84 @@
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(167, 139, 250, 0.15), transparent),
+    var(--npc-bg-deep);
+}
+
+.login__card {
+  width: min(400px, 92vw);
+  padding: 2rem;
+  background: var(--npc-glass);
+  border: 1px solid var(--npc-glass-border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login__brand {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.login__logo {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--npc-accent), var(--npc-accent-2));
+  color: var(--npc-bg-deep);
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.login__brand h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.login__brand p {
+  margin: 0.25rem 0 0;
+  color: var(--npc-text-muted);
+  font-size: 0.85rem;
+}
+
+.login__card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--npc-text-muted);
+}
+
+.login__card input {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--npc-text);
+}
+
+.login__card button {
+  margin-top: 0.5rem;
+  padding: 0.7rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--npc-accent), #4fd1c5);
+  color: var(--npc-bg-deep);
+  font-weight: 600;
+}
+
+.login__card button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login__error {
+  margin: 0;
+  color: #f87171;
+  font-size: 0.85rem;
+}

@@ -1,0 +1,144 @@
+.sales-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sales-pipeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.sales-pipeline__col {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--npc-glass-border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  min-height: 80px;
+}
+
+.sales-pipeline__col h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--npc-text-muted);
+  text-transform: uppercase;
+}
+
+.sales-pipeline__count {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--npc-accent);
+}
+
+.qt-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.qt-badge--gray {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+.qt-badge--blue {
+  background: rgba(96, 165, 250, 0.2);
+  color: #93c5fd;
+}
+.qt-badge--amber {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fcd34d;
+}
+.qt-badge--green {
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
+}
+.qt-badge--red {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+.qt-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.qt-form__full {
+  grid-column: 1 / -1;
+}
+
+.qt-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.qt-line {
+  display: grid;
+  grid-template-columns: 1fr 80px 120px 40px;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.qt-totals {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--npc-glass-border);
+  max-width: 320px;
+  margin-left: auto;
+}
+
+.qt-totals dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 1rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.qt-totals dt {
+  color: var(--npc-text-muted);
+}
+
+.qt-totals dd {
+  margin: 0;
+  text-align: right;
+}
+
+.qt-totals__total dd {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--npc-accent);
+}
+
+.qt-print {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: #fff;
+  color: #111;
+  border-radius: 8px;
+}
+
+@media (max-width: 720px) {
+  .qt-form__grid,
+  .qt-line {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .sidebar,
+  .crm-btn,
+  .qt-form__actions {
+    display: none !important;
+  }
+  .qt-print {
+    box-shadow: none;
+  }
+}

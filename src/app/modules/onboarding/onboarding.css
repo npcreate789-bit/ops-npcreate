@@ -1,0 +1,128 @@
+.onboarding-progress {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 0.5rem 0 1rem;
+}
+
+.onboarding-progress__bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--npc-accent), var(--npc-accent-2));
+  transition: width 0.3s ease;
+}
+
+.onboarding-ready {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.onboarding-ready--yes {
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
+}
+
+.onboarding-form-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.onboarding-ready--no {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fcd34d;
+}
+
+.checklist-table td {
+  vertical-align: middle;
+}
+
+.checklist-table .checklist-note-input {
+  width: 100%;
+  min-width: 12rem;
+}
+
+.onboarding-owners-hint {
+  margin: -0.35rem 0 0.85rem;
+  font-size: 0.85rem;
+}
+
+.onboarding-owners-success {
+  margin-bottom: 0.85rem;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  color: #86efac;
+}
+
+.onboarding-owners-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.onboarding-owners-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.onboarding-owners-row .crm-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.onboarding-owners-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.onboarding-owners-readonly {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1.25rem;
+  margin: 0;
+}
+
+.onboarding-owners-readonly dt {
+  font-size: 0.75rem;
+  color: var(--npc-text-muted);
+  margin: 0;
+}
+
+.onboarding-owners-readonly dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--npc-text);
+}
+
+@media (max-width: 720px) {
+  .onboarding-owners-row {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-owners-readonly {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-owners-readonly dt {
+    margin-top: 0.5rem;
+  }
+
+  .onboarding-owners-readonly dt:first-child {
+    margin-top: 0;
+  }
+}
+
+.onboarding-meta {
+  margin: 0.25rem 0 0;
+  color: var(--npc-muted, #94a3b8);
+  font-size: 0.9rem;
+}
