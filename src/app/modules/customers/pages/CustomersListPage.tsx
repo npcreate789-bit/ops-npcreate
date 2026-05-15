@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { canViewCustomer360 } from '../access'
 import { downloadCsv } from '../../../../shared/export/csv'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
+import { canViewCustomer360, isCustomer360Scoped } from '../access'
 import { listCustomers } from '../api/customers'
 import { CUSTOMER_STATUS_OPTIONS, customerStatusLabel } from '../constants'
 import type { CustomerListFilters, CustomerListRow } from '../types'
@@ -11,16 +11,27 @@ import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../customers.css'
 
+const SEARCH_DEBOUNCE_MS = 320
+
 export function CustomersListPage() {
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const allowed = canViewCustomer360(roles) || !configured
+  const scoped = isCustomer360Scoped(roles) && configured
   const navigate = useNavigate()
 
   const [filters, setFilters] = useState<CustomerListFilters>({ search: '', status: '' })
+  const [searchInput, setSearchInput] = useState('')
   const [rows, setRows] = useState<CustomerListRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setFilters((f) => ({ ...f, search: searchInput }))
+    }, SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(t)
+  }, [searchInput])
 
   const load = useCallback(async () => {
     if (!allowed) return
@@ -91,11 +102,17 @@ export function CustomersListPage() {
         <p className="crm-banner crm-banner--warn">โหมดพัฒนา — ข้อมูลตัวอย่าง</p>
       )}
 
+      {scoped && (
+        <p className="crm-banner crm-banner--warn phase2-scope-banner">
+          รายการลูกค้าถูกกรองตาม RLS — Sales เห็นเฉพาะลูกค้าที่รับผิดชอบ แอดเห็นเฉพาะที่มอบหมาย
+        </p>
+      )}
+
       <section className="card-grid">
         <article className="card card--accent">
           <h2>ลูกค้าที่มองเห็น</h2>
           <p className="stat">{rows.length}</p>
-          <span className="muted">ตาม RLS ของบทบาทคุณ</span>
+          <span className="muted">ตามสิทธิ์ในระบบ</span>
         </article>
         <article className="card">
           <h2>Active</h2>
@@ -113,8 +130,8 @@ export function CustomersListPage() {
             <span className="task-field__label">ค้นหา</span>
             <input
               className="crm-input"
-              value={filters.search}
-              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="แบรนด์, ผู้ติดต่อ, เบอร์..."
             />
           </label>
@@ -143,7 +160,11 @@ export function CustomersListPage() {
         {loading && <p className="muted">กำลังโหลด...</p>}
 
         {!loading && rows.length === 0 && (
-          <p className="muted">ไม่พบลูกค้าที่ตรงกับตัวกรอง</p>
+          <p className="muted">
+            {filters.search.trim() || filters.status
+              ? 'ไม่พบลูกค้าที่ตรงกับตัวกรอง'
+              : 'ยังไม่มีลูกค้าในระบบ หรือ RLS จำกัดการมองเห็น — ลองรีเฟรช'}
+          </p>
         )}
 
         {!loading && rows.length > 0 && (

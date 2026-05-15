@@ -1,17 +1,24 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import {
-  canLinkCustomerAds,
-  canLinkCustomerContent,
-  canLinkCustomerCrm,
-  canLinkCustomerFinance,
-  canLinkCustomerRenewals,
-  canViewCustomer360,
-} from '../access'
+import { downloadCsv } from '../../../../shared/export/csv'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
 import { renewalStatusLabel } from '../../renewals/constants'
 import type { ContractRenewalStatus } from '../../renewals/types'
+import {
+  canLinkCustomerAds,
+  canLinkCustomerClient,
+  canLinkCustomerCrm,
+  canLinkCustomerFinance,
+  canLinkCustomerOnboarding,
+  canLinkCustomerRenewals,
+  canShowCustomer360ContentMetrics,
+  canShowCustomer360FinanceMetrics,
+  canShowCustomer360Link,
+  canViewCustomer360,
+  customer360MetricKeysForRoles,
+  isCustomer360Scoped,
+} from '../access'
 import { getCustomer360 } from '../api/customers'
 import { customerStatusLabel } from '../constants'
 import type { Customer360 } from '../types'
@@ -28,6 +35,11 @@ export function Customer360Page() {
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const allowed = canViewCustomer360(roles) || !configured
+  const scoped = isCustomer360Scoped(roles) && configured
+  const metricKeys = useMemo(() => customer360MetricKeysForRoles(roles), [roles])
+  const showFinance = canShowCustomer360FinanceMetrics(roles) || !configured
+  const showAds = canLinkCustomerAds(roles) || !configured
+  const showContent = canShowCustomer360ContentMetrics(roles) || !configured
 
   const [data, setData] = useState<Customer360 | null>(null)
   const [loading, setLoading] = useState(true)
@@ -40,7 +52,7 @@ export function Customer360Page() {
     try {
       const row = await getCustomer360(id)
       if (!row) {
-        setError('ไม่พบลูกค้าหรือไม่มีสิทธิ์ดู')
+        setError('ไม่พบลูกค้าหรือไม่มีสิทธิ์ดู (RLS)')
         setData(null)
       } else {
         setData(row)
@@ -56,6 +68,30 @@ export function Customer360Page() {
   useEffect(() => {
     void load()
   }, [load])
+
+  function exportSummary() {
+    if (!data) return
+    const { customer: c, summary: s } = data
+    const rows: (string | number)[][] = [
+      ['แบรนด์', c.brand_name],
+      ['สถานะ', customerStatusLabel(c.status)],
+    ]
+    if (showFinance && metricKeys.includes('finance')) {
+      rows.push(
+        ['รายรับชำระแล้ว', s.payments_paid_total],
+        ['รายการชำระ', s.payments_count],
+        ['ค้างชำระ', s.payments_pending],
+      )
+    }
+    if (showAds && metricKeys.includes('ads')) {
+      rows.push(['Spend แอด 30 วัน', s.ads_spend_30d], ['แคมเปญ', s.campaigns_count])
+    }
+    if (metricKeys.includes('tasks')) rows.push(['งานเปิด', s.open_tasks])
+    if (showContent && metricKeys.includes('content')) {
+      rows.push(['คอนเทนต์กำลังทำ', s.content_in_progress])
+    }
+    downloadCsv(`customer-${c.id.slice(0, 8)}`, ['รายการ', 'ค่า'], rows)
+  }
 
   if (!allowed) {
     return (
@@ -95,13 +131,26 @@ export function Customer360Page() {
             </p>
           )}
         </div>
-        <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
-          รีเฟรช
-        </button>
+        <div className="crm-page__actions">
+          {data && (
+            <button type="button" className="crm-btn crm-btn--ghost" onClick={exportSummary}>
+              ส่งออก CSV
+            </button>
+          )}
+          <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
+            รีเฟรช
+          </button>
+        </div>
       </header>
 
       {!configured && (
         <p className="crm-banner crm-banner--warn">โหมดพัฒนา — ข้อมูลตัวอย่าง</p>
+      )}
+
+      {scoped && (
+        <p className="crm-banner crm-banner--warn phase2-scope-banner">
+          แสดงเฉพาะตัวเลขและลิงก์ที่บทบาทของคุณเข้าถึงได้ — ข้อมูลอื่นถูกซ่อนหรือเป็น 0 ตาม RLS
+        </p>
       )}
 
       {error && <p className="crm-error">{error}</p>}
@@ -125,9 +174,11 @@ export function Customer360Page() {
               <span>พร้อมยิงแอด: {c.ready_for_ads ? 'ใช่' : 'ยังไม่พร้อม'}</span>
             </div>
             <div className="customer-360-links">
-              <Link to={`/app/onboarding/${c.id}`} className="crm-btn crm-btn--ghost">
-                รับบรีฟ / Onboarding
-              </Link>
+              {canLinkCustomerOnboarding(roles) && (
+                <Link to={`/app/onboarding/${c.id}`} className="crm-btn crm-btn--ghost">
+                  รับบรีฟ
+                </Link>
+              )}
               {canLinkCustomerFinance(roles) && (
                 <Link to="/app/finance" className="crm-btn crm-btn--ghost">
                   การเงิน
@@ -138,10 +189,12 @@ export function Customer360Page() {
                   รายงานแอด
                 </Link>
               )}
-              <Link to="/app/tasks" className="crm-btn crm-btn--ghost">
-                งานภายใน
-              </Link>
-              {canLinkCustomerContent(roles) && (
+              {canShowCustomer360Link(roles, '/app/tasks') && (
+                <Link to="/app/tasks" className="crm-btn crm-btn--ghost">
+                  งานภายใน
+                </Link>
+              )}
+              {canShowCustomer360ContentMetrics(roles) && (
                 <Link to="/app/content" className="crm-btn crm-btn--ghost">
                   คอนเทนต์
                 </Link>
@@ -156,38 +209,48 @@ export function Customer360Page() {
                   Lead ต้นทาง
                 </Link>
               )}
-              <Link to="/app/client" className="crm-btn crm-btn--ghost">
-                รายงานลูกค้า
-              </Link>
+              {canLinkCustomerClient(roles) && (
+                <Link to="/app/client" className="crm-btn crm-btn--ghost">
+                  รายงานลูกค้า
+                </Link>
+              )}
             </div>
           </section>
 
           <section className="card-grid">
-            <article className="card">
-              <h2>การเงิน</h2>
-              <p className="stat">{formatMoney(s.payments_paid_total)}</p>
-              <span className="muted">
-                ชำระแล้ว · {s.payments_count} รายการ · ค้าง {s.payments_pending}
-              </span>
-            </article>
-            <article className="card">
-              <h2>แอด 30 วัน</h2>
-              <p className="stat">{formatMoney(s.ads_spend_30d)}</p>
-              <span className="muted">Spend · {s.campaigns_count} แคมเปญ</span>
-            </article>
-            <article className="card">
-              <h2>งานเปิด</h2>
-              <p className="stat">{s.open_tasks}</p>
-            </article>
-            <article className="card">
-              <h2>คอนเทนต์</h2>
-              <p className="stat">{s.content_in_progress}</p>
-              <span className="muted">กำลังดำเนินการ</span>
-            </article>
-            {s.renewal_status && (
+            {showFinance && metricKeys.includes('finance') && (
+              <article className="card card--accent">
+                <h2>การเงิน</h2>
+                <p className="stat">{formatMoney(s.payments_paid_total)}</p>
+                <span className="muted">
+                  ชำระแล้ว · {s.payments_count} รายการ · ค้าง {s.payments_pending}
+                </span>
+              </article>
+            )}
+            {showAds && metricKeys.includes('ads') && (
+              <article className="card">
+                <h2>แอด 30 วัน</h2>
+                <p className="stat">{formatMoney(s.ads_spend_30d)}</p>
+                <span className="muted">Spend · {s.campaigns_count} แคมเปญ</span>
+              </article>
+            )}
+            {metricKeys.includes('tasks') && (
+              <article className="card">
+                <h2>งานเปิด</h2>
+                <p className="stat">{s.open_tasks}</p>
+              </article>
+            )}
+            {showContent && metricKeys.includes('content') && (
+              <article className="card">
+                <h2>คอนเทนต์</h2>
+                <p className="stat">{s.content_in_progress}</p>
+                <span className="muted">กำลังดำเนินการ</span>
+              </article>
+            )}
+            {metricKeys.includes('renewals') && s.renewal_status && (
               <article className="card">
                 <h2>ต่อสัญญา</h2>
-                <p className="stat" style={{ fontSize: '1rem' }}>
+                <p className="stat customer-360-renewal-stat">
                   {renewalStatusLabel(s.renewal_status as ContractRenewalStatus)}
                 </p>
               </article>

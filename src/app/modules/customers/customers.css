@@ -28,3 +28,20 @@
   font-size: 0.9rem;
   color: var(--npc-text-muted);
 }
+
+.customer-360-meta strong,
+.customer-360-meta .stat {
+  color: var(--npc-text);
+}
+
+.customer-360-renewal-stat {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.customer-status--active,
+.customer-status--pending,
+.customer-status--at_risk,
+.customer-status--ended {
+  font-weight: 600;
+}

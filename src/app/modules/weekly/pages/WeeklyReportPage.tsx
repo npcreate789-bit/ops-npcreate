@@ -86,22 +86,33 @@ export function WeeklyReportPage() {
               className="crm-btn crm-btn--ghost"
               onClick={() => {
                 const r = report!
-                downloadCsv(
-                  `weekly-${r.week_start}`,
-                  ['รายการ', 'ค่า'],
-                  [
+                const rows: (string | number)[][] = []
+                if (showFinance && metricKeys.includes('finance')) {
+                  rows.push(
                     ['รายรับสัปดาห์', r.revenue_paid],
                     ['รายการชำระ', r.payments_paid_count],
+                  )
+                }
+                if (showAds && metricKeys.includes('ads')) {
+                  rows.push(
                     ['Spend แอด', r.ads_spend],
                     ['GMV แอด', r.ads_gmv],
                     ['ROI เฉลี่ย', r.ads_avg_roi ?? ''],
-                    ['งานเสร็จ', r.tasks_done],
-                    ['งานเปิด', r.open_tasks],
-                    ['Lead ใหม่', r.new_leads],
-                    ['คอนเทนต์ส่งมอบ', r.content_delivered],
-                    ['สัญญาใกล้หมด 14 วัน', r.contracts_expiring_14d],
-                  ],
-                )
+                  )
+                }
+                if (metricKeys.includes('tasks')) {
+                  rows.push(['งานเสร็จ', r.tasks_done], ['งานเปิด', r.open_tasks])
+                }
+                if (showLeads && metricKeys.includes('leads')) {
+                  rows.push(['Lead ใหม่', r.new_leads])
+                }
+                if (metricKeys.includes('content')) {
+                  rows.push(['คอนเทนต์ส่งมอบ', r.content_delivered])
+                }
+                if (metricKeys.includes('renewals')) {
+                  rows.push(['สัญญาใกล้หมด 14 วัน', r.contracts_expiring_14d])
+                }
+                downloadCsv(`weekly-${r.week_start}`, ['รายการ', 'ค่า'], rows)
               }}
             >
               ส่งออก CSV
