@@ -14,6 +14,7 @@ import {
   PHASE13_NAV_ITEMS,
   PHASE14_NAV_ITEMS,
   PHASE15_NAV_ITEMS,
+  PHASE16_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { canUseQuickAccess } from '../../shared/auth/access'
@@ -52,6 +53,8 @@ export function HomePage() {
   const phase14Total = PHASE14_NAV_ITEMS.length
   const phase15Ready = PHASE15_NAV_ITEMS.filter((i) => i.ready).length
   const phase15Total = PHASE15_NAV_ITEMS.length
+  const phase16Ready = PHASE16_NAV_ITEMS.filter((i) => i.ready).length
+  const phase16Total = PHASE16_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -275,6 +278,19 @@ export function HomePage() {
         </p>
         <p className="muted">
           ตารางปุ่มลัดรวมศูนย์ + นำทางผลค้นหาด้วยคีย์บอร์ดใน Command palette
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 16</h2>
+        <p>
+          ครบ {phase16Ready}/{phase16Total} โมดูล —{' '}
+          <Link to="/app/layout">การจัดวางหน้าจอ</Link>
+          {' · '}
+          พับแถบเมนูเป็นไอคอน (ปุ่ม‹/› ใต้โลโก้)
+        </p>
+        <p className="muted">
+          เลือกความกว้างแถบเมนู เก็บในเบราว์เซอร์ — แจ้งเตือนยังเห็นจุดแดงเมื่อพับ
         </p>
       </section>
 

@@ -49,4 +49,10 @@ export const KEYBOARD_SHORTCUT_TABLE: KeyboardShortcutRow[] = [
     label: 'ปักหมุด',
     detail: 'ในหน้าหลักหรือใน Command palette เมื่อแสดงเข้าถึงด่วน',
   },
+  {
+    category: 'การจัดวาง',
+    keys: '‹ ›',
+    label: 'พับ/ขยายแถบเมนู',
+    detail: 'ปุ่มมุมแถบเมนู (เก็บค่าเครื่อง) · หรือตั้งที่หน้าการจัดวาง',
+  },
 ]

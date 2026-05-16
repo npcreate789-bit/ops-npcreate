@@ -40,6 +40,7 @@ import { OpsCenterPage } from './modules/ops/pages/OpsCenterPage'
 import { WorkHubPage } from './modules/work-hub/pages/WorkHubPage'
 import { HelpPage } from './modules/help/pages/HelpPage'
 import { KeyboardShortcutsPage } from './modules/keyboard/pages/KeyboardShortcutsPage'
+import { LayoutPreferencesPage } from './modules/layout/pages/LayoutPreferencesPage'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -129,6 +130,10 @@ export function AppRoutes() {
         <Route
           path="keyboard"
           element={<Module path="/app/keyboard" element={<KeyboardShortcutsPage />} />}
+        />
+        <Route
+          path="layout"
+          element={<Module path="/app/layout" element={<LayoutPreferencesPage />} />}
         />
       </Route>
       <Route path="/" element={<Navigate to="/app" replace />} />

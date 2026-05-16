@@ -47,6 +47,8 @@ export interface NavItem {
   phase14?: boolean
   /** Phase 15 modules (Sprint 31+) — Keyboard reference & palette nav */
   phase15?: boolean
+  /** Phase 16 modules (Sprint 32+) — Layout preferences & collapsible sidebar */
+  phase16?: boolean
   ready: boolean
 }
 
@@ -304,6 +306,16 @@ export const NAV_ITEMS: NavItem[] = [
     phase15: true,
     ready: true,
   },
+  {
+    path: '/app/layout',
+    label: 'Layout',
+    labelTh: 'การจัดวาง',
+    icon: '◧',
+    roles: [],
+    phase: 32,
+    phase16: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -319,6 +331,7 @@ export const PHASE11_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase11)
 export const PHASE13_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase13)
 export const PHASE14_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase14)
 export const PHASE15_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase15)
+export const PHASE16_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase16)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

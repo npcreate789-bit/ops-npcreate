@@ -13,6 +13,7 @@ import type { HelpShortcut } from './types'
 
 const HELP_SELF_PATH = '/app/help'
 const KEYBOARD_CENTER_PATH = '/app/keyboard'
+const LAYOUT_PREFS_PATH = '/app/layout'
 
 function isDevUnconfigured(roles: AppRole[], configured: boolean): boolean {
   return !configured && roles.length === 0
@@ -37,6 +38,7 @@ export function helpNavItemsForRoles(roles: AppRole[], configured: boolean) {
       item.path !== '/app' &&
       item.path !== HELP_SELF_PATH &&
       item.path !== KEYBOARD_CENTER_PATH &&
+      item.path !== LAYOUT_PREFS_PATH &&
       item.ready,
   )
 }
@@ -97,6 +99,7 @@ export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
     links.push({ path: '/app/ops', label: 'ศูนย์ Ops', detail: 'เช็กลิสต์ deploy' })
   }
   links.push({ path: '/app/keyboard', label: 'ศูนย์คีย์ลัด', detail: 'ตารางปุ่มลัดทั้งหมด' })
+  links.push({ path: '/app/layout', label: 'การจัดวางหน้าจอ', detail: 'พับแถบเมนูและความกว้าง' })
 
   return links.filter((link) => canOpenHelpNavLink(roles, link.path, configured))
 }

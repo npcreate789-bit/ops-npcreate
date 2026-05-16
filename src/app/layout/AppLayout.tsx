@@ -9,6 +9,8 @@ import { PageHistoryTracker } from '../modules/quick-access/components/PageHisto
 import { Sidebar } from './Sidebar'
 import './AppLayout.css'
 
+import { SidebarLayoutProvider } from './SidebarLayoutContext'
+
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function AppLayout() {
@@ -21,14 +23,16 @@ export function AppLayout() {
   useKeyboardHelp(canViewHelp(roles))
 
   return (
-    <div className="app-shell">
-      {trackHistory && <PageHistoryTracker userId={userId} />}
-      <Sidebar onOpenSearch={paletteEnabled ? openPalette : undefined} />
-      <main className="app-main">
-        <BreadcrumbNav />
-        <Outlet />
-      </main>
-      <CommandPalette open={open} onClose={close} />
-    </div>
+    <SidebarLayoutProvider>
+      <div className="app-shell">
+        {trackHistory && <PageHistoryTracker userId={userId} />}
+        <Sidebar onOpenSearch={paletteEnabled ? openPalette : undefined} />
+        <main className="app-main">
+          <BreadcrumbNav />
+          <Outlet />
+        </main>
+        <CommandPalette open={open} onClose={close} />
+      </div>
+    </SidebarLayoutProvider>
   )
 }
