@@ -24,15 +24,13 @@
 }
 
 .login__logo {
-  display: inline-grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 0.75rem;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--npc-accent), var(--npc-accent-2));
-  color: var(--npc-bg-deep);
-  font-weight: 700;
-  margin-bottom: 0.75rem;
+  object-fit: contain;
+  background: #fff;
 }
 
 .login__brand h1 {

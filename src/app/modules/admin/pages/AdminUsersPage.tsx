@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canManageAdminUsers } from '../../../../shared/auth/access'
-import { canModifyUserRole, canViewStaffPasswords } from '../access'
+import {
+  canManageCeoUserStatus,
+  canModifyUserRole,
+  canViewStaffPasswords,
+} from '../access'
 import { APP_ROLES, ROLE_LABELS, type AppRole } from '../../../../shared/types/roles'
 import { listCustomersForSelect } from '../../finance/api/payments'
 import type { CustomerOption } from '../../finance/types'
@@ -69,10 +73,14 @@ export function AdminUsersPage() {
 
   async function handleToggleActive(user: AdminUserRow) {
     if (!canManage || user.id === profile?.id) return
+    if (!canManageCeoUserStatus(roles, user.roles)) {
+      setError('เฉพาะ CEO เท่านั้นที่เปิด/ปิดบัญชี CEO ได้')
+      return
+    }
     setSavingId(user.id)
     setError(null)
     try {
-      await setUserActive(user.id, !user.is_active)
+      await setUserActive(user.id, !user.is_active, roles, user.roles)
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
@@ -188,6 +196,7 @@ export function AdminUsersPage() {
                 {filtered.map((user) => {
                   const busy = savingId === user.id
                   const isSelf = user.id === profile?.id
+                  const statusLocked = !canManageCeoUserStatus(roles, user.roles)
                   return (
                     <tr key={user.id} className={!user.is_active ? 'is-inactive' : undefined}>
                       <td>
@@ -230,7 +239,7 @@ export function AdminUsersPage() {
                                 className={`admin-role-chip${on ? ' admin-role-chip--on' : ''}${roleLocked ? ' admin-role-chip--locked' : ''}`}
                                 title={
                                   roleLocked
-                                    ? 'เฉพาะ CEO เท่านั้นที่จัดการบทบาท CEO ได้'
+                                    ? 'เฉพาะ CEO เท่านั้นที่จัดการบัญชี CEO ได้'
                                     : undefined
                                 }
                               >
@@ -249,11 +258,18 @@ export function AdminUsersPage() {
                         </div>
                       </td>
                       <td>
-                        <label className="admin-toggle">
+                        <label
+                          className={`admin-toggle${statusLocked ? ' admin-toggle--locked' : ''}`}
+                          title={
+                            statusLocked
+                              ? 'เฉพาะ CEO เท่านั้นที่เปิด/ปิดบัญชี CEO ได้'
+                              : undefined
+                          }
+                        >
                           <input
                             type="checkbox"
                             checked={user.is_active}
-                            disabled={busy || isSelf}
+                            disabled={busy || isSelf || statusLocked}
                             onChange={() => void handleToggleActive(user)}
                           />
                           {user.is_active ? 'ใช้งาน' : 'ปิด'}
@@ -290,7 +306,7 @@ export function AdminUsersPage() {
         )}
 
         <p className="muted admin-hint">
-          แก้บทบาทหรือปิดบัญชีได้ด้านล่าง — บัญชี client ต้องผูกลูกค้า 1 รายเพื่อเข้ารายงานลูกค้า
+          แก้บทบาทหรือปิดบัญชีได้ด้านล่าง — บัญชี CEO จัดการได้เฉพาะ CEO — client ต้องผูกลูกค้า 1 ราย
         </p>
       </section>
     </div>

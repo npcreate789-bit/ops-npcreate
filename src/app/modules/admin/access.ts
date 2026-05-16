@@ -18,10 +18,18 @@ export function canAssignCeoRole(actorRoles: AppRole[]): boolean {
   return actorRoles.includes('ceo')
 }
 
-/** แก้บทบาทของผู้ใช้ที่มีบทบาท CEO — เฉพาะ CEO */
+/** จัดการผู้ใช้ที่มีบทบาท CEO (บทบาท / เปิด-ปิดบัญชี) — เฉพาะ CEO */
 export function canEditCeoUserRoles(actorRoles: AppRole[], targetUserRoles: AppRole[]): boolean {
   if (!targetUserRoles.includes('ceo')) return true
   return actorRoles.includes('ceo')
+}
+
+/** เปิด/ปิดบัญชีผู้ใช้ CEO */
+export function canManageCeoUserStatus(
+  actorRoles: AppRole[],
+  targetUserRoles: AppRole[],
+): boolean {
+  return canEditCeoUserRoles(actorRoles, targetUserRoles)
 }
 
 /** เปลี่ยนบทบาทใดๆ ของผู้ใช้เป้าหมาย */

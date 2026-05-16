@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
+import { COMPANY_ICON_SRC } from '../../shared/company/companyProfile'
 import { normalizeLoginId } from '../../shared/auth/loginId'
 import '../../shared/auth/auth.css'
 import './LoginPage.css'
@@ -41,7 +42,13 @@ export function LoginPage() {
     <div className="login">
       <form className="login__card" onSubmit={handleSubmit}>
         <div className="login__brand">
-          <span className="login__logo">NP</span>
+          <img
+            className="login__logo"
+            src={COMPANY_ICON_SRC}
+            alt="NP Create"
+            width={64}
+            height={64}
+          />
           <h1>NP Create OS</h1>
           <p>เข้าสู่ระบบบริหารงานกลาง</p>
         </div>

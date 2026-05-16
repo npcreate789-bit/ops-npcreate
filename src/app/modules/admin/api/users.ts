@@ -1,5 +1,9 @@
 import { logAudit } from '../../../../shared/audit/logAudit'
-import { canAssignCeoRole, canEditCeoUserRoles } from '../access'
+import {
+  canAssignCeoRole,
+  canEditCeoUserRoles,
+  canManageCeoUserStatus,
+} from '../access'
 import type { AppRole } from '../../../../shared/types/roles'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { setClientCustomerAccess } from '../../client/api/clientReport'
@@ -63,11 +67,37 @@ export async function listAdminUsers(): Promise<AdminUserRow[]> {
 export { getClientCustomerAccess } from '../../client/api/clientReport'
 export { setClientCustomerAccess }
 
-export async function setUserActive(userId: string, isActive: boolean): Promise<void> {
+function assertCanSetUserActive(
+  actorRoles: AppRole[],
+  targetRoles: AppRole[],
+): void {
+  if (!canManageCeoUserStatus(actorRoles, targetRoles)) {
+    throw new Error('เฉพาะ CEO เท่านั้นที่เปิด/ปิดบัญชี CEO ได้')
+  }
+}
+
+export async function setUserActive(
+  userId: string,
+  isActive: boolean,
+  actorRoles: AppRole[] = [],
+  targetRoles?: AppRole[],
+): Promise<void> {
   if (!isSupabaseConfigured || !supabase) {
+    if (targetRoles) assertCanSetUserActive(actorRoles, targetRoles)
     await mockAdminApi.setUserActive(userId, isActive)
     return
   }
+
+  let roles = targetRoles
+  if (!roles) {
+    const { data, error: readErr } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+    if (readErr) throw readErr
+    roles = (data ?? []).map((r) => r.role as AppRole)
+  }
+  assertCanSetUserActive(actorRoles, roles)
 
   const { error } = await supabase
     .from('profiles')

@@ -76,6 +76,11 @@
   cursor: not-allowed;
 }
 
+.admin-toggle--locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .admin-role-chip--on {
   border-color: rgba(110, 231, 255, 0.45);
   background: rgba(110, 231, 255, 0.1);

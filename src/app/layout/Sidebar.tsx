@@ -4,6 +4,7 @@ import { canUseGlobalSearch } from '../../shared/auth/access'
 import { ROLE_LABELS } from '../../shared/types/roles'
 import { effectiveRolesForNav, sidebarNavItemsForRoles } from '../config/navigation'
 import { useNotificationUnread } from '../modules/notifications/useNotificationUnread'
+import { COMPANY_ICON_SRC } from '../../shared/company/companyProfile'
 import { useSidebarLayout } from './SidebarLayoutContext'
 import './Sidebar.css'
 
@@ -26,8 +27,8 @@ export function Sidebar({ onOpenSearch }: SidebarProps) {
     <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
       <div className="sidebar__brand">
         <div className="sidebar__brand-main">
-          <span className="sidebar__logo" aria-hidden>
-            NP
+          <span className="sidebar__logo">
+            <img src={COMPANY_ICON_SRC} alt="" width={40} height={40} />
           </span>
           {!collapsed && (
             <div className="sidebar__brand-text">
