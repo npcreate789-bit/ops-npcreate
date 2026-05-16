@@ -51,6 +51,8 @@ export interface NavItem {
   phase16?: boolean
   /** Phase 17 modules (Sprint 33+) — Getting started checklist */
   phase17?: boolean
+  /** Phase 18 modules (Sprint 34+) — About & build info */
+  phase18?: boolean
   ready: boolean
 }
 
@@ -328,6 +330,16 @@ export const NAV_ITEMS: NavItem[] = [
     phase16: true,
     ready: true,
   },
+  {
+    path: '/app/about',
+    label: 'About',
+    labelTh: 'เกี่ยวกับ',
+    icon: 'ℹ',
+    roles: [],
+    phase: 34,
+    phase18: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -345,6 +357,7 @@ export const PHASE14_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase14)
 export const PHASE15_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase15)
 export const PHASE16_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase16)
 export const PHASE17_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase17)
+export const PHASE18_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase18)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

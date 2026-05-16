@@ -61,4 +61,10 @@ export const KEYBOARD_SHORTCUT_TABLE: KeyboardShortcutRow[] = [
     label: 'เช็กลิสต์เริ่มใช้งาน',
     detail: 'หน้าเริ่มใช้งาน — รายการตามโมดูลที่เข้าถึงได้',
   },
+  {
+    category: 'ระบบ',
+    keys: '—',
+    label: 'เกี่ยวกับ',
+    detail: 'เวอร์ชันแอป โหมด build และสถานะ Supabase',
+  },
 ]

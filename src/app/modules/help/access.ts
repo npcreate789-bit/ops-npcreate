@@ -15,6 +15,7 @@ const HELP_SELF_PATH = '/app/help'
 const KEYBOARD_CENTER_PATH = '/app/keyboard'
 const LAYOUT_PREFS_PATH = '/app/layout'
 const START_GUIDE_PATH = '/app/start'
+const ABOUT_PATH = '/app/about'
 
 function isDevUnconfigured(roles: AppRole[], configured: boolean): boolean {
   return !configured && roles.length === 0
@@ -41,6 +42,7 @@ export function helpNavItemsForRoles(roles: AppRole[], configured: boolean) {
       item.path !== KEYBOARD_CENTER_PATH &&
       item.path !== LAYOUT_PREFS_PATH &&
       item.path !== START_GUIDE_PATH &&
+      item.path !== ABOUT_PATH &&
       item.ready,
   )
 }
@@ -104,6 +106,7 @@ export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
   }
   links.push({ path: '/app/keyboard', label: 'ศูนย์คีย์ลัด', detail: 'ตารางปุ่มลัดทั้งหมด' })
   links.push({ path: '/app/layout', label: 'การจัดวางหน้าจอ', detail: 'พับแถบเมนูและความกว้าง' })
+  links.push({ path: '/app/about', label: 'เกี่ยวกับระบบ', detail: 'เวอร์ชันและสภาพแวดล้อม' })
 
   return links.filter((link) => canOpenHelpNavLink(roles, link.path, configured))
 }

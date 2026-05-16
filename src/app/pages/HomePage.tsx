@@ -16,6 +16,7 @@ import {
   PHASE15_NAV_ITEMS,
   PHASE16_NAV_ITEMS,
   PHASE17_NAV_ITEMS,
+  PHASE18_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { canUseQuickAccess } from '../../shared/auth/access'
@@ -58,6 +59,8 @@ export function HomePage() {
   const phase16Total = PHASE16_NAV_ITEMS.length
   const phase17Ready = PHASE17_NAV_ITEMS.filter((i) => i.ready).length
   const phase17Total = PHASE17_NAV_ITEMS.length
+  const phase18Ready = PHASE18_NAV_ITEMS.filter((i) => i.ready).length
+  const phase18Total = PHASE18_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -307,6 +310,19 @@ export function HomePage() {
         </p>
         <p className="muted">
           ลิงก์ไปโมดูลสำคัญ พร้อมทำเครื่องหมายเมื่อทำแล้ว — รีเซ็ตได้ตลอด
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 18</h2>
+        <p>
+          ครบ {phase18Ready}/{phase18Total} โมดูล —{' '}
+          <Link to="/app/about">เกี่ยวกับระบบ</Link>
+          {' · '}
+          เวอร์ชันแอปและสภาพแวดล้อม
+        </p>
+        <p className="muted">
+          ดึงเวอร์ชันจาก package.json แสดงโหมดรันไทม์และสถานะ Supabase
         </p>
       </section>
 

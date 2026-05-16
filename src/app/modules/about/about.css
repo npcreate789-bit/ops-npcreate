@@ -1,0 +1,41 @@
+.about-spec {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.about-spec > div {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 7.5rem) 1fr;
+  gap: 0.35rem 1rem;
+  align-items: start;
+}
+
+.about-spec dt {
+  margin: 0;
+  padding: 0;
+  color: var(--npc-text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.about-spec dd {
+  margin: 0;
+}
+
+.about-code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.88rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(110, 231, 255, 0.08);
+  border: 1px solid var(--npc-glass-border);
+  color: var(--npc-accent);
+}
+
+.about-blurb {
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
