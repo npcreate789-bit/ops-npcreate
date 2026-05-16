@@ -180,7 +180,7 @@ export function DashboardPage() {
           {showActivity && <Link to="/app/activity">บันทึกกิจกรรม</Link>}
           {showSearch && <Link to="/app/search">ค้นหารวม</Link>}
           <Link to="/app/reports">รายงานขั้นสูง</Link>
-          <Link to="/app/timeline">ไทม์ไลน์งาน</Link>
+          <Link to="/app/work">งานของฉัน</Link>
         </div>
       </section>
     </div>

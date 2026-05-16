@@ -5,6 +5,7 @@ import { RequireModuleAccess } from '../shared/auth/RequireModuleAccess'
 import { AppLayout } from './layout/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { SetPasswordPage } from './pages/SetPasswordPage'
 import { CrmLeadsPage } from './modules/crm/pages/CrmLeadsPage'
 import { LeadEditorPage } from './modules/crm/pages/LeadEditorPage'
 import { SalesPage } from './modules/sales/pages/SalesPage'
@@ -29,7 +30,6 @@ import { CreatorEditorPage } from './modules/creators/pages/CreatorEditorPage'
 import { RenewalsPage } from './modules/renewals/pages/RenewalsPage'
 import { ReportsPage } from './modules/reports/pages/ReportsPage'
 import { AssistantPage } from './modules/assistant/pages/AssistantPage'
-import { TimelinePage } from './modules/timeline/pages/TimelinePage'
 import { SettingsPage } from './modules/settings/pages/SettingsPage'
 import { ActivityLogPage } from './modules/activity/pages/ActivityLogPage'
 import { WeeklyReportPage } from './modules/weekly/pages/WeeklyReportPage'
@@ -57,6 +57,14 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/set-password"
+        element={
+          <RequireAuth allowMustChangePassword>
+            <SetPasswordPage />
+          </RequireAuth>
+        }
+      />
       <Route
         path="/app"
         element={
@@ -115,7 +123,7 @@ export function AppRoutes() {
         <Route path="renewals" element={<Module path="/app/renewals" element={<RenewalsPage />} />} />
         <Route path="reports" element={<Module path="/app/reports" element={<ReportsPage />} />} />
         <Route path="assistant" element={<Module path="/app/assistant" element={<AssistantPage />} />} />
-        <Route path="timeline" element={<Module path="/app/timeline" element={<TimelinePage />} />} />
+        <Route path="timeline" element={<Navigate to="/app/work" replace />} />
         <Route path="settings" element={<Module path="/app/settings" element={<SettingsPage />} />} />
         <Route path="activity" element={<Module path="/app/activity" element={<ActivityLogPage />} />} />
         <Route path="weekly" element={<Module path="/app/weekly" element={<WeeklyReportPage />} />} />

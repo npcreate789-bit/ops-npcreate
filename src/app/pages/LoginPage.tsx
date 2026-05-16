@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
+import { normalizeLoginId } from '../../shared/auth/loginId'
 import '../../shared/auth/auth.css'
 import './LoginPage.css'
 
@@ -10,7 +11,7 @@ export function LoginPage() {
   const location = useLocation()
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/app'
 
-  const [email, setEmail] = useState('')
+  const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -27,7 +28,7 @@ export function LoginPage() {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
-    const result = await signIn(email, password)
+    const result = await signIn(loginId, password)
     setSubmitting(false)
     if (result.error) {
       setError(result.error)
@@ -46,13 +47,19 @@ export function LoginPage() {
         </div>
 
         <label>
-          อีเมล
+          รหัสผู้ใช้
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            value={loginId}
+            onChange={(e) => setLoginId(normalizeLoginId(e.target.value))}
             required
-            autoComplete="email"
+            autoComplete="username"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="เช่น sales01"
+            minLength={3}
+            maxLength={32}
           />
         </label>
         <label>
@@ -69,8 +76,12 @@ export function LoginPage() {
         {error && <p className="login__error">{error}</p>}
 
         <button type="submit" disabled={submitting}>
-          {submitting ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+          {submitting ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ'}
         </button>
+
+        <p className="login__hint muted">
+          ใช้รหัสผู้ใช้ที่ผู้ดูแลระบบแจ้ง — ไม่ใช่อีเมล
+        </p>
       </form>
     </div>
   )

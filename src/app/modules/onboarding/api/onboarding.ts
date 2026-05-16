@@ -1,3 +1,4 @@
+import { logAudit } from '../../../../shared/audit/logAudit'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import {
   calcProgress,
@@ -275,12 +276,14 @@ export async function saveOnboardingForm(
       .select()
       .single()
     if (error) throw new Error(error.message)
+    await logAudit('onboarding.form_save', 'customer', customerId, { mode: 'update' })
     return data as OnboardingForm
   }
 
   const { data, error } = await supabase.from('onboarding_forms').insert(payload).select().single()
   if (error) throw new Error(error.message)
   await supabase.rpc('ensure_onboarding_checklist', { p_customer_id: customerId })
+  await logAudit('onboarding.form_save', 'customer', customerId, { mode: 'create' })
   return data as OnboardingForm
 }
 
@@ -322,6 +325,10 @@ export async function updateChecklistItem(
 
   if (error) throw new Error(error.message)
   await supabase.rpc('refresh_customer_ready_for_ads', { p_customer_id: customerId })
+  await logAudit('onboarding.checklist_update', 'customer', customerId, {
+    item_key: itemKey,
+    status,
+  })
 }
 
 export async function assignOwners(

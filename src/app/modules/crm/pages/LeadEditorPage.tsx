@@ -9,14 +9,9 @@ import {
   isCrmReadOnly,
 } from '../../../../shared/auth/access'
 import { isSupabaseConfigured } from '../../../../shared/supabase/client'
-import {
-  createLead,
-  deleteLead,
-  getLead,
-  listLeadFiles,
-  updateLead,
-  uploadLeadFile,
-} from '../api/leads'
+import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
+import { canViewLeadAttachments } from '../access'
+import { LeadAttachmentsSection } from '../components/LeadAttachmentsSection'
 import {
   LeadForm,
   formValuesToPayload,
@@ -46,9 +41,6 @@ export function LeadEditorPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [initial, setInitial] = useState<Awaited<ReturnType<typeof getLead>>>(null)
-  const [files, setFiles] = useState<{ name: string; path: string }[]>([])
-  const [uploading, setUploading] = useState(false)
-
   const canEdit =
     (isNew ? canCreate : canEditCrmLead(roles, initial?.owner_id, userId)) ||
     !configured
@@ -68,11 +60,7 @@ export function LeadEditorPage() {
             return
           }
           setInitial(lead)
-          return listLeadFiles(lead.id, lead.owner_id)
         }
-      })
-      .then((fileList) => {
-        if (!cancelled && fileList) setFiles(fileList)
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : 'โหลดไม่สำเร็จ')
@@ -115,22 +103,8 @@ export function LeadEditorPage() {
     }
   }
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || !id || isNew || !initial) return
-    setUploading(true)
-    setError(null)
-    try {
-      await uploadLeadFile(id, initial.owner_id, file)
-      const next = await listLeadFiles(id, initial.owner_id)
-      setFiles(next)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'อัปโหลดไม่สำเร็จ')
-    } finally {
-      setUploading(false)
-      e.target.value = ''
-    }
-  }
+  const canViewAttachments =
+    canViewLeadAttachments(roles, initial?.owner_id, userId) || !configured
 
   if (loading) {
     return (
@@ -198,19 +172,12 @@ export function LeadEditorPage() {
         />
       </section>
 
-      {!isNew && isSupabaseConfigured && canEdit && (
-        <section className="card card--wide">
-          <h2 className="crm-section-title">ไฟล์แนบ</h2>
-          <input type="file" accept="image/*,.pdf" onChange={handleFileChange} disabled={uploading} />
-          {uploading && <p className="muted">กำลังอัปโหลด...</p>}
-          {files.length > 0 && (
-            <ul className="crm-file-list">
-              {files.map((f) => (
-                <li key={f.path}>{f.name}</li>
-              ))}
-            </ul>
-          )}
-        </section>
+      {!isNew && id && initial && isSupabaseConfigured && canViewAttachments && (
+        <LeadAttachmentsSection
+          leadId={id}
+          ownerId={initial.owner_id}
+          canUpload={canEdit}
+        />
       )}
 
       {!isNew && canDelete && (

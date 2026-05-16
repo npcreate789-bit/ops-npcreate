@@ -1,21 +1,25 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { ROLE_LABELS } from '../../../../shared/types/roles'
+import { useScrollToHash } from '../../../hooks/useScrollToHash'
+import { StartChecklistSection } from '../../start/components/StartChecklistSection'
+import { KeyboardShortcutsSection } from '../../keyboard/components/KeyboardShortcutsSection'
 import {
   helpFlowStepsForRoles,
   helpNavItemsForRoles,
-  helpQuickLinksForRoles,
   helpShortcutsForRoles,
 } from '../access'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
+import '../../start/start.css'
+import '../../keyboard/keyboard.css'
 import '../help.css'
 
 export function HelpPage() {
+  useScrollToHash()
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const shortcuts = helpShortcutsForRoles(roles, configured)
-  const quickLinks = helpQuickLinksForRoles(roles, configured)
   const modules = helpNavItemsForRoles(roles, configured)
   const flowSteps = helpFlowStepsForRoles(roles, configured)
   const isClientOnly = configured && roles.length > 0 && roles.every((r) => r === 'client')
@@ -25,7 +29,7 @@ export function HelpPage() {
       <header className="page__header crm-page__header phase2-page__header">
         <div>
           <h1>ช่วยเหลือ</h1>
-          <p className="muted">ปุ่มลัด ลิงก์ด่วน และเมนูที่เข้าถึงได้ตามบทบาทของคุณ</p>
+          <p className="muted">เช็กลิสต์เริ่มต้น ปุ่มลัด Flow งาน และเมนูตามบทบาท</p>
         </div>
         <Link to="/app" className="crm-btn crm-btn--ghost">
           หน้าหลัก
@@ -39,6 +43,14 @@ export function HelpPage() {
       {configured && roles.length === 0 && (
         <p className="crm-banner crm-banner--warn">กำลังโหลดบทบาท...</p>
       )}
+
+      <section id="start" className="card card--wide help-anchor">
+        <h2>เริ่มใช้งาน</h2>
+        <p className="muted help-section-intro">
+          เช็กลิสต์แรกตามบทบาท — เก็บความคืบหน้าในเบราว์เซอร์นี้
+        </p>
+        <StartChecklistSection />
+      </section>
 
       <section className="card card--wide">
         <h2>ปุ่มลัด</h2>
@@ -59,26 +71,25 @@ export function HelpPage() {
         )}
       </section>
 
-      {quickLinks.length > 0 && (
-        <section className="card card--wide">
-          <h2>ลิงก์ด่วน</h2>
-          <ul className="help-links">
-            {quickLinks.map((link) => (
-              <li key={link.path}>
-                <Link to={link.path} className="help-links__item">
-                  <strong>{link.label}</strong>
-                  <span className="muted">{link.detail}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section id="keyboard" className="card card--wide help-anchor">
+        <h2>ตารางคีย์ลัด</h2>
+        <p className="muted help-section-intro">รายละเอียดปุ่มลัดทั้งหมดในระบบ</p>
+        <KeyboardShortcutsSection />
+      </section>
 
       <section className="card card--wide">
-        <h2>เมนูที่เข้าถึงได้</h2>
+        <h2>{isClientOnly ? 'การใช้งานสำหรับลูกค้า' : 'Flow งานหลัก'}</h2>
+        <ol className="flow-list">
+          {flowSteps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="card card--wide">
+        <h2>เมนูงาน (ตามบทบาท)</h2>
         <p className="muted help-modules__intro">
-          {modules.length} โมดูล — ตามบทบาท
+          {modules.length} โมดูล
           {profile?.roles.length
             ? ` (${profile.roles.map((r) => ROLE_LABELS[r]).join(', ')})`
             : ''}
@@ -102,15 +113,12 @@ export function HelpPage() {
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="card card--wide">
-        <h2>{isClientOnly ? 'การใช้งานสำหรับลูกค้า' : 'Flow งานหลัก'}</h2>
-        <ol className="flow-list">
-          {flowSteps.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
+        <p className="muted" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
+          ค้นหารวมใช้ <kbd>⌘K</kbd> · แจ้งเตือนจัดการจาก{' '}
+          <Link to="/app/notifications">หน้าแจ้งเตือน</Link>
+          {' · '}
+          <Link to="/app/status">สถานะระบบ</Link>
+        </p>
       </section>
     </div>
   )

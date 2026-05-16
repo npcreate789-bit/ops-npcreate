@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { effectiveRolesForNav, navItemsForRoles } from '../../../config/navigation'
+import { useScrollToHash } from '../../../hooks/useScrollToHash'
+import { effectiveRolesForNav, sidebarNavItemsForRoles } from '../../../config/navigation'
 import { canViewOpsCenter } from '../../../../shared/auth/access'
+import { AboutInfoSection } from '../../about/components/AboutInfoSection'
 import { runHealthChecks, type HealthCheckResult, type HealthStatus } from '../api/health'
 import '../../../modules/crm/crm.css'
 import '../../../modules/phase2/phase2.css'
+import '../../about/about.css'
 import '../status.css'
 
 const STATUS_LABEL: Record<HealthStatus, string> = {
@@ -71,6 +74,7 @@ function authChecks(
 }
 
 export function StatusPage() {
+  useScrollToHash()
   const { configured, loading, session, profile, profileLoadError } = useAuth()
   const roles = profile?.roles ?? []
   const navRoles = effectiveRolesForNav(roles, configured)
@@ -79,7 +83,7 @@ export function StatusPage() {
   const [lastRun, setLastRun] = useState<Date | null>(null)
   const [checkError, setCheckError] = useState<string | null>(null)
 
-  const moduleCount = navItemsForRoles(navRoles).filter((i) => i.path !== '/app').length
+  const moduleCount = sidebarNavItemsForRoles(navRoles).filter((i) => i.path !== '/app').length
 
   const runChecks = useCallback(async () => {
     setChecking(true)
@@ -115,12 +119,17 @@ export function StatusPage() {
       <header className="page__header crm-page__header phase2-page__header">
         <div>
           <h1>สถานะระบบ</h1>
-          <p className="muted">ตรวจการเชื่อมต่อ backend และการเข้าสู่ระบบ</p>
+          <p className="muted">เวอร์ชันแอป การเชื่อมต่อ backend และการเข้าสู่ระบบ</p>
         </div>
-        <Link to="/app/about" className="crm-btn crm-btn--ghost">
-          เกี่ยวกับ
+        <Link to="/app/help" className="crm-btn crm-btn--ghost">
+          ช่วยเหลือ
         </Link>
       </header>
+
+      <section id="about" className="card card--wide">
+        <h2>เกี่ยวกับแอป</h2>
+        <AboutInfoSection />
+      </section>
 
       <section className="card card--wide">
         <div className="status-toolbar">
@@ -137,7 +146,7 @@ export function StatusPage() {
               ? `ตรวจล่าสุด ${lastRun.toLocaleTimeString('th-TH')}`
               : 'ยังไม่ได้ตรวจ'}
             {' · '}
-            เมนูที่เข้าถึงได้ {moduleCount} รายการ
+            เมนูงาน {moduleCount} รายการ
             {hasError ? ' · พบข้อผิดพลาด' : hasWarn ? ' · มีคำเตือน' : allChecks.length ? ' · โดยรวมปกติ' : ''}
           </p>
         </div>
@@ -168,7 +177,7 @@ export function StatusPage() {
         <ul className="flow-list">
           <li>หากฐานข้อมูลผิดพลาด ลองรีเฟรชหรือตรวจ RLS / migration บน Supabase</li>
           <li>
-            ดูเวอร์ชันแอปที่ <Link to="/app/about">เกี่ยวกับระบบ</Link>
+            เช็กลิสต์เริ่มต้นอยู่ที่ <Link to="/app/help#start">ช่วยเหลือ → เริ่มใช้งาน</Link>
           </li>
           {canViewOpsCenter(navRoles) && (
             <li>

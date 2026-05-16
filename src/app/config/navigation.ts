@@ -57,6 +57,8 @@ export interface NavItem {
   /** Phase 19 modules (Sprint 35+) — System status & health checks */
   phase19?: boolean
   ready: boolean
+  /** false = ซ่อนจากแถบเมนู (รวมหน้าอื่นหรือ ⌘K แทน) */
+  sidebar?: boolean
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -78,6 +80,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 33,
     phase17: true,
     ready: true,
+    sidebar: false,
   },
   {
     path: '/app/crm',
@@ -181,6 +184,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 12,
     phase3: true,
     ready: true,
+    sidebar: false,
   },
   {
     path: '/app/creators',
@@ -231,6 +235,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 18,
     phase6: true,
     ready: true,
+    sidebar: false,
   },
   {
     path: '/app/settings',
@@ -247,7 +252,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Activity',
     labelTh: 'บันทึกกิจกรรม',
     icon: '◷',
-    roles: [...ACTIVITY_LOG_VIEW_ROLES, 'ceo', 'dev'],
+    roles: [...ACTIVITY_LOG_VIEW_ROLES, 'dev'],
     phase: 20,
     phase7: true,
     ready: true,
@@ -261,6 +266,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 21,
     phase7: true,
     ready: true,
+    sidebar: false,
   },
   {
     path: '/app/customers',
@@ -282,6 +288,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 23,
     phase9: true,
     ready: true,
+    sidebar: false,
   },
   {
     path: '/app/ops',
@@ -322,6 +329,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 31,
     phase15: true,
     ready: true,
+    sidebar: false,
   },
   {
     path: '/app/layout',
@@ -332,6 +340,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 32,
     phase16: true,
     ready: true,
+    sidebar: false,
   },
   {
     path: '/app/about',
@@ -342,6 +351,7 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 34,
     phase18: true,
     ready: true,
+    sidebar: false,
   },
   {
     path: '/app/status',
@@ -373,6 +383,46 @@ export const PHASE17_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase17)
 export const PHASE18_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase18)
 export const PHASE19_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase19)
 
+/**
+ * ลำดับแสดงในแถบเมนู (เฉพาะรายการที่ sidebar !== false)
+ * งานประจำวัน → ขาย → ดำเนินงาน → ลูกค้า/รายงาน → ภาพรวม → ระบบ
+ */
+export const NAV_DISPLAY_ORDER: readonly string[] = [
+  '/app',
+  '/app/work',
+  '/app/crm',
+  '/app/sales',
+  '/app/finance',
+  '/app/onboarding',
+  '/app/customers',
+  '/app/ads',
+  '/app/content',
+  '/app/tasks',
+  '/app/creators',
+  '/app/renewals',
+  '/app/client',
+  '/app/reports',
+  '/app/dashboard',
+  '/app/activity',
+  '/app/assistant',
+  '/app/admin',
+  '/app/ops',
+  '/app/settings',
+  '/app/help',
+  '/app/status',
+] as const
+
+const NAV_ORDER_INDEX = new Map<string, number>(
+  NAV_DISPLAY_ORDER.map((path, index) => [path, index]),
+)
+
+function compareNavDisplayOrder(a: NavItem, b: NavItem): number {
+  const ai = NAV_ORDER_INDEX.get(a.path) ?? 999
+  const bi = NAV_ORDER_INDEX.get(b.path) ?? 999
+  if (ai !== bi) return ai - bi
+  return a.labelTh.localeCompare(b.labelTh, 'th')
+}
+
 /** เมนูที่ full-access ยังต้องเช็ก roles ตามรายการ (ไม่ให้ admin เห็น Ops โดยไม่ตั้งใจ) */
 const NAV_ROLE_STRICT_PATHS = new Set<string>(['/app/ops'])
 
@@ -392,7 +442,12 @@ export function canAccessNavItem(roles: AppRole[], item: NavItem): boolean {
 }
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
-  return NAV_ITEMS.filter((item) => canAccessNavItem(roles, item))
+  return NAV_ITEMS.filter((item) => canAccessNavItem(roles, item)).sort(compareNavDisplayOrder)
+}
+
+/** เมนูในแถบข้าง — ไม่รวมโมดูลที่ยุบเข้าหน้าอื่น */
+export function sidebarNavItemsForRoles(roles: AppRole[]): NavItem[] {
+  return navItemsForRoles(roles).filter((item) => item.sidebar !== false)
 }
 
 /** ตรวจว่า role ปัจจุบันเข้า path โมดูลได้ (รวม sub-routes) */

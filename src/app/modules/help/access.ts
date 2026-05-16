@@ -1,22 +1,16 @@
 export { canViewHelp } from '../../../shared/auth/access'
 
-import { canAccessNavPath, effectiveRolesForNav, navItemsForRoles } from '../../config/navigation'
+import { canAccessNavPath, effectiveRolesForNav, sidebarNavItemsForRoles } from '../../config/navigation'
 import {
   canUseGlobalSearch,
   canUseQuickAccess,
   canViewOpsCenter,
-  canViewTimeline,
   canViewWorkHub,
 } from '../../../shared/auth/access'
 import type { AppRole } from '../../../shared/types/roles'
 import type { HelpShortcut } from './types'
 
 const HELP_SELF_PATH = '/app/help'
-const KEYBOARD_CENTER_PATH = '/app/keyboard'
-const LAYOUT_PREFS_PATH = '/app/layout'
-const START_GUIDE_PATH = '/app/start'
-const ABOUT_PATH = '/app/about'
-const STATUS_PATH = '/app/status'
 
 function isDevUnconfigured(roles: AppRole[], configured: boolean): boolean {
   return !configured && effectiveRolesForNav(roles, configured).length > 0 && roles.length === 0
@@ -32,19 +26,12 @@ export function canOpenHelpNavLink(
   return canAccessNavPath(roles, path)
 }
 
+/** เมนูงานจริงในแถบข้าง (ไม่รวมหน้าที่ยุบแล้ว) */
 export function helpNavItemsForRoles(roles: AppRole[], configured: boolean) {
   const effectiveRoles = effectiveRolesForNav(roles, configured)
 
-  return navItemsForRoles(effectiveRoles).filter(
-    (item) =>
-      item.path !== '/app' &&
-      item.path !== HELP_SELF_PATH &&
-      item.path !== KEYBOARD_CENTER_PATH &&
-      item.path !== LAYOUT_PREFS_PATH &&
-      item.path !== START_GUIDE_PATH &&
-      item.path !== ABOUT_PATH &&
-      item.path !== STATUS_PATH &&
-      item.ready,
+  return sidebarNavItemsForRoles(effectiveRoles).filter(
+    (item) => item.path !== '/app' && item.path !== HELP_SELF_PATH && item.ready,
   )
 }
 
@@ -89,26 +76,18 @@ export function helpShortcutsForRoles(roles: AppRole[], configured: boolean): He
 
 export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
   const devMode = isDevUnconfigured(roles, configured)
-  const links: { path: string; label: string; detail: string }[] = [
-    { path: '/app/start', label: 'เริ่มใช้งาน', detail: 'เช็กลิสต์แรกตามบทบาท' },
-  ]
+  const links: { path: string; label: string; detail: string }[] = []
 
   if (canViewWorkHub(roles) || devMode) {
     links.push({ path: '/app/work', label: 'งานของฉัน', detail: 'งานค้างและแจ้งเตือน' })
   }
-  if (canViewTimeline(roles) || devMode) {
-    links.push({ path: '/app/timeline', label: 'ไทม์ไลน์งาน', detail: 'ปฏิทินงานรวม' })
-  }
   if (canUseGlobalSearch(roles) || devMode) {
-    links.push({ path: '/app/search', label: 'ค้นหารวม', detail: 'ค้นหาทุกโมดูล' })
+    links.push({ path: '/app/search', label: 'ค้นหารวม (หน้าเต็ม)', detail: 'หรือกด ⌘K จากทุกหน้า' })
   }
   if (canViewOpsCenter(roles) || devMode) {
     links.push({ path: '/app/ops', label: 'ศูนย์ Ops', detail: 'เช็กลิสต์ deploy' })
   }
-  links.push({ path: '/app/keyboard', label: 'ศูนย์คีย์ลัด', detail: 'ตารางปุ่มลัดทั้งหมด' })
-  links.push({ path: '/app/layout', label: 'การจัดวางหน้าจอ', detail: 'พับแถบเมนูและความกว้าง' })
-  links.push({ path: '/app/about', label: 'เกี่ยวกับระบบ', detail: 'เวอร์ชันและสภาพแวดล้อม' })
-  links.push({ path: '/app/status', label: 'สถานะระบบ', detail: 'ตรวจ Supabase และการเข้าสู่ระบบ' })
+  links.push({ path: '/app/status', label: 'สถานะระบบ', detail: 'ตรวจ Supabase · เวอร์ชันแอป' })
 
   return links.filter((link) => canOpenHelpNavLink(roles, link.path, configured))
 }

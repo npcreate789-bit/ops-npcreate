@@ -16,6 +16,7 @@ import {
 } from '../api/quotations'
 import type { QuotationInput, Package, Quotation } from '../types'
 import { QuotationForm } from '../components/QuotationForm'
+import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../sales.css'
@@ -126,7 +127,7 @@ export function QuotationEditorPage() {
 
   return (
     <div className="page sales-page">
-      <header className="page__header">
+      <header className="page__header no-print">
         <Link to="/app/sales" className="crm-back">
           ← กลับ Sales
         </Link>
@@ -135,17 +136,17 @@ export function QuotationEditorPage() {
         </h1>
       </header>
 
-      {error && <p className="crm-error">{error}</p>}
+      {error && <p className="crm-error no-print">{error}</p>}
 
       {readOnly && (
-        <p className="crm-banner crm-banner--warn phase2-scope-banner">
+        <p className="crm-banner crm-banner--warn phase2-scope-banner no-print">
           โหมดดูอย่างเดียว — คุณไม่มีสิทธิ์แก้ไขใบเสนอราคานี้
         </p>
       )}
 
       {initial?.customer_id &&
         ['sent', 'awaiting_payment', 'paid'].includes(initial.status) && (
-          <p className="crm-banner">
+          <p className="crm-banner no-print">
             {initial.status === 'paid' ? 'ปิดการขายแล้ว' : 'พร้อมบันทึกการชำระเงิน'} —{' '}
             <Link
               to={`/app/finance/payments/new?customerId=${initial.customer_id}&quotationId=${initial.id}`}
@@ -157,7 +158,7 @@ export function QuotationEditorPage() {
           </p>
         )}
 
-      <section className="card card--wide">
+      <section className="card card--wide no-print">
         <QuotationForm
           initial={initial}
           leadId={leadIdParam ?? initial?.lead_id ?? undefined}
@@ -172,46 +173,19 @@ export function QuotationEditorPage() {
       </section>
 
       {!isNew && initial && (
-        <section className="card card--wide">
-          <button type="button" className="crm-btn crm-btn--ghost" onClick={handlePrint}>
-            พิมพ์ / PDF
-          </button>
-          <div className="qt-print">
-            <h2>ใบเสนอราคา {initial.quotation_number}</h2>
-            <p>แบรนด์: {leadBrandName ?? '—'}</p>
-            <p>ระยะสัญญา: {initial.contract_months ?? '—'} เดือน</p>
-            <table className="crm-table" style={{ marginTop: '1rem' }}>
-              <thead>
-                <tr>
-                  <th>รายการ</th>
-                  <th>จำนวน</th>
-                  <th>ราคา</th>
-                  <th>รวม</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(initial.items ?? []).map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.description}</td>
-                    <td>{item.quantity}</td>
-                    <td>{item.unit_price.toLocaleString('th-TH')}</td>
-                    <td>{item.line_total.toLocaleString('th-TH')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p style={{ textAlign: 'right', marginTop: '1rem' }}>
-              <strong>รวมทั้งสิ้น: {initial.total.toLocaleString('th-TH')} บาท</strong>
-            </p>
-            {initial.terms && (
-              <p style={{ fontSize: '0.85rem', marginTop: '1rem' }}>เงื่อนไข: {initial.terms}</p>
-            )}
+        <section className="card card--wide qt-print-section">
+          <div className="no-print qt-print-toolbar">
+            <button type="button" className="crm-btn crm-btn--primary" onClick={handlePrint}>
+              พิมพ์ / บันทึก PDF
+            </button>
+            <p className="muted">ตัวอย่างด้านล่าง — กดพิมพ์แล้วเลือก &quot;Save as PDF&quot;</p>
           </div>
+          <QuotationPrintDocument quotation={initial} brandName={leadBrandName} />
         </section>
       )}
 
       {!isNew && canDelete && (
-        <section className="crm-danger-zone">
+        <section className="crm-danger-zone no-print">
           <button type="button" className="crm-btn crm-btn--danger" onClick={() => void handleDelete()}>
             ลบใบเสนอราคา
           </button>

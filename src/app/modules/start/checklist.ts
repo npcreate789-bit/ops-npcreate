@@ -8,49 +8,37 @@ export interface StartTaskDef {
   hint: string
 }
 
-/** เช็กลิสต์เริ่มต้น — กรองตาม canAccessNavPath */
+/** เช็กลิสต์เริ่มต้น — ตาม flow งานจริง */
 export const START_CHECKLIST_TASKS: StartTaskDef[] = [
   {
     id: 'home',
     path: '/app',
-    labelTh: 'สำรวจหน้าหลัก',
-    hint: 'ดูสถานะโมดูลและลิงก์เข้าแต่ละเฟส',
-  },
-  {
-    id: 'help',
-    path: '/app/help',
-    labelTh: 'เปิดศูนย์ช่วยเหลือ',
-    hint: 'เมนูตามบทบาทและ flow งานแนะนำ',
-  },
-  {
-    id: 'status',
-    path: '/app/status',
-    labelTh: 'ตรวจสถานะระบบ',
-    hint: 'การเชื่อมต่อ Supabase และเซสชัน',
-  },
-  {
-    id: 'settings',
-    path: '/app/settings',
-    labelTh: 'ตั้งค่าชื่อที่แสดง',
-    hint: 'หน้าตั้งค่าบัญชี — ชื่อในระบบ',
-  },
-  {
-    id: 'search',
-    path: '/app/search',
-    labelTh: 'ลองค้นหารวม',
-    hint: 'Lead · ลูกค้า · งาน ตาม RLS',
+    labelTh: 'ดูภาพรวมหน้าหลัก',
+    hint: 'งานเร่งด่วนและทางลัด',
   },
   {
     id: 'work',
     path: '/app/work',
-    labelTh: 'ดูงานของฉัน',
-    hint: 'งานค้างและแจ้งเตือน',
+    labelTh: 'เปิดงานของฉัน',
+    hint: 'งานค้างและแจ้งเตือนรวมศูนย์',
   },
   {
     id: 'crm',
     path: '/app/crm',
     labelTh: 'เปิด CRM',
     hint: 'Lead และโอกาสขาย',
+  },
+  {
+    id: 'help',
+    path: '/app/help',
+    labelTh: 'อ่าน Flow งานหลัก',
+    hint: 'ในหน้าช่วยเหลือ',
+  },
+  {
+    id: 'settings',
+    path: '/app/settings',
+    labelTh: 'ตั้งค่าชื่อและหน้าจอ',
+    hint: 'บัญชีและพับแถบเมนู',
   },
 ]
 

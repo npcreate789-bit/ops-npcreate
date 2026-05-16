@@ -7,3 +7,18 @@
 .activity-table td {
   vertical-align: top;
 }
+
+.activity-filters {
+  align-items: flex-end;
+}
+
+.activity-count {
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.activity-meta-cell {
+  max-width: 280px;
+  font-size: 0.85rem;
+  word-break: break-word;
+}

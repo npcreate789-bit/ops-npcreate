@@ -13,7 +13,7 @@ export const WORK_LOOKBACK_OPTIONS = [
 ] as const
 
 export const DEFAULT_WORK_HUB_FILTERS: WorkHubFilters = {
-  within_days: 14,
+  within_days: 30,
   lookback_days: 30,
   kind: '',
   view: 'all',

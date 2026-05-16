@@ -242,7 +242,7 @@ export async function fetchCustomerTimeline(
     try {
       const { data, error } = await supabase
         .from('audit_logs')
-        .select('id, action, entity_type, entity_id, metadata, created_at')
+        .select('id, action, entity_type, entity_id, metadata, created_at, actor_id')
         .or(
           `and(entity_type.eq.customer,entity_id.eq.${customerId}),metadata->>customer_id.eq.${customerId}`,
         )
@@ -257,6 +257,7 @@ export async function fetchCustomerTimeline(
           entity_id: row.entity_id as string | null,
           metadata: (row.metadata as Record<string, unknown>) ?? {},
           created_at: row.created_at as string,
+          actor_id: (row.actor_id as string | null) ?? null,
           actor_email: null,
           actor_name: null,
         })),
@@ -278,7 +279,7 @@ export async function fetchCustomerTimeline(
       try {
         const { data, error } = await supabase
           .from('audit_logs')
-          .select('id, action, entity_type, entity_id, metadata, created_at')
+          .select('id, action, entity_type, entity_id, metadata, created_at, actor_id')
           .eq('entity_type', 'customer')
           .eq('entity_id', customerId)
           .order('created_at', { ascending: false })
@@ -292,6 +293,7 @@ export async function fetchCustomerTimeline(
             entity_id: row.entity_id as string | null,
             metadata: (row.metadata as Record<string, unknown>) ?? {},
             created_at: row.created_at as string,
+            actor_id: (row.actor_id as string | null) ?? null,
             actor_email: null,
             actor_name: null,
           })),

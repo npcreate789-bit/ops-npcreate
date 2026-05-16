@@ -7,9 +7,15 @@ import './auth.css'
 interface RequireAuthProps {
   children: ReactNode
   roles?: AppRole[]
+  /** หน้าตั้งรหัสผ่านครั้งแรก — ไม่ redirect ซ้ำ */
+  allowMustChangePassword?: boolean
 }
 
-export function RequireAuth({ children, roles }: RequireAuthProps) {
+export function RequireAuth({
+  children,
+  roles,
+  allowMustChangePassword = false,
+}: RequireAuthProps) {
   const { session, profile, loading, configured } = useAuth()
   const location = useLocation()
 
@@ -35,7 +41,7 @@ export function RequireAuth({ children, roles }: RequireAuthProps) {
       <div className="auth-loading auth-loading--blocked">
         <h2>ยังไม่ได้รับสิทธิ์ใช้งาน</h2>
         <p className="muted">
-          บัญชี {profile.email} ยังไม่มีบทบาทในระบบ — ติดต่อผู้ดูแลเพื่อมอบหมาย role
+          บัญชี {profile.login_id || profile.email} ยังไม่มีบทบาทในระบบ — ติดต่อผู้ดูแลเพื่อมอบหมาย role
         </p>
       </div>
     )
@@ -43,6 +49,14 @@ export function RequireAuth({ children, roles }: RequireAuthProps) {
 
   if (roles?.length && profile && !roles.some((r) => profile.roles.includes(r))) {
     return <Navigate to="/app" replace />
+  }
+
+  if (
+    profile?.must_change_password &&
+    !allowMustChangePassword &&
+    location.pathname !== '/set-password'
+  ) {
+    return <Navigate to="/set-password" replace />
   }
 
   return <>{children}</>

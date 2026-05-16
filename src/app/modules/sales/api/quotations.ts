@@ -1,3 +1,4 @@
+import { logAudit } from '../../../../shared/audit/logAudit'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { updateLead } from '../../crm/api/leads'
 import type { LeadStatus } from '../../crm/types'
@@ -126,6 +127,12 @@ export async function createQuotation(input: QuotationInput): Promise<Quotation>
 
   await linkCustomerForQuotation(quotationId, input)
 
+  await logAudit('quotation.create', 'quotation', quotationId, {
+    quotation_number: data.quotation_number,
+    status: input.status,
+    lead_id: input.lead_id,
+  })
+
   return (await getQuotation(quotationId))!
 }
 
@@ -169,6 +176,11 @@ export async function updateQuotation(id: string, input: QuotationInput): Promis
   await syncLeadStatusFromQuotation(input)
 
   await linkCustomerForQuotation(id, input)
+
+  await logAudit('quotation.update', 'quotation', id, {
+    status: input.status,
+    lead_id: input.lead_id,
+  })
 
   return (await getQuotation(id))!
 }
@@ -234,4 +246,5 @@ export async function deleteQuotation(id: string): Promise<void> {
   if (!isSupabaseConfigured || !supabase) return mockSalesApi.deleteQuotation(id)
   const { error } = await supabase.from('quotations').delete().eq('id', id)
   if (error) throw new Error(error.message)
+  await logAudit('quotation.delete', 'quotation', id)
 }

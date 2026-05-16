@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { canUseGlobalSearch } from '../../shared/auth/access'
 import { ROLE_LABELS } from '../../shared/types/roles'
-import { effectiveRolesForNav, navItemsForRoles } from '../config/navigation'
+import { effectiveRolesForNav, sidebarNavItemsForRoles } from '../config/navigation'
 import { useNotificationUnread } from '../modules/notifications/useNotificationUnread'
 import { useSidebarLayout } from './SidebarLayoutContext'
 import './Sidebar.css'
@@ -17,7 +17,7 @@ export function Sidebar({ onOpenSearch }: SidebarProps) {
   const { profile, signOut, configured } = useAuth()
   const { collapsed, toggleCollapsed } = useSidebarLayout()
   const roles = effectiveRolesForNav(profile?.roles ?? [], configured)
-  const items = navItemsForRoles(roles)
+  const items = sidebarNavItemsForRoles(roles)
   const userId = profile?.id ?? DEV_OWNER
   const unreadNotif = useNotificationUnread(userId, roles)
   const showQuickSearch = (canUseGlobalSearch(roles) || !configured) && onOpenSearch
@@ -49,9 +49,9 @@ export function Sidebar({ onOpenSearch }: SidebarProps) {
 
       <nav className="sidebar__nav" aria-label="เมนูหลัก">
         {items.map((item) => {
-          const isNotif = item.path === '/app/notifications'
+          const isWork = item.path === '/app/work'
           const notifTitle =
-            isNotif && unreadNotif > 0 ? `${item.labelTh} (${unreadNotif} ยังไม่อ่าน)` : item.labelTh
+            isWork && unreadNotif > 0 ? `${item.labelTh} (${unreadNotif} ยังไม่อ่าน)` : item.labelTh
           const linkTitle = item.ready ? notifTitle : `${item.labelTh} — Sprint ${item.phase}`
           return (
             <NavLink
@@ -64,14 +64,14 @@ export function Sidebar({ onOpenSearch }: SidebarProps) {
               }
             >
               <span
-                className={`sidebar__icon${isNotif && unreadNotif > 0 ? ' sidebar__icon--notif' : ''}`}
+                className={`sidebar__icon${isWork && unreadNotif > 0 ? ' sidebar__icon--notif' : ''}`}
                 aria-hidden
               >
                 {item.icon}
               </span>
               <span className="sidebar__label">
                 {item.labelTh}
-                {isNotif && unreadNotif > 0 && (
+                {isWork && unreadNotif > 0 && (
                   <span className="sidebar__badge-count" aria-label={`${unreadNotif} ยังไม่อ่าน`}>
                     {unreadNotif > 99 ? '99+' : unreadNotif}
                   </span>

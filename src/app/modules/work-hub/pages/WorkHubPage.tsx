@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { canViewTimeline } from '../../../../shared/auth/access'
+import { canAccessNotifications } from '../../../../shared/auth/access'
 import { formatBangkokDate, formatBangkokDateTime } from '../../../../shared/dates/bangkok'
 import {
   canOpenWorkItemLink,
@@ -71,7 +71,7 @@ export function WorkHubPage() {
   const allowed = canViewWorkHub(roles) || !configured
   const hasKinds = hasWorkHubKinds(roles) || !configured
   const scoped = isWorkHubScoped(roles) && configured
-  const showTimelineLink = canViewTimeline(roles) || !configured
+  const showNotifLink = canAccessNotifications(roles) || !configured
   const kindOptions = useMemo(() => workKindOptionsForRoles(roles), [roles])
   const scopedLabel = useMemo(
     () => scopedWorkKindLabels(roles, workKindLabel),
@@ -156,9 +156,9 @@ export function WorkHubPage() {
           </p>
         </div>
         <div className="work-hub__actions">
-          {showTimelineLink && (
-            <Link to="/app/timeline" className="crm-btn crm-btn--ghost">
-              ไทม์ไลน์เต็ม
+          {showNotifLink && (
+            <Link to="/app/notifications" className="crm-btn crm-btn--ghost">
+              จัดการแจ้งเตือน
             </Link>
           )}
           <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
@@ -286,10 +286,10 @@ export function WorkHubPage() {
         {!loading && hasKinds && rows.length === 0 && (
           <p className="muted">
             ไม่มีงานในช่วงที่เลือก — ลองขยายช่วงเวลาหรือเปลี่ยนมุมมอง
-            {showTimelineLink && (
+            {showNotifLink && (
               <>
                 {' '}
-                · <Link to="/app/timeline">ดูไทม์ไลน์เต็ม</Link>
+                · <Link to="/app/notifications">จัดการแจ้งเตือน</Link>
               </>
             )}
           </p>

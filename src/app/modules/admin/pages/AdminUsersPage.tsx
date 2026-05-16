@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canManageAdminUsers } from '../../../../shared/auth/access'
+import { canModifyUserRole, canViewStaffPasswords } from '../access'
 import { APP_ROLES, ROLE_LABELS, type AppRole } from '../../../../shared/types/roles'
 import { listCustomersForSelect } from '../../finance/api/payments'
 import type { CustomerOption } from '../../finance/types'
+import { CreateEmployeeForm } from '../components/CreateEmployeeForm'
 import {
   listAdminUsers,
   setClientCustomerAccess,
@@ -23,6 +25,7 @@ export function AdminUsersPage() {
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const canManage = canManageAdminUsers(roles) || !configured
+  const showPasswords = canViewStaffPasswords(roles) || !configured
 
   const [rows, setRows] = useState<AdminUserRow[]>([])
   const [query, setQuery] = useState('')
@@ -58,6 +61,7 @@ export function AdminUsersPage() {
     if (!q) return rows
     return rows.filter(
       (u) =>
+        u.login_id.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
         (u.full_name?.toLowerCase().includes(q) ?? false),
     )
@@ -79,6 +83,14 @@ export function AdminUsersPage() {
 
   async function handleRoleToggle(user: AdminUserRow, role: AppRole, checked: boolean) {
     if (!canManage) return
+    if (!canModifyUserRole(roles, user.roles, role)) {
+      setError(
+        user.roles.includes('ceo') || role === 'ceo'
+          ? 'เฉพาะ CEO เท่านั้นที่จัดการบทบาท CEO ได้'
+          : 'ไม่มีสิทธิ์แก้ไขบทบาทนี้',
+      )
+      return
+    }
     const next = checked
       ? [...new Set([...user.roles, role])]
       : user.roles.filter((r) => r !== role)
@@ -89,7 +101,7 @@ export function AdminUsersPage() {
     setSavingId(user.id)
     setError(null)
     try {
-      await setUserRoles(user.id, next)
+      await setUserRoles(user.id, next, roles)
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'บันทึกบทบาทไม่สำเร็จ')
@@ -130,17 +142,25 @@ export function AdminUsersPage() {
             <Link to="/app/admin/logs">Audit Log</Link>
           </nav>
           <p className="muted" style={{ fontSize: '0.85rem', marginTop: '0.35rem' }}>
-            เฉพาะ CEO / Operations / Dev — มอบบทบาท client + ผูกลูกค้าเพื่อเปิดพอร์ทัลรายงาน
+            CEO / ผู้จัดการ (Operations) สร้างรหัสผู้ใช้พนักงานได้ — มอบบทบาท client + ผูกลูกค้าเพื่อพอร์ทัลรายงาน
           </p>
         </div>
       </header>
+
+      <section className="card card--wide admin-create-card">
+        <CreateEmployeeForm
+          creatorRoles={roles}
+          configured={configured}
+          onCreated={() => void load()}
+        />
+      </section>
 
       <section className="card card--wide">
         <div className="admin-toolbar">
           <input
             type="search"
             className="crm-input"
-            placeholder="ค้นหาอีเมลหรือชื่อ..."
+            placeholder="ค้นหารหัสผู้ใช้ อีเมล หรือชื่อ..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -158,6 +178,7 @@ export function AdminUsersPage() {
               <thead>
                 <tr>
                   <th>ผู้ใช้</th>
+                  {showPasswords && <th>รหัสชั่วคราว (CEO)</th>}
                   <th>บทบาท</th>
                   <th>สถานะ</th>
                   <th>ลูกค้า (client)</th>
@@ -170,7 +191,9 @@ export function AdminUsersPage() {
                   return (
                     <tr key={user.id} className={!user.is_active ? 'is-inactive' : undefined}>
                       <td>
-                        <strong>{user.full_name || '—'}</strong>
+                        <strong>{user.full_name || user.login_id}</strong>
+                        <br />
+                        <code className="admin-user-login-id">{user.login_id}</code>
                         <br />
                         <span className="muted">{user.email}</span>
                         {isSelf && (
@@ -179,20 +202,42 @@ export function AdminUsersPage() {
                             <small className="muted">(บัญชีของคุณ)</small>
                           </>
                         )}
+                        {user.must_change_password && (
+                          <>
+                            <br />
+                            <small className="admin-user-pending-pw">รอตั้งรหัสผ่านใหม่</small>
+                          </>
+                        )}
                       </td>
+                      {showPasswords && (
+                        <td>
+                          {user.temporary_password ? (
+                            <code className="admin-user-temp-pw">{user.temporary_password}</code>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
+                      )}
                       <td>
                         <div className="admin-roles">
                           {MANAGEABLE_ROLES.map((role) => {
                             const on = user.roles.includes(role)
+                            const roleLocked =
+                              !canModifyUserRole(roles, user.roles, role)
                             return (
                               <label
                                 key={role}
-                                className={`admin-role-chip${on ? ' admin-role-chip--on' : ''}`}
+                                className={`admin-role-chip${on ? ' admin-role-chip--on' : ''}${roleLocked ? ' admin-role-chip--locked' : ''}`}
+                                title={
+                                  roleLocked
+                                    ? 'เฉพาะ CEO เท่านั้นที่จัดการบทบาท CEO ได้'
+                                    : undefined
+                                }
                               >
                                 <input
                                   type="checkbox"
                                   checked={on}
-                                  disabled={busy || isSelf}
+                                  disabled={busy || isSelf || roleLocked}
                                   onChange={(e) =>
                                     void handleRoleToggle(user, role, e.target.checked)
                                   }
@@ -245,8 +290,7 @@ export function AdminUsersPage() {
         )}
 
         <p className="muted admin-hint">
-          สร้างบัญชีใหม่ใน Supabase Auth ก่อน จากนั้นมากำหนดบทบาทที่นี่ — บัญชี client ต้องผูกกับลูกค้า 1 ราย
-          เพื่อเข้าหน้ารายงานลูกค้า
+          แก้บทบาทหรือปิดบัญชีได้ด้านล่าง — บัญชี client ต้องผูกลูกค้า 1 รายเพื่อเข้ารายงานลูกค้า
         </p>
       </section>
     </div>

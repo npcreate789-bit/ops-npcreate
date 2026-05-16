@@ -10,11 +10,14 @@ import {
 import type { Session, User } from '@supabase/supabase-js'
 import type { AppRole } from '../types/roles'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
+import { normalizeLoginId, validateLoginId } from './loginId'
 
 export interface UserProfile {
   id: string
+  login_id: string
   email: string
   full_name: string | null
+  must_change_password: boolean
   roles: AppRole[]
 }
 
@@ -25,7 +28,7 @@ interface AuthContextValue {
   loading: boolean
   configured: boolean
   profileLoadError: string | null
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signIn: (loginId: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   hasRole: (role: AppRole) => boolean
@@ -36,12 +39,19 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 async function fetchProfile(userId: string, email: string): Promise<UserProfile> {
   if (!supabase) {
-    return { id: userId, email, full_name: null, roles: ['ceo'] }
+    return {
+      id: userId,
+      login_id: 'dev',
+      email,
+      full_name: null,
+      must_change_password: false,
+      roles: ['ceo'],
+    }
   }
 
   const { data: profileRow, error: profileError } = await supabase
     .from('profiles')
-    .select('id, full_name')
+    .select('id, full_name, login_id, must_change_password')
     .eq('id', userId)
     .maybeSingle()
 
@@ -54,10 +64,16 @@ async function fetchProfile(userId: string, email: string): Promise<UserProfile>
 
   if (rolesError) throw rolesError
 
+  const loginId =
+    (profileRow?.login_id as string | undefined) ??
+    normalizeLoginId(email.split('@')[0] ?? 'user')
+
   return {
     id: userId,
+    login_id: loginId,
     email,
     full_name: profileRow?.full_name ?? null,
+    must_change_password: Boolean(profileRow?.must_change_password),
     roles: (roleRows ?? []).map((r) => r.role as AppRole),
   }
 }
@@ -86,8 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       )
       setProfile({
         id: s.user.id,
+        login_id: normalizeLoginId((s.user.email ?? '').split('@')[0] || 'user'),
         email: s.user.email ?? '',
         full_name: null,
+        must_change_password: false,
         roles: [],
       })
     } finally {
@@ -101,8 +119,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseConfigured || !supabase) {
       setProfile({
         id: '00000000-0000-4000-8000-000000000001',
+        login_id: 'dev',
         email: 'dev@npcreate.local',
         full_name: 'Dev User (โหมดพัฒนา)',
+        must_change_password: false,
         roles: ['ceo', 'dev'],
       })
       setProfileLoadError(null)
@@ -133,12 +153,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loadProfile])
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (loginId: string, password: string) => {
     if (!supabase) {
       return { error: 'ยังไม่ได้ตั้งค่า Supabase (ดู .env.example)' }
     }
+
+    const invalid = validateLoginId(loginId)
+    if (invalid) return { error: invalid }
+
+    if (!password) {
+      return { error: 'กรุณากรอกรหัสผ่าน' }
+    }
+
+    const normalized = normalizeLoginId(loginId)
+    const { data: email, error: resolveError } = await supabase.rpc('resolve_login_email', {
+      p_login_id: normalized,
+    })
+
+    if (resolveError) {
+      return { error: 'ไม่สามารถตรวจสอบรหัสผู้ใช้ได้ — ลองใหม่อีกครั้ง' }
+    }
+
+    if (!email || typeof email !== 'string') {
+      return { error: 'รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }
+    }
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    if (error) {
+      return { error: 'รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }
+    }
+    return { error: null }
   }, [])
 
   const signOut = useCallback(async () => {

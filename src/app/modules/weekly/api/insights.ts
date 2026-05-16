@@ -37,7 +37,7 @@ export function buildWeeklyInsights(
       severity: report.open_tasks >= 15 ? 'warn' : 'info',
       title: 'งานเปิดค้าง',
       body: `มีงานเปิด ${report.open_tasks} รายการ — ดูไทม์ไลน์เพื่อจัดลำดับ`,
-      link: '/app/timeline',
+      link: '/app/work',
     })
     if (item) insights.push(item)
   }

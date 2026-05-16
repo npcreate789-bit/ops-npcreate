@@ -82,3 +82,10 @@
   color: #f87171;
   font-size: 0.85rem;
 }
+
+.login__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  text-align: center;
+  line-height: 1.45;
+}

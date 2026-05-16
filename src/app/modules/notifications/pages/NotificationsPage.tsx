@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ChangeEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canAccessNotifications } from '../../../../shared/auth/access'
@@ -10,6 +10,11 @@ import {
   syncNotifications,
 } from '../api/notifications'
 import type { UserNotification } from '../types'
+import {
+  isNotificationSoundEnabled,
+  playNotificationSound,
+  setNotificationSoundEnabled,
+} from '../notificationSound'
 import '../../crm/crm.css'
 import '../../tasks/tasks.css'
 import '../../phase2/phase2.css'
@@ -28,6 +33,7 @@ export function NotificationsPage() {
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [soundEnabled, setSoundEnabled] = useState(() => isNotificationSoundEnabled())
 
   const load = useCallback(async () => {
     if (!allowed) return
@@ -50,14 +56,27 @@ export function NotificationsPage() {
   async function handleRefresh() {
     setSyncing(true)
     setError(null)
+    const beforeUnread = rows.filter((n) => !n.read_at).length
     try {
       await syncNotifications(userId, roles)
-      setRows(await listNotifications(userId))
+      const next = await listNotifications(userId)
+      const afterUnread = next.filter((n) => !n.read_at).length
+      if (soundEnabled && afterUnread > beforeUnread) {
+        playNotificationSound()
+      }
+      setRows(next)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ซิงก์ไม่สำเร็จ')
     } finally {
       setSyncing(false)
     }
+  }
+
+  function handleSoundToggle(e: ChangeEvent<HTMLInputElement>) {
+    const checked = e.target.checked
+    setSoundEnabled(checked)
+    setNotificationSoundEnabled(checked)
+    if (checked) playNotificationSound()
   }
 
   async function handleMarkRead(id: string) {
@@ -150,6 +169,18 @@ export function NotificationsPage() {
               <option value="unread">ยังไม่อ่าน ({unreadCount})</option>
             </select>
           </label>
+          <label className="notif-sound-toggle">
+            <input type="checkbox" checked={soundEnabled} onChange={handleSoundToggle} />
+            <span>เสียงเมื่อมีแจ้งเตือนใหม่</span>
+          </label>
+          <button
+            type="button"
+            className="crm-btn crm-btn--ghost notif-sound-test"
+            disabled={!soundEnabled}
+            onClick={() => playNotificationSound()}
+          >
+            ทดสอบเสียง
+          </button>
         </div>
 
         {error && <p className="crm-error">{error}</p>}

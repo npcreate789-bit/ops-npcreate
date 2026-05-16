@@ -1,13 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { ROLE_LABELS } from '../../../../shared/types/roles'
+import { useScrollToHash } from '../../../hooks/useScrollToHash'
+import { LayoutPreferencesSection } from '../../layout/components/LayoutPreferencesSection'
 import { updateProfileFullName } from '../api/profile'
 import '../../crm/crm.css'
 import '../../tasks/tasks.css'
 import '../../phase2/phase2.css'
+import '../../layout/layout-prefs.css'
 import '../settings.css'
 
 export function SettingsPage() {
+  useScrollToHash()
   const { profile, configured, refreshProfile } = useAuth()
   const [fullName, setFullName] = useState(profile?.full_name ?? '')
   const [saving, setSaving] = useState(false)
@@ -38,8 +42,8 @@ export function SettingsPage() {
   return (
     <div className="page">
       <header className="page__header phase2-page__header">
-        <h1>ตั้งค่าบัญชี</h1>
-        <p className="muted">จัดการชื่อที่แสดงในระบบ — บทบาทแก้ได้โดยผู้ดูแลเท่านั้น</p>
+        <h1>ตั้งค่า</h1>
+        <p className="muted">บัญชีผู้ใช้และการจัดวางหน้าจอ</p>
       </header>
 
       {!configured && (
@@ -47,9 +51,15 @@ export function SettingsPage() {
       )}
 
       <section className="card card--wide">
+        <h2>บัญชี</h2>
         <form className="settings-form" onSubmit={(e) => void handleSubmit(e)}>
           <label className="task-field task-field--full">
-            <span className="task-field__label">อีเมล</span>
+            <span className="task-field__label">รหัสผู้ใช้ (เข้าสู่ระบบ)</span>
+            <input className="crm-input" value={profile?.login_id ?? ''} disabled />
+          </label>
+
+          <label className="task-field task-field--full">
+            <span className="task-field__label">อีเมล (ระบบภายใน)</span>
             <input className="crm-input" value={profile?.email ?? ''} disabled />
           </label>
 
@@ -96,6 +106,11 @@ export function SettingsPage() {
             เปลี่ยนรหัสผ่านได้จากลิงก์ในอีเมล reset ของ Supabase หรือติดต่อผู้ดูแลระบบ
           </p>
         )}
+      </section>
+
+      <section id="layout" className="card card--wide">
+        <h2>การจัดวางหน้าจอ</h2>
+        <LayoutPreferencesSection />
       </section>
     </div>
   )

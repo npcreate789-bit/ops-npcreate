@@ -134,7 +134,26 @@ if (!allOk) {
   process.exit(1)
 }
 
+const fnUrl = `${url.replace(/\/$/, '')}/functions/v1/create-employee`
+let fnOk = false
+try {
+  const res = await fetch(fnUrl, { method: 'OPTIONS' })
+  fnOk = res.ok || res.status === 401 || res.status === 405
+} catch {
+  fnOk = false
+}
+
+if (!fnOk) {
+  console.log('\n⚠ Edge Function create-employee ยังไม่ได้ deploy')
+  console.log('  → npx supabase login')
+  console.log('  → npm run functions:deploy\n')
+} else {
+  console.log('\n✓ Edge Function create-employee พร้อมใช้งาน')
+}
+
 console.log('\n✓ ฐานข้อมูลครบถึง Phase 7 (รวมตาราง Phase 3–5)')
+console.log('\nถ้ายังไม่เคยรัน migrations สร้างพนักงาน / login_id:')
+console.log('  npm run db:push  (00038–00040)')
 console.log('\nถ้ายังไม่เคยรัน Phase 7 RLS สำหรับ audit log:')
 console.log('  npm run db:sql:phase4-7  → รันเฉพาะ 00036_phase7_activity_audit_rls.sql')
 console.log('\nทดสอบแอป:')

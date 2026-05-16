@@ -117,12 +117,161 @@
   color: var(--npc-accent);
 }
 
-.qt-print {
+.qt-print-section {
   margin-top: 1rem;
-  padding: 1.5rem;
+}
+
+.qt-print-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.qt-print-toolbar .muted {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.qt-document {
+  padding: 1.75rem 2rem;
   background: #fff;
-  color: #111;
+  color: #1a1a1a;
   border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  max-width: 210mm;
+  margin: 0 auto;
+}
+
+.qt-document__title-block {
+  text-align: center;
+  margin: 0 0 1.25rem;
+}
+
+.qt-document__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.qt-document__doc-no {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+}
+
+.qt-document__info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 1.5rem;
+  margin: 0 0 1.25rem;
+  font-size: 0.88rem;
+}
+
+.qt-document__info > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: 0.25rem 0.5rem;
+}
+
+.qt-document__info dt {
+  margin: 0;
+  font-weight: 600;
+  color: #444;
+}
+
+.qt-document__info dd {
+  margin: 0;
+}
+
+.qt-document__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.qt-document__table th,
+.qt-document__table td {
+  border: 1px solid #d1d5db;
+  padding: 0.45rem 0.55rem;
+  vertical-align: top;
+}
+
+.qt-document__table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+}
+
+.qt-document__num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.qt-document__totals {
+  margin: 0 0 0 auto;
+  max-width: 280px;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+}
+
+.qt-document__totals > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+}
+
+.qt-document__totals dt {
+  margin: 0;
+  color: #555;
+}
+
+.qt-document__totals dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.qt-document__totals-grand dt,
+.qt-document__totals-grand dd {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #c62828;
+}
+
+.qt-document__terms {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+}
+
+.qt-document__terms h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.9rem;
+}
+
+.qt-document__terms p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.qt-document__footer {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #d1d5db;
+  font-size: 0.75rem;
+  color: #666;
+  text-align: center;
+}
+
+.qt-document__footer-legal {
+  margin: 0.25rem 0 0;
+  font-weight: 600;
 }
 
 @media (max-width: 720px) {
@@ -133,12 +282,60 @@
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 12mm 14mm;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .app-shell,
+  .app-main {
+    display: block !important;
+    background: #fff !important;
+  }
+
   .sidebar,
-  .crm-btn,
-  .qt-form__actions {
+  .breadcrumb,
+  .no-print {
     display: none !important;
   }
-  .qt-print {
-    box-shadow: none;
+
+  .sales-page {
+    padding: 0 !important;
+  }
+
+  .qt-print-section {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .qt-document {
+    border: none;
+    border-radius: 0;
+    max-width: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  body[data-print-doc='receipt'] .finance-print-target--tax,
+  body[data-print-doc='tax_invoice'] .finance-print-target--receipt {
+    display: none !important;
+  }
+
+  .finance-page .finance-docs-section,
+  .finance-page .finance-doc-block .no-print {
+    display: none !important;
+  }
+
+  .finance-page .finance-doc-block {
+    border: none;
+    margin: 0;
+    padding: 0;
   }
 }

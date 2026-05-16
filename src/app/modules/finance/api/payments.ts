@@ -1,3 +1,4 @@
+import { logAudit } from '../../../../shared/audit/logAudit'
 import { bangkokTodayIsoDate, bangkokYearMonthPrefix } from '../../../../shared/dates/bangkok'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import type { CustomerOption, FinanceSummary, Payment, PaymentInput } from '../types'
@@ -157,7 +158,14 @@ export async function createPayment(input: PaymentInput): Promise<Payment> {
     await supabase.rpc('confirm_payment', { p_payment_id: data.id })
   }
 
-  return (await getPayment(data.id as string))!
+  const paymentId = data.id as string
+  await logAudit('payment.create', 'payment', paymentId, {
+    customer_id: input.customer_id,
+    status: input.status,
+    total_amount: input.total_amount,
+  })
+
+  return (await getPayment(paymentId))!
 }
 
 export async function updatePayment(id: string, input: PaymentInput): Promise<Payment> {
@@ -203,6 +211,11 @@ export async function updatePayment(id: string, input: PaymentInput): Promise<Pa
     await supabase.rpc('confirm_payment', { p_payment_id: id })
   }
 
+  await logAudit('payment.update', 'payment', id, {
+    status: input.status,
+    total_amount: input.total_amount,
+  })
+
   return (await getPayment(id))!
 }
 
@@ -210,6 +223,7 @@ export async function confirmPayment(id: string): Promise<void> {
   if (!isSupabaseConfigured || !supabase) return mockFinanceApi.confirmPayment(id)
   const { error } = await supabase.rpc('confirm_payment', { p_payment_id: id })
   if (error) throw new Error(error.message)
+  await logAudit('payment.confirm', 'payment', id)
 }
 
 export async function getPaymentSlipUrl(slipPath: string): Promise<string | null> {
@@ -245,6 +259,7 @@ export async function uploadPaymentSlip(
   if (upError) throw new Error(upError.message)
   const { error } = await supabase.from('payments').update({ slip_path: path }).eq('id', paymentId)
   if (error) throw new Error(error.message)
+  await logAudit('payment.slip_upload', 'payment', paymentId, { file_name: file.name })
   return path
 }
 

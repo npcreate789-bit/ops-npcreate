@@ -1,20 +1,34 @@
 import type { AppRole } from '../../../../shared/types/roles'
-import { listAuditLogs, type AuditLogRow } from '../../admin/api/auditLogs'
+import {
+  listActivityActors,
+  listAuditLogs,
+  type ActivityActorOption,
+  type AuditLogRow,
+  type ListAuditFilters,
+} from '../../admin/api/auditLogs'
 import { filterActivityRowsForRoles } from '../access'
 import type { ActivityFilters } from '../types'
 
-export type { AuditLogRow as ActivityLogRow }
+export type { AuditLogRow as ActivityLogRow, ActivityActorOption }
+
+export { listActivityActors }
+
+function toListFilters(filters: ActivityFilters): ListAuditFilters {
+  return {
+    actor_id: filters.actor_id || undefined,
+    date_from: filters.date_from || undefined,
+    date_to: filters.date_to || undefined,
+    action_prefix: filters.action_prefix || undefined,
+    entity_type: filters.entity_type || undefined,
+    limit: 200,
+  }
+}
 
 export async function listActivityLogs(
   filters: ActivityFilters,
   roles: AppRole[] = [],
-  limit = 100,
 ): Promise<AuditLogRow[]> {
-  let rows = filterActivityRowsForRoles(await listAuditLogs(limit), roles)
-
-  if (filters.entity_type) {
-    rows = rows.filter((r) => r.entity_type === filters.entity_type)
-  }
+  let rows = filterActivityRowsForRoles(await listAuditLogs(toListFilters(filters)), roles)
 
   if (filters.search.trim()) {
     const q = filters.search.trim().toLowerCase()

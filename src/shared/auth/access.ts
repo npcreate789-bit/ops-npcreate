@@ -275,7 +275,7 @@ export function canAccessSettings(_roles: AppRole[]): boolean {
 // --- Phase 7: Activity log & weekly summary ---
 
 /** อ่าน audit log — privileged หรือ operations/account/admin (ตรง 00036) */
-export const ACTIVITY_LOG_VIEW_ROLES: AppRole[] = ['operations', 'account', 'admin']
+export const ACTIVITY_LOG_VIEW_ROLES: AppRole[] = ['ceo', 'operations', 'account', 'admin']
 
 export function canViewActivityLog(roles: AppRole[]): boolean {
   return (

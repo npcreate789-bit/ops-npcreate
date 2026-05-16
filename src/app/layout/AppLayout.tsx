@@ -6,6 +6,7 @@ import { CommandPalette } from '../components/CommandPalette'
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import { useKeyboardHelp } from '../hooks/useKeyboardHelp'
 import { PageHistoryTracker } from '../modules/quick-access/components/PageHistoryTracker'
+import { useNotificationSoundPrime } from '../modules/notifications/useNotificationSoundPrime'
 import { Sidebar } from './Sidebar'
 import './AppLayout.css'
 
@@ -21,6 +22,7 @@ export function AppLayout() {
   const trackHistory = canUseQuickAccess(roles) || !configured
   const { open, close, openPalette } = useCommandPalette(paletteEnabled)
   useKeyboardHelp(canViewHelp(roles) && !open)
+  useNotificationSoundPrime()
 
   return (
     <SidebarLayoutProvider>

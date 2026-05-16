@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canManageFinance } from '../../../../shared/auth/access'
-import { isSupabaseConfigured } from '../../../../shared/supabase/client'
 import {
   confirmPayment,
   createPayment,
@@ -14,6 +13,7 @@ import {
 } from '../api/payments'
 import type { CustomerOption, Payment, PaymentInput } from '../types'
 import { PaymentForm } from '../components/PaymentForm'
+import { PaymentDocumentsSection } from '../components/PaymentDocumentsSection'
 import { PaymentSlipPreview } from '../components/PaymentSlipPreview'
 import '../../crm/crm.css'
 import '../../sales/sales.css'
@@ -28,11 +28,11 @@ export function PaymentEditorPage() {
   const quotationId = searchParams.get('quotationId')
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { profile, configured } = useAuth()
+  const roles = profile?.roles ?? []
   const ownerId = profile?.id ?? DEV_OWNER
-  const canEdit =
-    canManageFinance(profile?.roles ?? []) || !isSupabaseConfigured
-  const readOnly = !canEdit && isSupabaseConfigured
+  const canEdit = canManageFinance(roles) || !configured
+  const readOnly = !canEdit && configured
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -133,30 +133,30 @@ export function PaymentEditorPage() {
 
   return (
     <div className="page finance-page">
-      <header className="page__header">
+      <header className="page__header no-print">
         <Link to="/app/finance" className="crm-back">
           ← กลับการเงิน
         </Link>
         <h1>{isNew ? 'บันทึกการชำระเงิน' : `รายการชำระเงิน`}</h1>
       </header>
 
-      {error && <p className="crm-error">{error}</p>}
+      {error && <p className="crm-error no-print">{error}</p>}
 
       {readOnly && (
-        <p className="crm-banner crm-banner--warn">
+        <p className="crm-banner crm-banner--warn no-print">
           โหมดดูอย่างเดียว — คุณไม่มีสิทธิ์แก้ไขรายการชำระเงิน
         </p>
       )}
 
       {initial?.confirmed_at && (
-        <p className="crm-banner">
+        <p className="crm-banner no-print">
           ยืนยันชำระแล้ว — ลูกค้า Active แล้ว ไปที่{' '}
           <Link to={`/app/onboarding/${initial.customer_id}`}>รับบรีฟลูกค้า</Link>{' '}
           เพื่อกรอกข้อมูลก่อนยิงแอด
         </p>
       )}
 
-      <section className="card card--wide">
+      <section className="card card--wide no-print">
         <PaymentForm
           initial={initial}
           preset={preset}
@@ -172,7 +172,7 @@ export function PaymentEditorPage() {
       {!isNew && initial && (
         <>
           {initial.status !== 'paid' && canEdit && (
-            <section className="card card--wide">
+            <section className="card card--wide no-print">
               <button
                 type="button"
                 className="crm-btn crm-btn--primary"
@@ -184,7 +184,7 @@ export function PaymentEditorPage() {
             </section>
           )}
 
-          <section className="card card--wide">
+          <section className="card card--wide no-print">
             <h2 className="crm-section-title">สลิปชำระเงิน</h2>
             <PaymentSlipPreview slipPath={initial.slip_path} />
             {canEdit && (
@@ -198,15 +198,13 @@ export function PaymentEditorPage() {
             )}
           </section>
 
-          {(initial.receipt_number || initial.tax_invoice_number) && (
-            <section className="card card--wide">
-              <h2 className="crm-section-title">เอกสาร</h2>
-              {initial.receipt_number && <p>ใบเสร็จ: {initial.receipt_number}</p>}
-              {initial.tax_invoice_number && (
-                <p>ใบกำกับภาษี: {initial.tax_invoice_number}</p>
-              )}
-            </section>
-          )}
+          <PaymentDocumentsSection
+            payment={initial}
+            ownerId={ownerId}
+            roles={roles}
+            readOnly={readOnly}
+            onPaymentUpdated={setInitial}
+          />
         </>
       )}
     </div>

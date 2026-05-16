@@ -1,3 +1,4 @@
+import { logAudit } from '../../../../shared/audit/logAudit'
 import { bangkokWeekStartIso } from '../../../../shared/dates/bangkok'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { isTaskOverdue } from '../constants'
@@ -129,6 +130,8 @@ export async function createTask(input: TaskInput): Promise<Task> {
 
   const { data, error } = await supabase.from('tasks').insert(payload).select(taskSelect).single()
   if (error) throw new Error(error.message)
+  const taskId = data.id as string
+  await logAudit('task.create', 'task', taskId, { title: input.title, status: input.status })
   const names = await assigneeNameMap()
   const row = data as Record<string, unknown> & { assignee_id: string }
   return mapTask(row, names.get(row.assignee_id))
@@ -156,6 +159,7 @@ export async function updateTask(id: string, input: TaskInput): Promise<Task> {
     .single()
 
   if (error) throw new Error(error.message)
+  await logAudit('task.update', 'task', id, { title: input.title, status: input.status })
   const names = await assigneeNameMap()
   const row = data as Record<string, unknown> & { assignee_id: string }
   return mapTask(row, names.get(row.assignee_id))
@@ -165,4 +169,5 @@ export async function deleteTask(id: string): Promise<void> {
   if (!isSupabaseConfigured || !supabase) return mockTasksApi.deleteTask(id)
   const { error } = await supabase.from('tasks').delete().eq('id', id)
   if (error) throw new Error(error.message)
+  await logAudit('task.delete', 'task', id)
 }

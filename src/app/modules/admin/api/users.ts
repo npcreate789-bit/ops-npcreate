@@ -1,4 +1,5 @@
 import { logAudit } from '../../../../shared/audit/logAudit'
+import { canAssignCeoRole, canEditCeoUserRoles } from '../access'
 import type { AppRole } from '../../../../shared/types/roles'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { setClientCustomerAccess } from '../../client/api/clientReport'
@@ -10,19 +11,29 @@ export async function listAdminUsers(): Promise<AdminUserRow[]> {
 
   const { data: profiles, error: pErr } = await supabase
     .from('profiles')
-    .select('id, email, full_name, is_active, created_at')
+    .select('id, login_id, email, full_name, is_active, must_change_password, created_at')
     .order('email')
 
   if (pErr) throw pErr
 
-  const [{ data: roleRows, error: rErr }, { data: clientLinks, error: cErr }] =
-    await Promise.all([
-      supabase.from('user_roles').select('user_id, role'),
-      supabase.from('client_customer_access').select('user_id, customer_id'),
-    ])
+  const [
+    { data: roleRows, error: rErr },
+    { data: clientLinks, error: cErr },
+    { data: passwordHints, error: hErr },
+  ] = await Promise.all([
+    supabase.from('user_roles').select('user_id, role'),
+    supabase.from('client_customer_access').select('user_id, customer_id'),
+    supabase.from('staff_password_hints').select('user_id, temporary_password'),
+  ])
 
   if (rErr) throw rErr
   if (cErr) throw cErr
+  if (hErr && hErr.code !== 'PGRST116') throw hErr
+
+  const passwordByUser = new Map<string, string>()
+  for (const row of passwordHints ?? []) {
+    passwordByUser.set(row.user_id as string, row.temporary_password as string)
+  }
 
   const rolesByUser = new Map<string, AppRole[]>()
   const clientByUser = new Map<string, string>()
@@ -37,9 +48,12 @@ export async function listAdminUsers(): Promise<AdminUserRow[]> {
 
   return (profiles ?? []).map((p) => ({
     id: p.id,
+    login_id: (p.login_id as string) ?? p.email.split('@')[0]?.toLowerCase() ?? '',
     email: p.email,
     full_name: p.full_name,
     is_active: p.is_active,
+    must_change_password: Boolean(p.must_change_password),
+    temporary_password: passwordByUser.get(p.id) ?? null,
     created_at: p.created_at,
     roles: rolesByUser.get(p.id) ?? [],
     client_customer_id: clientByUser.get(p.id) ?? null,
@@ -64,8 +78,29 @@ export async function setUserActive(userId: string, isActive: boolean): Promise<
   await logAudit(isActive ? 'user.activate' : 'user.deactivate', 'profile', userId)
 }
 
-export async function setUserRoles(userId: string, roles: AppRole[]): Promise<void> {
+function assertCanSetUserRoles(
+  actorRoles: AppRole[],
+  targetRoles: AppRole[],
+  nextRoles: AppRole[],
+): void {
+  if (!canEditCeoUserRoles(actorRoles, targetRoles)) {
+    throw new Error('เฉพาะ CEO เท่านั้นที่จัดการบทบาทของผู้ใช้ CEO ได้')
+  }
+  const touchesCeo = targetRoles.includes('ceo') || nextRoles.includes('ceo')
+  if (touchesCeo && !canAssignCeoRole(actorRoles)) {
+    throw new Error('เฉพาะ CEO เท่านั้นที่มอบหรือถอนบทบาท CEO ได้')
+  }
+}
+
+export async function setUserRoles(
+  userId: string,
+  roles: AppRole[],
+  actorRoles: AppRole[] = [],
+): Promise<void> {
   if (!isSupabaseConfigured || !supabase) {
+    const users = await mockAdminApi.listUsers()
+    const target = users.find((u) => u.id === userId)
+    if (target) assertCanSetUserRoles(actorRoles, target.roles, roles)
     await mockAdminApi.setUserRoles(userId, roles)
     return
   }
@@ -77,7 +112,10 @@ export async function setUserRoles(userId: string, roles: AppRole[]): Promise<vo
 
   if (readErr) throw readErr
 
-  const current = new Set((existing ?? []).map((r) => r.role as AppRole))
+  const targetRoles = (existing ?? []).map((r) => r.role as AppRole)
+  assertCanSetUserRoles(actorRoles, targetRoles, roles)
+
+  const current = new Set(targetRoles)
   const next = new Set(roles)
 
   const toAdd = roles.filter((r) => !current.has(r))
