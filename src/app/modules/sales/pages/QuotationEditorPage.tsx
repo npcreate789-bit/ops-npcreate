@@ -16,6 +16,7 @@ import {
 } from '../api/quotations'
 import type { QuotationInput, Package, Quotation } from '../types'
 import { QuotationForm } from '../components/QuotationForm'
+import { printDocument } from '../../../../shared/print/printDocument'
 import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
@@ -114,7 +115,7 @@ export function QuotationEditorPage() {
   }
 
   function handlePrint() {
-    window.print()
+    printDocument()
   }
 
   if (loading) {
@@ -178,7 +179,10 @@ export function QuotationEditorPage() {
             <button type="button" className="crm-btn crm-btn--primary" onClick={handlePrint}>
               พิมพ์ / บันทึก PDF
             </button>
-            <p className="muted">ตัวอย่างด้านล่าง — กดพิมพ์แล้วเลือก &quot;Save as PDF&quot;</p>
+            <p className="muted">
+              ตัวอย่างด้านล่าง — กดพิมพ์แล้วเลือก Save as PDF — ปิด &quot;Headers and footers&quot;
+              / หัวท้ายกระดาษ ในกล่องพิมพ์เพื่อไม่ให้มี URL
+            </p>
           </div>
           <QuotationPrintDocument quotation={initial} brandName={leadBrandName} />
         </section>

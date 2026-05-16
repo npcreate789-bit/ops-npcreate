@@ -1,4 +1,3 @@
-import { COMPANY_LEGAL_NAME } from '../../../../shared/company/companyProfile'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
 import { DocumentLetterhead } from '../../../../shared/documents/DocumentLetterhead'
 import { quotationStatusLabel } from '../constants'
@@ -111,11 +110,6 @@ export function QuotationPrintDocument({ quotation, brandName }: QuotationPrintD
           <p>{quotation.notes}</p>
         </section>
       ) : null}
-
-      <footer className="qt-document__footer">
-        <p>เอกสารนี้ออกโดยระบบ NP Create Operating System</p>
-        <p className="qt-document__footer-legal">{COMPANY_LEGAL_NAME}</p>
-      </footer>
     </article>
   )
 }
