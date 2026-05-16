@@ -41,6 +41,7 @@ import { WorkHubPage } from './modules/work-hub/pages/WorkHubPage'
 import { HelpPage } from './modules/help/pages/HelpPage'
 import { KeyboardShortcutsPage } from './modules/keyboard/pages/KeyboardShortcutsPage'
 import { LayoutPreferencesPage } from './modules/layout/pages/LayoutPreferencesPage'
+import { StartPage } from './modules/start/pages/StartPage'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -63,6 +64,7 @@ export function AppRoutes() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="start" element={<Module path="/app/start" element={<StartPage />} />} />
         <Route path="crm" element={<Module path="/app/crm" element={<CrmLeadsPage />} />} />
         <Route path="crm/:id" element={<Module path="/app/crm" element={<LeadEditorPage />} />} />
         <Route path="sales" element={<Module path="/app/sales" element={<SalesPage />} />} />

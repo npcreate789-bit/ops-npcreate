@@ -15,6 +15,7 @@ import {
   PHASE14_NAV_ITEMS,
   PHASE15_NAV_ITEMS,
   PHASE16_NAV_ITEMS,
+  PHASE17_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { canUseQuickAccess } from '../../shared/auth/access'
@@ -55,6 +56,8 @@ export function HomePage() {
   const phase15Total = PHASE15_NAV_ITEMS.length
   const phase16Ready = PHASE16_NAV_ITEMS.filter((i) => i.ready).length
   const phase16Total = PHASE16_NAV_ITEMS.length
+  const phase17Ready = PHASE17_NAV_ITEMS.filter((i) => i.ready).length
+  const phase17Total = PHASE17_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -291,6 +294,19 @@ export function HomePage() {
         </p>
         <p className="muted">
           เลือกความกว้างแถบเมนู เก็บในเบราว์เซอร์ — แจ้งเตือนยังเห็นจุดแดงเมื่อพับ
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 17</h2>
+        <p>
+          ครบ {phase17Ready}/{phase17Total} โมดูล —{' '}
+          <Link to="/app/start">เริ่มใช้งาน</Link>
+          {' · '}
+          เช็กลิสต์แรกตามบทบาท เก็บในเครื่อง
+        </p>
+        <p className="muted">
+          ลิงก์ไปโมดูลสำคัญ พร้อมทำเครื่องหมายเมื่อทำแล้ว — รีเซ็ตได้ตลอด
         </p>
       </section>
 

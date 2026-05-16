@@ -14,6 +14,7 @@ import type { HelpShortcut } from './types'
 const HELP_SELF_PATH = '/app/help'
 const KEYBOARD_CENTER_PATH = '/app/keyboard'
 const LAYOUT_PREFS_PATH = '/app/layout'
+const START_GUIDE_PATH = '/app/start'
 
 function isDevUnconfigured(roles: AppRole[], configured: boolean): boolean {
   return !configured && roles.length === 0
@@ -39,6 +40,7 @@ export function helpNavItemsForRoles(roles: AppRole[], configured: boolean) {
       item.path !== HELP_SELF_PATH &&
       item.path !== KEYBOARD_CENTER_PATH &&
       item.path !== LAYOUT_PREFS_PATH &&
+      item.path !== START_GUIDE_PATH &&
       item.ready,
   )
 }
@@ -84,7 +86,9 @@ export function helpShortcutsForRoles(roles: AppRole[], configured: boolean): He
 
 export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
   const devMode = isDevUnconfigured(roles, configured)
-  const links: { path: string; label: string; detail: string }[] = []
+  const links: { path: string; label: string; detail: string }[] = [
+    { path: '/app/start', label: 'เริ่มใช้งาน', detail: 'เช็กลิสต์แรกตามบทบาท' },
+  ]
 
   if (canViewWorkHub(roles) || devMode) {
     links.push({ path: '/app/work', label: 'งานของฉัน', detail: 'งานค้างและแจ้งเตือน' })
