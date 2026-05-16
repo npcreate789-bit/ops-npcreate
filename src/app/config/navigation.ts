@@ -45,6 +45,8 @@ export interface NavItem {
   phase13?: boolean
   /** Phase 14 modules (Sprint 30+) — Help & breadcrumbs */
   phase14?: boolean
+  /** Phase 15 modules (Sprint 31+) — Keyboard reference & palette nav */
+  phase15?: boolean
   ready: boolean
 }
 
@@ -292,6 +294,16 @@ export const NAV_ITEMS: NavItem[] = [
     phase14: true,
     ready: true,
   },
+  {
+    path: '/app/keyboard',
+    label: 'Keyboard',
+    labelTh: 'คีย์ลัด',
+    icon: '⌨',
+    roles: [],
+    phase: 31,
+    phase15: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -306,6 +318,7 @@ export const PHASE10_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase10)
 export const PHASE11_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase11)
 export const PHASE13_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase13)
 export const PHASE14_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase14)
+export const PHASE15_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase15)
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
   if (hasNavFullAccess(roles)) return NAV_ITEMS

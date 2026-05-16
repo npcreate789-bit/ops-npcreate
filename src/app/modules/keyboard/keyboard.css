@@ -1,0 +1,37 @@
+.keyboard-table-wrap {
+  overflow-x: auto;
+}
+
+.keyboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.keyboard-table th,
+.keyboard-table td {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--npc-glass-border);
+  vertical-align: top;
+}
+
+.keyboard-table th {
+  color: var(--npc-text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.keyboard-table__kbd {
+  display: inline-block;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(110, 231, 255, 0.08);
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--npc-accent);
+  white-space: nowrap;
+}

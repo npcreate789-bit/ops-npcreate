@@ -12,6 +12,7 @@ import type { AppRole } from '../../../shared/types/roles'
 import type { HelpShortcut } from './types'
 
 const HELP_SELF_PATH = '/app/help'
+const KEYBOARD_CENTER_PATH = '/app/keyboard'
 
 function isDevUnconfigured(roles: AppRole[], configured: boolean): boolean {
   return !configured && roles.length === 0
@@ -35,6 +36,7 @@ export function helpNavItemsForRoles(roles: AppRole[], configured: boolean) {
     (item) =>
       item.path !== '/app' &&
       item.path !== HELP_SELF_PATH &&
+      item.path !== KEYBOARD_CENTER_PATH &&
       item.ready,
   )
 }
@@ -48,6 +50,11 @@ export function helpShortcutsForRoles(roles: AppRole[], configured: boolean): He
       keys: '⌘K / Ctrl+K',
       label: 'ค้นหาด่วน',
       detail: 'ค้นหา Lead · ลูกค้า · งาน',
+    })
+    shortcuts.push({
+      keys: '↑ ↓ · Enter',
+      label: 'เลือกผลค้นหา',
+      detail: 'ใน Command palette เมื่อมีผล',
     })
     shortcuts.push({
       keys: 'Esc',
@@ -89,6 +96,7 @@ export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
   if (canViewOpsCenter(roles) || devMode) {
     links.push({ path: '/app/ops', label: 'ศูนย์ Ops', detail: 'เช็กลิสต์ deploy' })
   }
+  links.push({ path: '/app/keyboard', label: 'ศูนย์คีย์ลัด', detail: 'ตารางปุ่มลัดทั้งหมด' })
 
   return links.filter((link) => canOpenHelpNavLink(roles, link.path, configured))
 }

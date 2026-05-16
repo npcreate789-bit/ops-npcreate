@@ -48,6 +48,26 @@
   padding: 0.75rem 1rem 1rem;
 }
 
+.command-palette__row {
+  list-style: none;
+}
+
+.command-palette__list .command-palette__row {
+  margin: 0;
+  padding: 0;
+}
+
+.command-palette__row--active .command-palette__item,
+.command-palette__row--active .command-palette__item--static {
+  border-color: rgba(110, 231, 255, 0.55);
+  background: rgba(110, 231, 255, 0.14);
+}
+
+.command-palette__row--active .command-palette__item--static:hover {
+  border-color: rgba(110, 231, 255, 0.55);
+  background: rgba(110, 231, 255, 0.14);
+}
+
 .command-palette__list {
   list-style: none;
   margin: 0;

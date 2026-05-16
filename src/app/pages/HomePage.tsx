@@ -13,6 +13,7 @@ import {
   PHASE11_NAV_ITEMS,
   PHASE13_NAV_ITEMS,
   PHASE14_NAV_ITEMS,
+  PHASE15_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { canUseQuickAccess } from '../../shared/auth/access'
@@ -49,6 +50,8 @@ export function HomePage() {
   const phase13Total = PHASE13_NAV_ITEMS.length
   const phase14Ready = PHASE14_NAV_ITEMS.filter((i) => i.ready).length
   const phase14Total = PHASE14_NAV_ITEMS.length
+  const phase15Ready = PHASE15_NAV_ITEMS.filter((i) => i.ready).length
+  const phase15Total = PHASE15_NAV_ITEMS.length
   return (
     <div className="page">
       <header className="page__header">
@@ -258,6 +261,20 @@ export function HomePage() {
         </p>
         <p className="muted">
           Breadcrumb ด้านบน + ปุ่มลัด + เมนูตามบทบาท
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 15</h2>
+        <p>
+          ครบ {phase15Ready}/{phase15Total} โมดูล —{' '}
+          <Link to="/app/keyboard">ศูนย์คีย์ลัด</Link>
+          {' · '}
+          ใน <kbd>⌘K</kbd> เลือกผลด้วย <kbd>↑</kbd>
+          <kbd>↓</kbd> แล้วกด <kbd>Enter</kbd>
+        </p>
+        <p className="muted">
+          ตารางปุ่มลัดรวมศูนย์ + นำทางผลค้นหาด้วยคีย์บอร์ดใน Command palette
         </p>
       </section>
 

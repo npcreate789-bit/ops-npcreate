@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import {
@@ -37,6 +37,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [results, setResults] = useState<Awaited<ReturnType<typeof globalSearch>>['results']>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const rowRefs = useRef<(HTMLLIElement | null)[]>([])
 
   const scopedLabel = useMemo(
     () => scopedSearchKindLabels(roles, searchResultTypeLabel),
@@ -50,6 +52,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       setResults([])
       setError(null)
       setLoading(false)
+      setActiveIndex(-1)
       return
     }
     const t = window.setTimeout(() => setQuery(input), DEBOUNCE_MS)
@@ -96,6 +99,17 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     }
   }, [allowed, hasKinds, open, query, roles])
 
+  useEffect(() => {
+    if (!open) return
+    setActiveIndex(results.length > 0 ? 0 : -1)
+    rowRefs.current = rowRefs.current.slice(0, results.length)
+  }, [open, results])
+
+  useEffect(() => {
+    if (activeIndex < 0) return
+    rowRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' })
+  }, [activeIndex])
+
   if (!open || !allowed) return null
 
   function go(href: string) {
@@ -104,6 +118,35 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
   }
 
   const queryReady = query.trim().length >= MIN_QUERY
+
+  function handlePaletteKeys(e: KeyboardEvent<HTMLInputElement>) {
+    if (!queryReady || loading || results.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActiveIndex((i) => {
+        if (i < 0) return 0
+        return (i + 1) % results.length
+      })
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActiveIndex((i) => {
+        if (i < 0) return results.length - 1
+        return (i - 1 + results.length) % results.length
+      })
+      return
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const i = activeIndex < 0 ? 0 : activeIndex
+      const item = results[i]
+      if (!item) return
+      const linkable = !configured || canOpenSearchResult(roles, item.href)
+      if (linkable) go(item.href)
+    }
+  }
 
   return (
     <div className="command-palette-backdrop" role="presentation" onClick={onClose}>
@@ -128,6 +171,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
           className="crm-input command-palette__input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handlePaletteKeys}
           placeholder="พิมพ์อย่างน้อย 2 ตัวอักษร..."
           aria-describedby="command-palette-hint"
         />
@@ -160,11 +204,22 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
           {!loading && results.length > 0 && (
             <ul className="command-palette__list">
-              {results.map((item) => {
+              {results.map((item, index) => {
                 const linkable = !configured || canOpenSearchResult(roles, item.href)
                 if (!linkable) {
                   return (
-                    <li key={`${item.kind}-${item.id}`}>
+                    <li
+                      key={`${item.kind}-${item.id}`}
+                      ref={(el) => {
+                        rowRefs.current[index] = el
+                      }}
+                      className={
+                        index === activeIndex
+                          ? 'command-palette__row command-palette__row--active'
+                          : 'command-palette__row'
+                      }
+                      onMouseEnter={() => setActiveIndex(index)}
+                    >
                       <div
                         className="command-palette__item command-palette__item--static"
                         aria-disabled="true"
@@ -180,7 +235,18 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
                   )
                 }
                 return (
-                  <li key={`${item.kind}-${item.id}`}>
+                  <li
+                    key={`${item.kind}-${item.id}`}
+                    ref={(el) => {
+                      rowRefs.current[index] = el
+                    }}
+                    className={
+                      index === activeIndex
+                        ? 'command-palette__row command-palette__row--active'
+                        : 'command-palette__row'
+                    }
+                    onMouseEnter={() => setActiveIndex(index)}
+                  >
                     <Link
                       to={item.href}
                       className="command-palette__item"
@@ -215,6 +281,9 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         </div>
 
         <footer className="command-palette__footer">
+          {!loading && queryReady && results.length > 0 ? (
+            <span>↑↓ เลือก · Enter เปิด</span>
+          ) : null}
           <span>Esc ปิด</span>
           <span>⌘K / Ctrl+K สลับ</span>
         </footer>
