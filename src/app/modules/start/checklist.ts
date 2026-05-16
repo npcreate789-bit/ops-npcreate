@@ -1,4 +1,4 @@
-import { canAccessNavPath } from '../../config/navigation'
+import { canAccessNavPath, effectiveRolesForNav } from '../../config/navigation'
 import type { AppRole } from '../../../shared/types/roles'
 
 export interface StartTaskDef {
@@ -21,6 +21,12 @@ export const START_CHECKLIST_TASKS: StartTaskDef[] = [
     path: '/app/help',
     labelTh: 'เปิดศูนย์ช่วยเหลือ',
     hint: 'เมนูตามบทบาทและ flow งานแนะนำ',
+  },
+  {
+    id: 'status',
+    path: '/app/status',
+    labelTh: 'ตรวจสถานะระบบ',
+    hint: 'การเชื่อมต่อ Supabase และเซสชัน',
   },
   {
     id: 'settings',
@@ -48,6 +54,7 @@ export const START_CHECKLIST_TASKS: StartTaskDef[] = [
   },
 ]
 
-export function startTasksVisibleForRoles(roles: AppRole[]): StartTaskDef[] {
-  return START_CHECKLIST_TASKS.filter((t) => canAccessNavPath(roles, t.path))
+export function startTasksVisibleForRoles(roles: AppRole[], configured: boolean): StartTaskDef[] {
+  const effective = effectiveRolesForNav(roles, configured)
+  return START_CHECKLIST_TASKS.filter((t) => canAccessNavPath(effective, t.path))
 }

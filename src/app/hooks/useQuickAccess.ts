@@ -52,7 +52,7 @@ export function useQuickAccess(
 
   const togglePin = useCallback(
     (path: string) => {
-      if (configured && roles.length > 0 && !canPinQuickAccessPath(roles, path)) {
+      if (configured && roles.length > 0 && !canPinQuickAccessPath(roles, path, configured)) {
         return
       }
       const result = togglePinnedPath(userId, path)

@@ -1,10 +1,14 @@
 import { Link } from 'react-router-dom'
-import { KEYBOARD_SHORTCUT_TABLE } from '../constants'
+import { useAuth } from '../../../../shared/auth/AuthProvider'
+import { keyboardShortcutsForRoles } from '../access'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../keyboard.css'
 
 export function KeyboardShortcutsPage() {
+  const { profile, configured } = useAuth()
+  const rows = keyboardShortcutsForRoles(profile?.roles ?? [], configured)
+
   return (
     <div className="page">
       <header className="page__header crm-page__header phase2-page__header">
@@ -29,7 +33,7 @@ export function KeyboardShortcutsPage() {
               </tr>
             </thead>
             <tbody>
-              {KEYBOARD_SHORTCUT_TABLE.map((row) => (
+              {rows.map((row) => (
                 <tr key={`${row.category}-${row.keys}-${row.label}`}>
                   <td>{row.category}</td>
                   <td>

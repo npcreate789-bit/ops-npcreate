@@ -43,6 +43,7 @@ import { KeyboardShortcutsPage } from './modules/keyboard/pages/KeyboardShortcut
 import { LayoutPreferencesPage } from './modules/layout/pages/LayoutPreferencesPage'
 import { StartPage } from './modules/start/pages/StartPage'
 import { AboutPage } from './modules/about/pages/AboutPage'
+import { StatusPage } from './modules/status/pages/StatusPage'
 
 function Module({ path, element }: { path: string; element: ReactNode }) {
   return (
@@ -139,6 +140,7 @@ export function AppRoutes() {
           element={<Module path="/app/layout" element={<LayoutPreferencesPage />} />}
         />
         <Route path="about" element={<Module path="/app/about" element={<AboutPage />} />} />
+        <Route path="status" element={<Module path="/app/status" element={<StatusPage />} />} />
       </Route>
       <Route path="/" element={<Navigate to="/app" replace />} />
       <Route path="*" element={<Navigate to="/app" replace />} />

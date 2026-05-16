@@ -20,14 +20,14 @@ export function useKeyboardHelp(enabled: boolean) {
       if (e.key !== '?' && !(e.shiftKey && e.key === '/')) return
       if (isEditableTarget(e.target)) return
 
-      e.preventDefault()
       const normalized =
         location.pathname.length > 1 && location.pathname.endsWith('/')
           ? location.pathname.slice(0, -1)
           : location.pathname
-      if (normalized !== '/app/help') {
-        navigate('/app/help')
-      }
+      if (normalized === '/app/help') return
+
+      e.preventDefault()
+      navigate('/app/help')
     }
 
     window.addEventListener('keydown', onKeyDown)

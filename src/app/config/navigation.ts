@@ -4,6 +4,7 @@ import {
   FINANCE_VIEW_ROLES,
   GLOBAL_SEARCH_VIEW_ROLES,
   OPS_CENTER_VIEW_ROLES,
+  TASKS_VIEW_ROLES,
   WORK_HUB_VIEW_ROLES,
   hasNavFullAccess,
   STAFF_ASSISTANT_ROLES,
@@ -53,6 +54,8 @@ export interface NavItem {
   phase17?: boolean
   /** Phase 18 modules (Sprint 34+) — About & build info */
   phase18?: boolean
+  /** Phase 19 modules (Sprint 35+) — System status & health checks */
+  phase19?: boolean
   ready: boolean
 }
 
@@ -126,7 +129,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Tasks',
     labelTh: 'งานภายใน',
     icon: '☑',
-    roles: [],
+    roles: [...TASKS_VIEW_ROLES],
     phase: 7,
     ready: true,
   },
@@ -340,6 +343,16 @@ export const NAV_ITEMS: NavItem[] = [
     phase18: true,
     ready: true,
   },
+  {
+    path: '/app/status',
+    label: 'Status',
+    labelTh: 'สถานะ',
+    icon: '●',
+    roles: [],
+    phase: 35,
+    phase19: true,
+    ready: true,
+  },
 ]
 
 export const PHASE2_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase2)
@@ -358,15 +371,28 @@ export const PHASE15_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase15)
 export const PHASE16_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase16)
 export const PHASE17_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase17)
 export const PHASE18_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase18)
+export const PHASE19_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase19)
+
+/** เมนูที่ full-access ยังต้องเช็ก roles ตามรายการ (ไม่ให้ admin เห็น Ops โดยไม่ตั้งใจ) */
+const NAV_ROLE_STRICT_PATHS = new Set<string>(['/app/ops'])
+
+/** โหมด dev — จำลอง ceo เมื่อยังไม่มีบทบาทจาก backend */
+export function effectiveRolesForNav(roles: AppRole[], configured: boolean): AppRole[] {
+  if (roles.length > 0) return roles
+  if (!configured) return ['ceo']
+  return []
+}
+
+export function canAccessNavItem(roles: AppRole[], item: NavItem): boolean {
+  if (item.path === '/app') return true
+  if (item.roles.length === 0) return true
+  if (item.roles.some((r) => roles.includes(r))) return true
+  if (hasNavFullAccess(roles) && !NAV_ROLE_STRICT_PATHS.has(item.path)) return true
+  return false
+}
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
-  if (hasNavFullAccess(roles)) return NAV_ITEMS
-
-  return NAV_ITEMS.filter(
-    (item) =>
-      item.roles.length === 0 ||
-      item.roles.some((r) => roles.includes(r)),
-  )
+  return NAV_ITEMS.filter((item) => canAccessNavItem(roles, item))
 }
 
 /** ตรวจว่า role ปัจจุบันเข้า path โมดูลได้ (รวม sub-routes) */

@@ -9,10 +9,10 @@ import '../start.css'
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function StartPage() {
-  const { profile } = useAuth()
+  const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const userId = profile?.id ?? DEV_OWNER
-  const tasks = startTasksVisibleForRoles(roles)
+  const tasks = startTasksVisibleForRoles(roles, configured)
   const { done, toggle, reset } = useStartChecklist(userId)
 
   const total = tasks.length

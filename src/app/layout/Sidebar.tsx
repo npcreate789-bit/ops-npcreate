@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { canUseGlobalSearch } from '../../shared/auth/access'
 import { ROLE_LABELS } from '../../shared/types/roles'
-import { navItemsForRoles } from '../config/navigation'
+import { effectiveRolesForNav, navItemsForRoles } from '../config/navigation'
 import { useNotificationUnread } from '../modules/notifications/useNotificationUnread'
 import { useSidebarLayout } from './SidebarLayoutContext'
 import './Sidebar.css'
@@ -16,7 +16,7 @@ interface SidebarProps {
 export function Sidebar({ onOpenSearch }: SidebarProps) {
   const { profile, signOut, configured } = useAuth()
   const { collapsed, toggleCollapsed } = useSidebarLayout()
-  const roles = profile?.roles ?? (configured ? [] : ['ceo' as const])
+  const roles = effectiveRolesForNav(profile?.roles ?? [], configured)
   const items = navItemsForRoles(roles)
   const userId = profile?.id ?? DEV_OWNER
   const unreadNotif = useNotificationUnread(userId, roles)

@@ -17,7 +17,7 @@ export function HelpPage() {
   const shortcuts = helpShortcutsForRoles(roles, configured)
   const quickLinks = helpQuickLinksForRoles(roles, configured)
   const modules = helpNavItemsForRoles(roles, configured)
-  const flowSteps = helpFlowStepsForRoles(roles)
+  const flowSteps = helpFlowStepsForRoles(roles, configured)
   const isClientOnly = configured && roles.length > 0 && roles.every((r) => r === 'client')
 
   return (

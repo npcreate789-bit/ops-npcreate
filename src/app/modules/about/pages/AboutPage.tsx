@@ -65,6 +65,9 @@ export function AboutPage() {
           <li>
             <Link to="/app/keyboard">ศูนย์คีย์ลัด</Link> — ปุ่มลัดในระบบ
           </li>
+          <li>
+            <Link to="/app/status">สถานะระบบ</Link> — ตรวจการเชื่อมต่อ
+          </li>
         </ul>
       </section>
     </div>

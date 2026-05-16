@@ -20,7 +20,7 @@ export function AppLayout() {
   const paletteEnabled = canUseGlobalSearch(roles) || !configured
   const trackHistory = canUseQuickAccess(roles) || !configured
   const { open, close, openPalette } = useCommandPalette(paletteEnabled)
-  useKeyboardHelp(canViewHelp(roles))
+  useKeyboardHelp(canViewHelp(roles) && !open)
 
   return (
     <SidebarLayoutProvider>

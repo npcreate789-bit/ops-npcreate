@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
 import {
-  NAV_ITEMS,
+  effectiveRolesForNav,
+  navItemsForRoles,
   PHASE2_NAV_ITEMS,
   PHASE3_NAV_ITEMS,
   PHASE4_NAV_ITEMS,
@@ -17,50 +17,41 @@ import {
   PHASE16_NAV_ITEMS,
   PHASE17_NAV_ITEMS,
   PHASE18_NAV_ITEMS,
+  PHASE19_NAV_ITEMS,
 } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
-import { canUseQuickAccess } from '../../shared/auth/access'
+import { canUseGlobalSearch, canUseQuickAccess } from '../../shared/auth/access'
 import { QuickAccessPanel } from '../modules/quick-access/components/QuickAccessPanel'
+import { HomeLinks, HomeNavLink, phaseCountsForRoles } from './homeAccess'
 import './pages.css'
 
 export function HomePage() {
   const { configured, profile, profileLoadError } = useAuth()
   const roles = profile?.roles ?? []
+  const navRoles = effectiveRolesForNav(roles, configured)
   const showQuickAccess = canUseQuickAccess(roles) || !configured
-  const readyCount = NAV_ITEMS.filter((i) => i.ready && i.path !== '/app').length
-  const moduleCount = NAV_ITEMS.filter((i) => i.path !== '/app').length
-  const phase2Ready = PHASE2_NAV_ITEMS.filter((i) => i.ready).length
-  const phase2Total = PHASE2_NAV_ITEMS.length
-  const phase3Ready = PHASE3_NAV_ITEMS.filter((i) => i.ready).length
-  const phase3Total = PHASE3_NAV_ITEMS.length
-  const phase4Ready = PHASE4_NAV_ITEMS.filter((i) => i.ready).length
-  const phase4Total = PHASE4_NAV_ITEMS.length
-  const phase5Ready = PHASE5_NAV_ITEMS.filter((i) => i.ready).length
-  const phase5Total = PHASE5_NAV_ITEMS.length
-  const phase6Ready = PHASE6_NAV_ITEMS.filter((i) => i.ready).length
-  const phase6Total = PHASE6_NAV_ITEMS.length
-  const phase7Ready = PHASE7_NAV_ITEMS.filter((i) => i.ready).length
-  const phase7Total = PHASE7_NAV_ITEMS.length
-  const phase8Ready = PHASE8_NAV_ITEMS.filter((i) => i.ready).length
-  const phase8Total = PHASE8_NAV_ITEMS.length
-  const phase9Ready = PHASE9_NAV_ITEMS.filter((i) => i.ready).length
-  const phase9Total = PHASE9_NAV_ITEMS.length
-  const phase10Ready = PHASE10_NAV_ITEMS.filter((i) => i.ready).length
-  const phase10Total = PHASE10_NAV_ITEMS.length
-  const phase11Ready = PHASE11_NAV_ITEMS.filter((i) => i.ready).length
-  const phase11Total = PHASE11_NAV_ITEMS.length
-  const phase13Ready = PHASE13_NAV_ITEMS.filter((i) => i.ready).length
-  const phase13Total = PHASE13_NAV_ITEMS.length
-  const phase14Ready = PHASE14_NAV_ITEMS.filter((i) => i.ready).length
-  const phase14Total = PHASE14_NAV_ITEMS.length
-  const phase15Ready = PHASE15_NAV_ITEMS.filter((i) => i.ready).length
-  const phase15Total = PHASE15_NAV_ITEMS.length
-  const phase16Ready = PHASE16_NAV_ITEMS.filter((i) => i.ready).length
-  const phase16Total = PHASE16_NAV_ITEMS.length
-  const phase17Ready = PHASE17_NAV_ITEMS.filter((i) => i.ready).length
-  const phase17Total = PHASE17_NAV_ITEMS.length
-  const phase18Ready = PHASE18_NAV_ITEMS.filter((i) => i.ready).length
-  const phase18Total = PHASE18_NAV_ITEMS.length
+  const showPaletteHint = canUseGlobalSearch(roles) || !configured
+  const navModules = navItemsForRoles(navRoles).filter((i) => i.path !== '/app')
+  const readyCount = navModules.filter((i) => i.ready).length
+  const moduleCount = navModules.length
+  const phase2 = phaseCountsForRoles(PHASE2_NAV_ITEMS, navRoles)
+  const phase3 = phaseCountsForRoles(PHASE3_NAV_ITEMS, navRoles)
+  const phase4 = phaseCountsForRoles(PHASE4_NAV_ITEMS, navRoles)
+  const phase5 = phaseCountsForRoles(PHASE5_NAV_ITEMS, navRoles)
+  const phase6 = phaseCountsForRoles(PHASE6_NAV_ITEMS, navRoles)
+  const phase7 = phaseCountsForRoles(PHASE7_NAV_ITEMS, navRoles)
+  const phase8 = phaseCountsForRoles(PHASE8_NAV_ITEMS, navRoles)
+  const phase9 = phaseCountsForRoles(PHASE9_NAV_ITEMS, navRoles)
+  const phase10 = phaseCountsForRoles(PHASE10_NAV_ITEMS, navRoles)
+  const phase11 = phaseCountsForRoles(PHASE11_NAV_ITEMS, navRoles)
+  const phase13 = phaseCountsForRoles(PHASE13_NAV_ITEMS, navRoles)
+  const phase14 = phaseCountsForRoles(PHASE14_NAV_ITEMS, navRoles)
+  const phase15 = phaseCountsForRoles(PHASE15_NAV_ITEMS, navRoles)
+  const phase16 = phaseCountsForRoles(PHASE16_NAV_ITEMS, navRoles)
+  const phase17 = phaseCountsForRoles(PHASE17_NAV_ITEMS, navRoles)
+  const phase18 = phaseCountsForRoles(PHASE18_NAV_ITEMS, navRoles)
+  const phase19 = phaseCountsForRoles(PHASE19_NAV_ITEMS, navRoles)
+  const roleStat = profileLoadError ? '—' : String(profile?.roles.length ?? 0)
   return (
     <div className="page">
       <header className="page__header">
@@ -93,7 +84,7 @@ export function HomePage() {
         </article>
         <article className="card">
           <h2>ผู้ใช้</h2>
-          <p className="stat">{profile?.roles.length ?? 0}</p>
+          <p className="stat">{roleStat}</p>
           <span className="muted">บทบาทที่ได้รับมอบหมาย</span>
         </article>
       </section>
@@ -101,31 +92,47 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 1 MVP</h2>
         <p>
-          โมดูลหลักพร้อมใช้งานครบแล้ว — ไปที่{' '}
-          <Link to="/app/dashboard">ภาพรวมผู้บริหาร</Link> เพื่อดูสรุปทั้งระบบ
+          โมดูลหลักพร้อมใช้งานครบแล้ว
+          <HomeNavLink path="/app/dashboard" roles={navRoles}>
+            {' '}
+            — ไปที่ภาพรวมผู้บริหาร
+          </HomeNavLink>{' '}
+          เพื่อดูสรุปทั้งระบบ
         </p>
       </section>
 
       <section className="card card--wide">
         <h2>Phase 2</h2>
         <p>
-          ครบ {phase2Ready}/{phase2Total} โมดูล —{' '}
-          <Link to="/app/admin">ผู้ใช้</Link>,{' '}
-          <Link to="/app/content">คอนเทนต์</Link>,{' '}
-          <Link to="/app/client">รายงานลูกค้า</Link>
+          ครบ {phase2.ready}/{phase2.total} โมดูล —{' '}
+          <HomeLinks
+            roles={navRoles}
+            items={[
+              { path: '/app/admin', label: 'ผู้ใช้' },
+              { path: '/app/content', label: 'คอนเทนต์' },
+              { path: '/app/client', label: 'รายงานลูกค้า' },
+            ]}
+          />
         </p>
         <p className="muted">
           CEO ดูสรุปคอนเทนต์และแจ้งเตือนได้ที่{' '}
-          <Link to="/app/dashboard">ภาพรวมผู้บริหาร</Link>
+          <HomeNavLink path="/app/dashboard" roles={navRoles}>
+            ภาพรวมผู้บริหาร
+          </HomeNavLink>
         </p>
       </section>
 
       <section className="card card--wide">
         <h2>Phase 3</h2>
         <p>
-          ครบ {phase3Ready}/{phase3Total} โมดูล —{' '}
-          <Link to="/app/notifications">แจ้งเตือน</Link>,{' '}
-          <Link to="/app/creators">ครีเอเตอร์</Link>
+          ครบ {phase3.ready}/{phase3.total} โมดูล —{' '}
+          <HomeLinks
+            roles={navRoles}
+            items={[
+              { path: '/app/notifications', label: 'แจ้งเตือน' },
+              { path: '/app/creators', label: 'ครีเอเตอร์' },
+            ]}
+          />
         </p>
         <p className="muted">
           แจ้งเตือนซิงก์จากงานค้างในระบบอัตโนมัติ — ฐานข้อมูล Creator สำหรับ UGC / TikTok One
@@ -135,9 +142,14 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 4</h2>
         <p>
-          ครบ {phase4Ready}/{phase4Total} โมดูล —{' '}
-          <Link to="/app/renewals">ต่อสัญญา</Link>,{' '}
-          <Link to="/app/reports">รายงานขั้นสูง</Link>
+          ครบ {phase4.ready}/{phase4.total} โมดูล —{' '}
+          <HomeLinks
+            roles={navRoles}
+            items={[
+              { path: '/app/renewals', label: 'ต่อสัญญา' },
+              { path: '/app/reports', label: 'รายงานขั้นสูง' },
+            ]}
+          />
         </p>
         <p className="muted">
           ติดตามสัญญาใกล้หมดอายุ ขยายสัญญาได้จากระบบ — รายงานรายเดือนพร้อมคำแนะนำอัตโนมัติ
@@ -147,10 +159,14 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 5</h2>
         <p>
-          ครบ {phase5Ready}/{phase5Total} โมดูลหลัก —{' '}
-          <Link to="/app/assistant">ผู้ช่วย AI</Link>
-          {' · '}
-          <Link to="/app/client">รายงานลูกค้า + ถามผู้ช่วย</Link>
+          ครบ {phase5.ready}/{phase5.total} โมดูลหลัก —{' '}
+          <HomeLinks
+            roles={navRoles}
+            items={[
+              { path: '/app/assistant', label: 'ผู้ช่วย AI' },
+              { path: '/app/client', label: 'รายงานลูกค้า + ถามผู้ช่วย' },
+            ]}
+          />
         </p>
         <p className="muted">
           เทมเพลตอัจฉริยะจากข้อมูลในระบบ (ไม่ใช้ OpenAI) — ลูกค้าถามได้เฉพาะในรายงานของตัวเอง
@@ -160,10 +176,14 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 6</h2>
         <p>
-          ครบ {phase6Ready}/{phase6Total} โมดูล —{' '}
-          <Link to="/app/timeline">ไทม์ไลน์งาน</Link>
-          {' · '}
-          <Link to="/app/settings">ตั้งค่าบัญชี</Link>
+          ครบ {phase6.ready}/{phase6.total} โมดูล —{' '}
+          <HomeLinks
+            roles={navRoles}
+            items={[
+              { path: '/app/timeline', label: 'ไทม์ไลน์งาน' },
+              { path: '/app/settings', label: 'ตั้งค่าบัญชี' },
+            ]}
+          />
         </p>
         <p className="muted">
           รวมงานค้าง สัญญา นัด Lead และครบกำหนดชำระ — ดูเอกสารการเงินที่ออกแล้วในหน้าการเงิน
@@ -173,10 +193,14 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 7</h2>
         <p>
-          ครบ {phase7Ready}/{phase7Total} โมดูล —{' '}
-          <Link to="/app/activity">บันทึกกิจกรรม</Link>
-          {' · '}
-          <Link to="/app/weekly">สรุปรายสัปดาห์</Link>
+          ครบ {phase7.ready}/{phase7.total} โมดูล —{' '}
+          <HomeLinks
+            roles={navRoles}
+            items={[
+              { path: '/app/activity', label: 'บันทึกกิจกรรม' },
+              { path: '/app/weekly', label: 'สรุปรายสัปดาห์' },
+            ]}
+          />
         </p>
         <p className="muted">
           ติดตามการเปลี่ยนแปลงในระบบและสรุป KPI 7 วัน พร้อมคำแนะนำอัตโนมัติ
@@ -186,8 +210,10 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 8</h2>
         <p>
-          ครบ {phase8Ready}/{phase8Total} โมดูล —{' '}
-          <Link to="/app/customers">ลูกค้า 360</Link>
+          ครบ {phase8.ready}/{phase8.total} โมดูล —{' '}
+          <HomeNavLink path="/app/customers" roles={navRoles}>
+            ลูกค้า 360
+          </HomeNavLink>
         </p>
         <p className="muted">
           ศูนย์กลางข้อมูลลูกค้าเชื่อมทุกโมดูล พร้อมส่งออก CSV ในรายงานและบันทึกกิจกรรม
@@ -197,8 +223,10 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 9</h2>
         <p>
-          ครบ {phase9Ready}/{phase9Total} โมดูล —{' '}
-          <Link to="/app/search">ค้นหารวม</Link>
+          ครบ {phase9.ready}/{phase9.total} โมดูล —{' '}
+          <HomeNavLink path="/app/search" roles={navRoles}>
+            ค้นหารวม
+          </HomeNavLink>
         </p>
         <p className="muted">
           ค้นหา Lead · ลูกค้า · งาน ตาม RLS ของบทบาท — พร้อม deploy SPA บน Vercel
@@ -208,8 +236,10 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 10</h2>
         <p>
-          ครบ {phase10Ready}/{phase10Total} ฟีเจอร์ —{' '}
-          <Link to="/app/customers">ลูกค้า 360 + ไทม์ไลน์</Link>
+          ครบ {phase10.ready}/{phase10.total} ฟีเจอร์ —{' '}
+          <HomeNavLink path="/app/customers" roles={navRoles}>
+            ลูกค้า 360 + ไทม์ไลน์
+          </HomeNavLink>
         </p>
         <p className="muted">
           รวมเหตุการณ์งาน การเงิน คอนเทนต์ สัญญา และกิจกรรมต่อลูกค้า — กรองตามบทบาท
@@ -219,10 +249,17 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 11</h2>
         <p>
-          ครบ {phase11Ready}/{phase11Total} โมดูล —{' '}
-          <Link to="/app/ops">ศูนย์ Ops</Link>
-          {' · '}
-          กด <kbd>⌘K</kbd> เพื่อค้นหาด่วน
+          ครบ {phase11.ready}/{phase11.total} โมดูล
+          <HomeNavLink path="/app/ops" roles={navRoles}>
+            {' '}
+            — ศูนย์ Ops
+          </HomeNavLink>
+          {showPaletteHint ? (
+            <>
+              {' · '}
+              กด <kbd>⌘K</kbd> เพื่อค้นหาด่วน
+            </>
+          ) : null}
         </p>
         <p className="muted">
           Command palette ค้นหารวมทุกหน้า + เช็กลิสต์ deploy สำหรับทีม Ops
@@ -232,8 +269,13 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 12</h2>
         <p>
-          หน้าล่าสุดและปักหมุด — บันทึกอัตโนมัติตามที่คุณเปิดดู · กด ☆ เพื่อปักหมุด · แสดงใน{' '}
-          <kbd>⌘K</kbd> เมื่อยังไม่พิมพ์ค้นหา
+          หน้าล่าสุดและปักหมุด — บันทึกอัตโนมัติตามที่คุณเปิดดู · กด ☆ เพื่อปักหมุด
+          {showPaletteHint ? (
+            <>
+              {' '}
+              · แสดงใน <kbd>⌘K</kbd> เมื่อยังไม่พิมพ์ค้นหา
+            </>
+          ) : null}
         </p>
         {showQuickAccess ? (
           <>
@@ -252,8 +294,10 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 13</h2>
         <p>
-          ครบ {phase13Ready}/{phase13Total} โมดูล —{' '}
-          <Link to="/app/work">งานของฉัน</Link>
+          ครบ {phase13.ready}/{phase13.total} โมดูล —{' '}
+          <HomeNavLink path="/app/work" roles={navRoles}>
+            งานของฉัน
+          </HomeNavLink>
         </p>
         <p className="muted">
           รวมงานค้าง นัด Lead สัญญา การเงิน และแจ้งเตือน — เรียงตามความเร่งด่วน กรองตามบทบาท
@@ -263,8 +307,10 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 14</h2>
         <p>
-          ครบ {phase14Ready}/{phase14Total} โมดูล —{' '}
-          <Link to="/app/help">ช่วยเหลือ</Link>
+          ครบ {phase14.ready}/{phase14.total} โมดูล —{' '}
+          <HomeNavLink path="/app/help" roles={navRoles}>
+            ช่วยเหลือ
+          </HomeNavLink>
           {' · '}
           กด <kbd>?</kbd> จากทุกหน้า
         </p>
@@ -276,11 +322,17 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 15</h2>
         <p>
-          ครบ {phase15Ready}/{phase15Total} โมดูล —{' '}
-          <Link to="/app/keyboard">ศูนย์คีย์ลัด</Link>
-          {' · '}
-          ใน <kbd>⌘K</kbd> เลือกผลด้วย <kbd>↑</kbd>
-          <kbd>↓</kbd> แล้วกด <kbd>Enter</kbd>
+          ครบ {phase15.ready}/{phase15.total} โมดูล —{' '}
+          <HomeNavLink path="/app/keyboard" roles={navRoles}>
+            ศูนย์คีย์ลัด
+          </HomeNavLink>
+          {showPaletteHint ? (
+            <>
+              {' · '}
+              ใน <kbd>⌘K</kbd> เลือกผลด้วย <kbd>↑</kbd>
+              <kbd>↓</kbd> แล้วกด <kbd>Enter</kbd>
+            </>
+          ) : null}
         </p>
         <p className="muted">
           ตารางปุ่มลัดรวมศูนย์ + นำทางผลค้นหาด้วยคีย์บอร์ดใน Command palette
@@ -290,8 +342,10 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 16</h2>
         <p>
-          ครบ {phase16Ready}/{phase16Total} โมดูล —{' '}
-          <Link to="/app/layout">การจัดวางหน้าจอ</Link>
+          ครบ {phase16.ready}/{phase16.total} โมดูล —{' '}
+          <HomeNavLink path="/app/layout" roles={navRoles}>
+            การจัดวางหน้าจอ
+          </HomeNavLink>
           {' · '}
           พับแถบเมนูเป็นไอคอน (ปุ่ม‹/› ใต้โลโก้)
         </p>
@@ -303,8 +357,10 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 17</h2>
         <p>
-          ครบ {phase17Ready}/{phase17Total} โมดูล —{' '}
-          <Link to="/app/start">เริ่มใช้งาน</Link>
+          ครบ {phase17.ready}/{phase17.total} โมดูล —{' '}
+          <HomeNavLink path="/app/start" roles={navRoles}>
+            เริ่มใช้งาน
+          </HomeNavLink>
           {' · '}
           เช็กลิสต์แรกตามบทบาท เก็บในเครื่อง
         </p>
@@ -316,13 +372,30 @@ export function HomePage() {
       <section className="card card--wide">
         <h2>Phase 18</h2>
         <p>
-          ครบ {phase18Ready}/{phase18Total} โมดูล —{' '}
-          <Link to="/app/about">เกี่ยวกับระบบ</Link>
+          ครบ {phase18.ready}/{phase18.total} โมดูล —{' '}
+          <HomeNavLink path="/app/about" roles={navRoles}>
+            เกี่ยวกับระบบ
+          </HomeNavLink>
           {' · '}
           เวอร์ชันแอปและสภาพแวดล้อม
         </p>
         <p className="muted">
           ดึงเวอร์ชันจาก package.json แสดงโหมดรันไทม์และสถานะ Supabase
+        </p>
+      </section>
+
+      <section className="card card--wide">
+        <h2>Phase 19</h2>
+        <p>
+          ครบ {phase19.ready}/{phase19.total} โมดูล —{' '}
+          <HomeNavLink path="/app/status" roles={navRoles}>
+            สถานะระบบ
+          </HomeNavLink>
+          {' · '}
+          ตรวจ Supabase และเซสชัน
+        </p>
+        <p className="muted">
+          ทดสอบการเชื่อมต่อฐานข้อมูล แสดง latency และสรุป auth / โปรไฟล์
         </p>
       </section>
 

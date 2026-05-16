@@ -67,4 +67,10 @@ export const KEYBOARD_SHORTCUT_TABLE: KeyboardShortcutRow[] = [
     label: 'เกี่ยวกับ',
     detail: 'เวอร์ชันแอป โหมด build และสถานะ Supabase',
   },
+  {
+    category: 'ระบบ',
+    keys: '—',
+    label: 'สถานะระบบ',
+    detail: 'ตรวจการเชื่อมต่อฐานข้อมูลและเซสชัน',
+  },
 ]

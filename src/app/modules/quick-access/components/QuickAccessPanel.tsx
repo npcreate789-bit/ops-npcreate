@@ -32,7 +32,7 @@ export function QuickAccessPanel({ variant = 'home', onNavigate }: QuickAccessPa
   const recentOnly = recent.filter((r) => !isPinned(r.path))
 
   function go(path: string) {
-    if (configured && roles.length > 0 && !canOpenQuickAccessPath(roles, path)) return
+    if (configured && roles.length > 0 && !canOpenQuickAccessPath(roles, path, configured)) return
     onNavigate?.()
     navigate(path)
   }
@@ -43,8 +43,8 @@ export function QuickAccessPanel({ variant = 'home', onNavigate }: QuickAccessPa
     subtitle?: string
     visitedAt?: string
   }) {
-    const linkable = !configured || canOpenQuickAccessPath(roles, entry.path)
-    const canPin = linkable && (!configured || canPinQuickAccessPath(roles, entry.path))
+    const linkable = !configured || canOpenQuickAccessPath(roles, entry.path, configured)
+    const canPin = linkable && (!configured || canPinQuickAccessPath(roles, entry.path, configured))
     const pinnedNow = isPinned(entry.path)
 
     const body = (

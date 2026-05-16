@@ -14,16 +14,24 @@ export function filterVisibleQuickAccess(
   if (roles.length === 0) {
     return configured ? [] : entries
   }
-  return entries.filter((entry) => canOpenQuickAccessPath(roles, entry.path))
+  return entries.filter((entry) => canOpenQuickAccessPath(roles, entry.path, configured))
 }
 
-export function canOpenQuickAccessPath(roles: AppRole[], path: string): boolean {
-  if (roles.length === 0) return true
+export function canOpenQuickAccessPath(
+  roles: AppRole[],
+  path: string,
+  configured = true,
+): boolean {
+  if (roles.length === 0) return !configured
   return canAccessNavPath(roles, path)
 }
 
-export function canPinQuickAccessPath(roles: AppRole[], path: string): boolean {
-  return canOpenQuickAccessPath(roles, path)
+export function canPinQuickAccessPath(
+  roles: AppRole[],
+  path: string,
+  configured = true,
+): boolean {
+  return canOpenQuickAccessPath(roles, path, configured)
 }
 
 export function shouldRecordQuickAccessVisit(
@@ -34,7 +42,7 @@ export function shouldRecordQuickAccessVisit(
   if (!isTrackableAppPath(pathname)) return false
   const { path } = resolvePageMeta(pathname)
   if (path === '/app') return false
-  if (configured && roles.length > 0 && !canOpenQuickAccessPath(roles, path)) {
+  if (configured && roles.length > 0 && !canOpenQuickAccessPath(roles, path, configured)) {
     return false
   }
   return true
@@ -50,7 +58,7 @@ export function sanitizeQuickAccessState(
     pinned: state.pinned.filter((path) => {
       if (roles.length === 0 && !configured) return true
       if (roles.length === 0) return false
-      return canOpenQuickAccessPath(roles, path)
+      return canOpenQuickAccessPath(roles, path, configured)
     }),
   }
 }

@@ -1,6 +1,6 @@
 export { canViewHelp } from '../../../shared/auth/access'
 
-import { canAccessNavPath, navItemsForRoles } from '../../config/navigation'
+import { canAccessNavPath, effectiveRolesForNav, navItemsForRoles } from '../../config/navigation'
 import {
   canUseGlobalSearch,
   canUseQuickAccess,
@@ -16,9 +16,10 @@ const KEYBOARD_CENTER_PATH = '/app/keyboard'
 const LAYOUT_PREFS_PATH = '/app/layout'
 const START_GUIDE_PATH = '/app/start'
 const ABOUT_PATH = '/app/about'
+const STATUS_PATH = '/app/status'
 
 function isDevUnconfigured(roles: AppRole[], configured: boolean): boolean {
-  return !configured && roles.length === 0
+  return !configured && effectiveRolesForNav(roles, configured).length > 0 && roles.length === 0
 }
 
 export function canOpenHelpNavLink(
@@ -32,8 +33,7 @@ export function canOpenHelpNavLink(
 }
 
 export function helpNavItemsForRoles(roles: AppRole[], configured: boolean) {
-  const effectiveRoles =
-    roles.length > 0 ? roles : isDevUnconfigured(roles, configured) ? (['ceo' as const] as AppRole[]) : []
+  const effectiveRoles = effectiveRolesForNav(roles, configured)
 
   return navItemsForRoles(effectiveRoles).filter(
     (item) =>
@@ -43,6 +43,7 @@ export function helpNavItemsForRoles(roles: AppRole[], configured: boolean) {
       item.path !== LAYOUT_PREFS_PATH &&
       item.path !== START_GUIDE_PATH &&
       item.path !== ABOUT_PATH &&
+      item.path !== STATUS_PATH &&
       item.ready,
   )
 }
@@ -107,6 +108,7 @@ export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
   links.push({ path: '/app/keyboard', label: 'ศูนย์คีย์ลัด', detail: 'ตารางปุ่มลัดทั้งหมด' })
   links.push({ path: '/app/layout', label: 'การจัดวางหน้าจอ', detail: 'พับแถบเมนูและความกว้าง' })
   links.push({ path: '/app/about', label: 'เกี่ยวกับระบบ', detail: 'เวอร์ชันและสภาพแวดล้อม' })
+  links.push({ path: '/app/status', label: 'สถานะระบบ', detail: 'ตรวจ Supabase และการเข้าสู่ระบบ' })
 
   return links.filter((link) => canOpenHelpNavLink(roles, link.path, configured))
 }
@@ -125,8 +127,9 @@ const FLOW_CLIENT = [
   'ใช้ผู้ช่วย AI ในหน้ารายงาน (ถามข้อมูลของคุณเท่านั้น)',
 ] as const
 
-export function helpFlowStepsForRoles(roles: AppRole[]): string[] {
-  if (roles.length === 0) return [...FLOW_STAFF]
-  if (roles.every((r) => r === 'client')) return [...FLOW_CLIENT]
+export function helpFlowStepsForRoles(roles: AppRole[], configured: boolean): string[] {
+  const effective = effectiveRolesForNav(roles, configured)
+  if (effective.length === 0) return [...FLOW_STAFF]
+  if (effective.every((r) => r === 'client')) return [...FLOW_CLIENT]
   return [...FLOW_STAFF]
 }

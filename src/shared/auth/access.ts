@@ -14,6 +14,19 @@ export function hasNavFullAccess(roles: AppRole[]): boolean {
   return roles.some((r) => NAV_FULL_ACCESS_ROLES.includes(r))
 }
 
+/** งานภายใน — ทีมภายในเท่านั้น (ไม่รวม client) */
+export const TASKS_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'sales',
+  'account',
+  'ads',
+  'senior_ads',
+  'content',
+  'admin',
+  'dev',
+]
+
 /** เปิดรายการแอด / ข้าม claim โดยไม่ต้องเป็นเจ้าของแคมเปญ */
 export const ADS_BYPASS_ROLES: AppRole[] = [
   'ceo',
