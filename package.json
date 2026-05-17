@@ -13,6 +13,8 @@
     "supabase:login": "npx supabase login",
     "functions:deploy": "node scripts/deploy-create-employee.mjs",
     "db:push": "npx supabase db push",
+    "db:verify-inquiry": "node scripts/verify-public-inquiry.mjs",
+    "db:verify-inquiry:submit": "node scripts/verify-public-inquiry.mjs --submit",
     "db:link": "npx supabase link",
     "db:sql": "node scripts/print-migrations.mjs",
     "db:sql:phase4-7": "node scripts/print-migrations-range.mjs 00030",
