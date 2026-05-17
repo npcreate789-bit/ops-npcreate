@@ -74,6 +74,9 @@ export function SalesPage() {
           </p>
         </div>
         <div className="sales-page__header-actions">
+          <Link to="/app/sales/packages" className="crm-btn crm-btn--ghost">
+            จัดการแพ็กเกจ
+          </Link>
           {showWorkLink && (
             <Link to="/app/work" className="crm-btn crm-btn--ghost">
               งานของฉัน

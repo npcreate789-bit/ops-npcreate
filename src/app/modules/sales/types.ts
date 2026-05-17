@@ -18,6 +18,19 @@ export interface Package {
   is_active: boolean
 }
 
+export interface PackageInput {
+  code: string
+  name: string
+  description: string | null
+  base_price: number
+  is_active: boolean
+}
+
+export interface PackageListOptions {
+  /** undefined = ทั้งหมด, true = เฉพาะใช้งาน, false = ปิดใช้งาน */
+  activeOnly?: boolean
+}
+
 export interface Customer {
   id: string
   lead_id: string | null

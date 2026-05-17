@@ -2,21 +2,12 @@ import { logAudit } from '../../../../shared/audit/logAudit'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { updateLead } from '../../crm/api/leads'
 import type { LeadStatus } from '../../crm/types'
-import type { Quotation, QuotationInput, Package, QuotationStatus } from '../types'
+import type { Quotation, QuotationInput, QuotationStatus } from '../types'
 import { appUrl } from '../../../../shared/config/appUrl'
 import { calcQuotationTotals, isQuotationSentLike, publicQuotationPath } from '../constants'
 import { mockSalesApi } from './mockStore'
 
-export async function listPackages(): Promise<Package[]> {
-  if (!isSupabaseConfigured || !supabase) return mockSalesApi.listPackages()
-  const { data, error } = await supabase
-    .from('packages')
-    .select('*')
-    .eq('is_active', true)
-    .order('name')
-  if (error) throw new Error(error.message)
-  return (data ?? []) as Package[]
-}
+export { listPackages } from './packages'
 
 export async function listQuotations(): Promise<Quotation[]> {
   if (!isSupabaseConfigured || !supabase) return mockSalesApi.listQuotations()

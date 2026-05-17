@@ -495,6 +495,13 @@ export function canEditSalesQuotation(
   )
 }
 
+/** จัดการแพ็กเกจบริการ — ตรง packages_insert/update RLS */
+export const PACKAGES_MANAGE_ROLES: AppRole[] = ['sales', ...DB_PRIVILEGED_ROLES]
+
+export function canManageSalesPackages(roles: AppRole[]): boolean {
+  return roles.some((r) => PACKAGES_MANAGE_ROLES.includes(r))
+}
+
 // --- Phase 1: Finance ---
 
 export const FINANCE_MANAGE_ROLES: AppRole[] = ['ceo', 'admin', 'dev']

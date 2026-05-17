@@ -11,6 +11,8 @@ import { CrmLeadsPage } from './modules/crm/pages/CrmLeadsPage'
 import { LeadEditorPage } from './modules/crm/pages/LeadEditorPage'
 import { SalesPage } from './modules/sales/pages/SalesPage'
 import { QuotationEditorPage } from './modules/sales/pages/QuotationEditorPage'
+import { PackagesListPage } from './modules/sales/pages/PackagesListPage'
+import { PackageEditorPage } from './modules/sales/pages/PackageEditorPage'
 import { FinancePage } from './modules/finance/pages/FinancePage'
 import { PaymentEditorPage } from './modules/finance/pages/PaymentEditorPage'
 import { OnboardingListPage } from './modules/onboarding/pages/OnboardingListPage'
@@ -95,6 +97,14 @@ export function AppRoutes() {
         <Route
           path="sales/quotations/:id"
           element={<Module path="/app/sales" element={<QuotationEditorPage />} />}
+        />
+        <Route
+          path="sales/packages"
+          element={<Module path="/app/sales" element={<PackagesListPage />} />}
+        />
+        <Route
+          path="sales/packages/:id"
+          element={<Module path="/app/sales" element={<PackageEditorPage />} />}
         />
         <Route path="finance" element={<Module path="/app/finance" element={<FinancePage />} />} />
         <Route

@@ -1,26 +1,118 @@
-import type { Customer, Package, PublicQuotation, Quotation, QuotationInput } from '../types'
+import type {
+  Customer,
+  Package,
+  PackageInput,
+  PackageListOptions,
+  PublicQuotation,
+  Quotation,
+  QuotationInput,
+} from '../types'
 import { calcQuotationTotals, isQuotationSentLike } from '../constants'
 
 const PKG_KEY = 'npcreate_packages_dev'
+const PKG_VERSION_KEY = 'npcreate_packages_dev_version'
+/** Bump when SEED_PACKAGES changes so dev localStorage picks up new rows. */
+const PKG_SEED_VERSION = 2
 const QT_KEY = 'npcreate_quotations_dev'
 const CUST_KEY = 'npcreate_customers_dev'
+
+/** Mirrors supabase/migrations/00005_sales.sql + 00065_seed_sales_packages.sql */
 const SEED_PACKAGES: Package[] = [
-  { id: 'p1', code: 'gmv_max', name: 'ดูแล GMV Max', description: null, base_price: 15000, is_active: true },
-  { id: 'p2', code: 'content', name: 'ผลิตคอนเทนต์', description: null, base_price: 12000, is_active: true },
-  { id: 'p3', code: 'tiktok_one', name: 'TikTok One / Creator', description: null, base_price: 20000, is_active: true },
+  {
+    id: 'p-gmv-max',
+    code: 'gmv_max',
+    name: 'ดูแล GMV Max',
+    description: 'บริการดูแลแคมเปญ GMV Max รายเดือน — วางแผน ยิงแอด รายงานผล',
+    base_price: 15000,
+    is_active: true,
+  },
+  {
+    id: 'p-gmv-course',
+    code: 'gmv_course',
+    name: 'คอร์ส GMV Max',
+    description: 'อบรม GMV Max แบบ intensive — กลุ่มเล็ก + แนวทางปฏิบัติ',
+    base_price: 9900,
+    is_active: true,
+  },
+  {
+    id: 'p-tiktok-one',
+    code: 'tiktok_one',
+    name: 'TikTok One / Creator',
+    description: 'บริการ Creator & TikTok One — จับคู่ครีเอเตอร์และดูแลโปรเจกต์',
+    base_price: 20000,
+    is_active: true,
+  },
+  {
+    id: 'p-content',
+    code: 'content',
+    name: 'ผลิตคอนเทนต์',
+    description: 'ผลิตคลิปและคอนเทนต์สำหรับ TikTok / Reels — ตามแพ็กเกจชิ้น',
+    base_price: 12000,
+    is_active: true,
+  },
+  {
+    id: 'p-live',
+    code: 'live',
+    name: 'Live Commerce',
+    description: 'บริการไลฟ์ขาย — จัดไลฟ์ ดูแลห้อง และสรุปผลหลังไลฟ์',
+    base_price: 18000,
+    is_active: true,
+  },
+  {
+    id: 'p-consulting',
+    code: 'consulting',
+    name: 'Private Consulting',
+    description: 'ที่ปรึกษาแบบส่วนตัว — วิเคราะห์ธุรกิจและแผนการตลาด',
+    base_price: 25000,
+    is_active: true,
+  },
+  {
+    id: 'p-software',
+    code: 'software',
+    name: 'Software / License',
+    description: 'ซอฟต์แวร์และไลเซนส์ NP Create — รายเดือนหรือรายปี',
+    base_price: 8000,
+    is_active: true,
+  },
+  {
+    id: 'p-other',
+    code: 'other',
+    name: 'บริการอื่น ๆ',
+    description: 'บริการอื่นตามข้อตกลง — กำหนดราคาในใบเสนอราคา',
+    base_price: 0,
+    is_active: true,
+  },
 ]
 
-function loadPackages(): Package[] {
+function persistPackages(packages: Package[]) {
+  localStorage.setItem(PKG_KEY, JSON.stringify(packages))
+  localStorage.setItem(PKG_VERSION_KEY, String(PKG_SEED_VERSION))
+}
+
+function loadAllPackagesRaw(): Package[] {
   try {
+    const version = localStorage.getItem(PKG_VERSION_KEY)
     const raw = localStorage.getItem(PKG_KEY)
-    if (!raw) {
-      localStorage.setItem(PKG_KEY, JSON.stringify(SEED_PACKAGES))
-      return SEED_PACKAGES
+    if (!raw || version !== String(PKG_SEED_VERSION)) {
+      persistPackages(SEED_PACKAGES)
+      return [...SEED_PACKAGES]
     }
-    return JSON.parse(raw) as Package[]
+    const parsed = JSON.parse(raw) as Package[]
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      persistPackages(SEED_PACKAGES)
+      return [...SEED_PACKAGES]
+    }
+    return parsed
   } catch {
-    return SEED_PACKAGES
+    persistPackages(SEED_PACKAGES)
+    return [...SEED_PACKAGES]
   }
+}
+
+function filterPackages(rows: Package[], options: PackageListOptions): Package[] {
+  if (options.activeOnly === true) return rows.filter((p) => p.is_active)
+  if (options.activeOnly === false) return rows.filter((p) => !p.is_active)
+  return rows
 }
 
 function loadQuotations(): Quotation[] {
@@ -53,7 +145,58 @@ let qtSeq = 1001
 
 export const mockSalesApi = {
   async listPackages(): Promise<Package[]> {
-    return loadPackages()
+    return filterPackages(loadAllPackagesRaw(), { activeOnly: true }).sort((a, b) =>
+      a.name.localeCompare(b.name, 'th'),
+    )
+  },
+
+  async listAllPackages(options: PackageListOptions = {}): Promise<Package[]> {
+    return filterPackages(loadAllPackagesRaw(), options).sort((a, b) =>
+      a.name.localeCompare(b.name, 'th'),
+    )
+  },
+
+  async getPackage(id: string): Promise<Package | null> {
+    return loadAllPackagesRaw().find((p) => p.id === id) ?? null
+  },
+
+  async createPackage(input: PackageInput): Promise<Package> {
+    const rows = loadAllPackagesRaw()
+    const code = input.code.trim()
+    if (rows.some((p) => p.code === code)) {
+      throw new Error('รหัสแพ็กเกจซ้ำ — ใช้รหัสอื่น')
+    }
+    const row: Package = {
+      id: crypto.randomUUID(),
+      code,
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+      base_price: input.base_price,
+      is_active: input.is_active,
+    }
+    persistPackages([row, ...rows])
+    return row
+  },
+
+  async updatePackage(id: string, input: PackageInput): Promise<Package> {
+    const rows = loadAllPackagesRaw()
+    const idx = rows.findIndex((p) => p.id === id)
+    if (idx === -1) throw new Error('ไม่พบแพ็กเกจ')
+    const code = input.code.trim()
+    if (rows.some((p) => p.code === code && p.id !== id)) {
+      throw new Error('รหัสแพ็กเกจซ้ำ — ใช้รหัสอื่น')
+    }
+    const updated: Package = {
+      ...rows[idx],
+      code,
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+      base_price: input.base_price,
+      is_active: input.is_active,
+    }
+    rows[idx] = updated
+    persistPackages(rows)
+    return updated
   },
 
   async listQuotations(): Promise<Quotation[]> {

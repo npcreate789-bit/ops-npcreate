@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import type { Package, Quotation, QuotationInput, QuotationStatus } from '../types'
 import {
   DEFAULT_TERMS,
@@ -224,7 +225,19 @@ export function QuotationForm({
       </div>
 
       <div className="qt-form__full">
-        <h3 className="crm-section-title">รายการบริการ</h3>
+        <h3 className="crm-section-title">
+          รายการบริการ{' '}
+          <Link to="/app/sales/packages" className="crm-sub">
+            · จัดการแพ็กเกจ
+          </Link>
+        </h3>
+        {packages.length === 0 && (
+          <p className="crm-banner crm-banner--warn">
+            ยังไม่มีแพ็กเกจในระบบ —{' '}
+            <Link to="/app/sales/packages">จัดการแพ็กเกจ</Link>
+            หรือรัน migration บน Supabase
+          </p>
+        )}
         <div className="qt-lines">
           {state.items.map((item, index) => (
             <div key={index} className="qt-line">
@@ -238,7 +251,7 @@ export function QuotationForm({
                   <option value="">กำหนดเอง</option>
                   {packages.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name}
+                      {p.name} — {p.base_price.toLocaleString('th-TH')} บาท
                     </option>
                   ))}
                 </select>
