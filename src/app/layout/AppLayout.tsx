@@ -7,6 +7,7 @@ import { useCommandPalette } from '../hooks/useCommandPalette'
 import { useKeyboardHelp } from '../hooks/useKeyboardHelp'
 import { PageHistoryTracker } from '../modules/quick-access/components/PageHistoryTracker'
 import { LeadNotificationToasts } from '../modules/notifications/components/LeadNotificationToasts'
+import { NotificationRealtimeProvider } from '../modules/notifications/NotificationRealtimeContext'
 import { useNotificationSoundPrime } from '../modules/notifications/useNotificationSoundPrime'
 import { Sidebar } from './Sidebar'
 import './AppLayout.css'
@@ -26,6 +27,7 @@ export function AppLayout() {
   useNotificationSoundPrime()
 
   return (
+    <NotificationRealtimeProvider userId={userId} roles={roles}>
     <SidebarLayoutProvider>
       <div className="app-shell">
         {trackHistory && <PageHistoryTracker userId={userId} />}
@@ -38,5 +40,6 @@ export function AppLayout() {
         <LeadNotificationToasts userId={userId} roles={roles} />
       </div>
     </SidebarLayoutProvider>
+    </NotificationRealtimeProvider>
   )
 }

@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { canAccessNotifications } from '../../../shared/auth/access'
-import { isSupabaseConfigured } from '../../../shared/supabase/client'
-import { useRealtimeChannel } from '../../../shared/supabase/useRealtimeChannel'
 import type { AppRole } from '../../../shared/types/roles'
 import { getUnreadNotificationCount } from './api/notifications'
 import { NOTIFICATION_PUSH_EVENT } from './leadNotification'
+import { useNotificationRealtime } from './NotificationRealtimeContext'
 import { playNotificationAlert } from './notificationSound'
 
 const POLL_MS = 60_000
@@ -17,25 +16,7 @@ export function useNotificationUnread(userId: string | undefined, roles: AppRole
   const [count, setCount] = useState(0)
   const prevCountRef = useRef<number | null>(null)
   const enabled = canAccessNotifications(roles)
-
-  const refreshCount = useCallback(
-    (opts?: { silent?: boolean }) => {
-      if (!userId || !enabled) return
-      getUnreadNotificationCount(userId)
-        .then((n) => {
-          if (!opts?.silent && shouldPlaySound(prevCountRef.current, n)) {
-            playNotificationAlert()
-          }
-          prevCountRef.current = n
-          setCount(n)
-        })
-        .catch(() => {
-          prevCountRef.current = 0
-          setCount(0)
-        })
-    },
-    [userId, enabled],
-  )
+  const realtime = useNotificationRealtime()
 
   useEffect(() => {
     if (!userId || !enabled) {
@@ -44,36 +25,40 @@ export function useNotificationUnread(userId: string | undefined, roles: AppRole
       return
     }
 
-    refreshCount()
+    let cancelled = false
 
-    const interval = window.setInterval(() => refreshCount(), POLL_MS)
-    const onPush = () => refreshCount()
+    const refresh = (opts?: { silent?: boolean }) => {
+      getUnreadNotificationCount(userId)
+        .then((n) => {
+          if (cancelled) return
+          if (!opts?.silent && shouldPlaySound(prevCountRef.current, n)) {
+            playNotificationAlert()
+          }
+          prevCountRef.current = n
+          setCount(n)
+        })
+        .catch(() => {
+          if (!cancelled) {
+            prevCountRef.current = 0
+            setCount(0)
+          }
+        })
+    }
+
+    refresh()
+
+    const interval = window.setInterval(() => refresh(), POLL_MS)
+    const onPush = () => refresh()
     window.addEventListener(NOTIFICATION_PUSH_EVENT, onPush)
+    const unsubRealtime = realtime.subscribeUnread(() => refresh({ silent: true }))
 
     return () => {
+      cancelled = true
       window.clearInterval(interval)
       window.removeEventListener(NOTIFICATION_PUSH_EVENT, onPush)
+      unsubRealtime()
     }
-  }, [userId, enabled, refreshCount])
-
-  useRealtimeChannel(
-    Boolean(userId && enabled && isSupabaseConfigured),
-    useCallback(
-      (channel) =>
-        channel.on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'user_notifications',
-            filter: `user_id=eq.${userId}`,
-          },
-          () => refreshCount({ silent: true }),
-        ),
-      [userId, refreshCount],
-    ),
-    [userId, enabled],
-  )
+  }, [userId, enabled, realtime])
 
   return count
 }

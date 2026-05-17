@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { isSupabaseConfigured } from '../../../shared/supabase/client'
-import { useRealtimeChannel } from '../../../shared/supabase/useRealtimeChannel'
 import {
   listUnreadLeadNotifications,
   markNotificationRead,
 } from './api/notifications'
-import {
-  NOTIFICATION_PUSH_EVENT,
-  isLeadNotification,
-  mapNotificationRow,
-} from './leadNotification'
+import { NOTIFICATION_PUSH_EVENT } from './leadNotification'
+import { useNotificationRealtime } from './NotificationRealtimeContext'
 import { playLeadNotificationSound } from './notificationSound'
 import type { UserNotification } from './types'
 
@@ -22,6 +17,7 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
   const [toasts, setToasts] = useState<UserNotification[]>([])
   const knownKeysRef = useRef<Set<string>>(new Set())
   const initialLoadRef = useRef(true)
+  const realtime = useNotificationRealtime()
 
   const applyToasts = useCallback((next: UserNotification[], playSoundForNew: boolean) => {
     if (playSoundForNew && !initialLoadRef.current) {
@@ -48,6 +44,28 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
     }
   }, [userId, enabled, applyToasts])
 
+  const handleLeadInsert = useCallback((row: UserNotification) => {
+    setToasts((prev) => {
+      const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
+      if (!had) playLeadNotificationSound()
+      knownKeysRef.current.add(row.dedupe_key)
+      return upsertToast(prev, row)
+    })
+  }, [])
+
+  const handleLeadUpdate = useCallback((row: UserNotification) => {
+    if (row.read_at) {
+      setToasts((prev) => prev.filter((t) => t.id !== row.id))
+      return
+    }
+    setToasts((prev) => {
+      const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
+      if (!had) playLeadNotificationSound()
+      knownKeysRef.current.add(row.dedupe_key)
+      return upsertToast(prev, row)
+    })
+  }, [])
+
   useEffect(() => {
     void load()
   }, [load])
@@ -61,55 +79,15 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
       void load()
     }
     window.addEventListener(NOTIFICATION_PUSH_EVENT, onPush)
-    return () => window.removeEventListener(NOTIFICATION_PUSH_EVENT, onPush)
-  }, [userId, enabled, load])
+    const unsubInsert = realtime.subscribeLeadInsert(handleLeadInsert)
+    const unsubUpdate = realtime.subscribeLeadUpdate(handleLeadUpdate)
 
-  const handleRealtimeRow = useCallback((payload: { new: Record<string, unknown> }) => {
-    const row = mapNotificationRow(payload.new)
-    if (!isLeadNotification(row.dedupe_key)) return
-
-    if (row.read_at) {
-      setToasts((prev) => prev.filter((t) => t.id !== row.id))
-      return
+    return () => {
+      window.removeEventListener(NOTIFICATION_PUSH_EVENT, onPush)
+      unsubInsert()
+      unsubUpdate()
     }
-
-    setToasts((prev) => {
-      const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
-      if (!had) playLeadNotificationSound()
-      knownKeysRef.current.add(row.dedupe_key)
-      return upsertToast(prev, row)
-    })
-  }, [])
-
-  useRealtimeChannel(
-    Boolean(userId && enabled && isSupabaseConfigured),
-    useCallback(
-      (channel) =>
-        channel
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'user_notifications',
-              filter: `user_id=eq.${userId}`,
-            },
-            handleRealtimeRow,
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'user_notifications',
-              filter: `user_id=eq.${userId}`,
-            },
-            handleRealtimeRow,
-          ),
-      [userId, handleRealtimeRow],
-    ),
-    [userId, enabled],
-  )
+  }, [userId, enabled, load, realtime, handleLeadInsert, handleLeadUpdate])
 
   const dismiss = useCallback(
     async (id: string) => {
