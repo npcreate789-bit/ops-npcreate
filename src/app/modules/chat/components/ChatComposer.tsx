@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import type { ChatMentionCandidate, ChatMessageTemplate } from '../types'
 import { getActiveMentionQuery, insertMention } from '../utils/chatBody'
+import { resizeChatComposerTextarea, resetChatComposerTextarea } from '../utils/composerResize'
 import { ChatVoiceRecorder } from './ChatVoiceRecorder'
 import '../chat.css'
 
@@ -42,8 +43,11 @@ export function ChatComposer({
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 140)}px`
+    if (!draft) {
+      resetChatComposerTextarea(el)
+      return
+    }
+    resizeChatComposerTextarea(el)
   }, [draft])
 
   const mentionCtx = getActiveMentionQuery(draft, cursor)
@@ -255,9 +259,11 @@ export function ChatComposer({
         </form>
       </div>
 
-      <p className="chat-composer__hint muted">
-        Enter ส่ง · @ แท็กทีม · ไมค์บันทึกเสียง · วิดีโอสูงสุด 50 MB
-      </p>
+      {!draft.includes('\n') && draft.length < 48 && (
+        <p className="chat-composer__hint muted">
+          Enter ส่ง · Shift+Enter ขึ้นบรรทัด · @ แท็กทีม
+        </p>
+      )}
     </footer>
   )
 }

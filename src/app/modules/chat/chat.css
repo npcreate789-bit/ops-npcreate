@@ -101,7 +101,13 @@
   flex-direction: column;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.22);
+}
+
+.chat-hub-shell__main > .chat-shell {
+  flex: 1;
+  min-height: 0;
 }
 
 /* Team channel tabs */
@@ -148,6 +154,12 @@
 
 .client-chat-page .chat-hub-shell {
   min-height: min(640px, 70vh);
+  max-height: min(720px, calc(100dvh - var(--npc-taskbar-h, 52px) - 10rem));
+  overflow: hidden;
+}
+
+.client-chat-page .chat-hub-shell__main {
+  overflow: hidden;
 }
 
 .chat-hub-welcome {
@@ -346,6 +358,9 @@
 
 .chat-shell--card {
   margin-top: 0;
+  height: min(520px, calc(100dvh - var(--npc-taskbar-h, 52px) - 12rem));
+  max-height: min(520px, calc(100dvh - var(--npc-taskbar-h, 52px) - 12rem));
+  overflow: hidden;
 }
 
 .chat-shell__error {
@@ -721,7 +736,7 @@
 /* Composer */
 .chat-composer {
   flex-shrink: 0;
-  padding: 0.65rem 0.85rem 0.75rem;
+  padding: 0.5rem 0.75rem 0.65rem;
   border-top: 1px solid var(--npc-glass-border);
   background: rgba(0, 0, 0, 0.18);
 }
@@ -753,6 +768,7 @@
   display: flex;
   align-items: flex-end;
   gap: 0.45rem;
+  max-height: 8.5rem;
 }
 
 .chat-composer__icon-btn {
@@ -778,14 +794,28 @@
   min-width: 0;
   resize: none;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 0.55rem 0.75rem;
+  border-radius: 18px;
+  padding: 0.5rem 0.85rem;
   background: rgba(0, 0, 0, 0.25);
   color: var(--npc-text);
   font: inherit;
   font-size: 0.92rem;
-  line-height: 1.4;
-  max-height: 140px;
+  line-height: 1.35;
+  min-height: 2.5rem;
+  max-height: 6.5rem;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+
+.chat-composer__input::-webkit-scrollbar {
+  width: 5px;
+}
+
+.chat-composer__input::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .chat-composer__input:focus {
@@ -828,9 +858,10 @@
 }
 
 .chat-composer__hint {
-  margin: 0.35rem 0 0;
-  font-size: 0.72rem;
+  margin: 0.3rem 0 0;
+  font-size: 0.68rem;
   text-align: center;
+  line-height: 1.3;
 }
 
 .chat-mention {
