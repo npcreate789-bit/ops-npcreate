@@ -32,10 +32,7 @@ interface ChatMessageListProps {
   canViewNotes?: boolean
   notes?: ChatNotesMap
   openNotesMessageId?: string | null
-  notesSaving?: boolean
   onToggleNotes?: (messageId: string) => void
-  onSaveNote?: (messageId: string, body: string) => void | Promise<void>
-  onDeleteNote?: (messageId: string, noteId: string) => void | Promise<void>
 }
 
 export function ChatMessageList({
@@ -58,10 +55,7 @@ export function ChatMessageList({
   canViewNotes = false,
   notes = {},
   openNotesMessageId = null,
-  notesSaving = false,
   onToggleNotes,
-  onSaveNote,
-  onDeleteNote,
 }: ChatMessageListProps) {
   const feedRef = useRef<HTMLDivElement>(null)
   const [showJump, setShowJump] = useState(false)
@@ -163,17 +157,8 @@ export function ChatMessageList({
                     canViewNotes={canViewNotes}
                     notes={notes[message.id] ?? []}
                     notesOpen={openNotesMessageId === message.id}
-                    notesSaving={notesSaving}
                     onToggleNotes={
                       onToggleNotes ? () => onToggleNotes(message.id) : undefined
-                    }
-                    onSaveNote={
-                      onSaveNote ? (body) => onSaveNote(message.id, body) : undefined
-                    }
-                    onDeleteNote={
-                      onDeleteNote
-                        ? (noteId) => onDeleteNote(message.id, noteId)
-                        : undefined
                     }
                   />
                 )

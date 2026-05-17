@@ -13,7 +13,6 @@ import type {
   ChatReadReceipt,
 } from '../types'
 import { ChatAvatar } from './ChatAvatar'
-import { ChatMessageNotes } from './ChatMessageNotes'
 import { ChatReactionRow } from './ChatReactionRow'
 import { ChatReplyQuote } from './ChatReplyQuote'
 import '../chat.css'
@@ -38,10 +37,7 @@ interface ChatMessageBubbleProps {
   canViewNotes?: boolean
   notes?: ChatMessageNote[]
   notesOpen?: boolean
-  notesSaving?: boolean
   onToggleNotes?: () => void
-  onSaveNote?: (body: string) => void | Promise<void>
-  onDeleteNote?: (noteId: string) => void | Promise<void>
 }
 
 export function ChatMessageBubble({
@@ -64,10 +60,7 @@ export function ChatMessageBubble({
   canViewNotes = false,
   notes = [],
   notesOpen = false,
-  notesSaving = false,
   onToggleNotes,
-  onSaveNote,
-  onDeleteNote,
 }: ChatMessageBubbleProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -140,7 +133,9 @@ export function ChatMessageBubble({
       id={`chat-msg-${message.id}`}
       className={`chat-bubble${mine ? ' chat-bubble--mine' : ' chat-bubble--theirs'}${
         compact ? ' chat-bubble--compact' : ''
-      }${isPinned ? ' chat-bubble--pinned' : ''}`}
+      }${isPinned ? ' chat-bubble--pinned' : ''}${
+        notesOpen ? ' chat-bubble--notes-target' : ''
+      }`}
     >
       {!mine && !compact && (
         <ChatAvatar name={message.sender_name} seed={message.sender_id} size="sm" className="chat-bubble__avatar" />
@@ -239,17 +234,6 @@ export function ChatMessageBubble({
             )}
           </div>
         </div>
-
-        {canViewNotes && notesOpen && onSaveNote && onDeleteNote && onToggleNotes && (
-          <ChatMessageNotes
-            notes={notes}
-            userId={userId}
-            saving={notesSaving}
-            onSave={onSaveNote}
-            onDelete={(noteId) => onDeleteNote(noteId)}
-            onClose={onToggleNotes}
-          />
-        )}
 
         {onToggleReaction && (
           <ChatReactionRow

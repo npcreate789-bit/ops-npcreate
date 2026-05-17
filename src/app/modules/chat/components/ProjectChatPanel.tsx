@@ -30,6 +30,7 @@ import { ChatComposer } from './ChatComposer'
 import { ChatReplyBar } from './ChatReplyBar'
 import { ChatMessageList } from './ChatMessageList'
 import { ChatPinnedBar } from './ChatPinnedBar'
+import { ChatNotesDock } from './ChatNotesDock'
 import { ChatRoomHeader } from './ChatRoomHeader'
 import { useChatRoomSocial } from '../hooks/useChatRoomSocial'
 import { useProjectChat } from '../hooks/useProjectChat'
@@ -117,6 +118,17 @@ export function ProjectChatPanel({
   }, [projectId, activeChannel])
 
   const canViewNotes = !isClientOnly
+
+  const notesTarget = useMemo(
+    () => (openNotesMessageId ? messages.find((m) => m.id === openNotesMessageId) : undefined),
+    [messages, openNotesMessageId],
+  )
+
+  useEffect(() => {
+    if (openNotesMessageId && !notesTarget) {
+      setOpenNotesMessageId(null)
+    }
+  }, [openNotesMessageId, notesTarget])
 
   const visibleMessages = useMemo(
     () => messages.filter((m) => messageMatchesSearch(m, searchQuery)),
@@ -319,6 +331,20 @@ export function ProjectChatPanel({
           void reloadSocial()
         }}
         refreshing={loading}
+        notesDock={
+          canViewNotes && notesTarget ? (
+            <ChatNotesDock
+              message={notesTarget}
+              userId={userId}
+              notes={social.notes[notesTarget.id] ?? []}
+              saving={notesSaving}
+              onSave={(body) => handleSaveNote(notesTarget.id, body)}
+              onDelete={(noteId) => handleDeleteNote(notesTarget.id, noteId)}
+              onClose={() => setOpenNotesMessageId(null)}
+              onJumpToMessage={() => scrollToMessage(notesTarget.id)}
+            />
+          ) : undefined
+        }
       />
 
       {error && <p className="crm-error chat-shell__error">{error}</p>}
@@ -349,10 +375,7 @@ export function ProjectChatPanel({
         canViewNotes={canViewNotes}
         notes={social.notes}
         openNotesMessageId={openNotesMessageId}
-        notesSaving={notesSaving}
         onToggleNotes={toggleNotes}
-        onSaveNote={handleSaveNote}
-        onDeleteNote={handleDeleteNote}
       />
 
       {replyTarget && (
