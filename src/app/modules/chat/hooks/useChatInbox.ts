@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
+import {
+  isNotificationSoundEnabled,
+  playChatNotificationSound,
+} from '../../notifications/notificationSound'
 import { listChatInbox } from '../api/chat'
 import type { ChatInboxItem } from '../types'
 
@@ -7,6 +11,7 @@ export function useChatInbox(userId: string) {
   const [items, setItems] = useState<ChatInboxItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const prevUnreadRef = useRef<number | null>(null)
 
   const reload = useCallback(async () => {
     if (!userId) {
@@ -49,6 +54,19 @@ export function useChatInbox(userId: string) {
   }, [reload])
 
   const totalUnread = items.reduce((sum, row) => sum + row.unread_count, 0)
+
+  useEffect(() => {
+    const prev = prevUnreadRef.current
+    if (
+      prev !== null &&
+      totalUnread > prev &&
+      totalUnread > 0 &&
+      isNotificationSoundEnabled()
+    ) {
+      playChatNotificationSound()
+    }
+    prevUnreadRef.current = totalUnread
+  }, [totalUnread])
 
   return { items, loading, error, totalUnread, reload }
 }

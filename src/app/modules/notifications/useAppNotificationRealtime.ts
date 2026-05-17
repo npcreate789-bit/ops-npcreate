@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { isSupabaseConfigured, supabase } from '../../../shared/supabase/client'
 import { isLeadNotification, mapNotificationRow } from './leadNotification'
+import { tryPlayIncomingNotificationSound } from './notificationSound'
 import type { UserNotification } from './types'
 
 type LeadInsertHandler = (row: UserNotification) => void
@@ -41,6 +42,7 @@ export function useAppNotificationRealtime(
         (payload) => {
           const row = mapNotificationRow(payload.new as Record<string, unknown>)
           onUnreadRef.current()
+          tryPlayIncomingNotificationSound(row)
           if (isLeadNotification(row.dedupe_key) && !row.read_at) {
             onLeadInsertRef.current(row)
           }

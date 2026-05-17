@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { formatChatListTime, truncatePreview } from '../utils/chatDisplay'
-import type { ChatInboxItem } from '../types'
+import type { ChatChannelKey, ChatInboxItem } from '../types'
 import { ChatAvatar } from './ChatAvatar'
 import '../chat.css'
 
@@ -8,7 +8,8 @@ interface ChatInboxListProps {
   items: ChatInboxItem[]
   loading: boolean
   selectedProjectId: string
-  onSelect: (projectId: string) => void
+  selectedChannel?: ChatChannelKey
+  onSelect: (projectId: string, channel: ChatChannelKey) => void
   emptyHint?: string
 }
 
@@ -16,6 +17,7 @@ export function ChatInboxList({
   items,
   loading,
   selectedProjectId,
+  selectedChannel = 'client',
   onSelect,
   emptyHint = 'ยังไม่มีแชท — เปิดแชทจากหน้าโปรเจกต์',
 }: ChatInboxListProps) {
@@ -28,6 +30,7 @@ export function ChatInboxList({
       (row) =>
         row.project_name.toLowerCase().includes(q) ||
         row.brand_name.toLowerCase().includes(q) ||
+        row.channel_label.toLowerCase().includes(q) ||
         (row.last_message_body?.toLowerCase().includes(q) ?? false),
     )
   }, [items, query])
@@ -51,7 +54,7 @@ export function ChatInboxList({
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="ค้นหาโปรเจกต์ / แบรนด์…"
+          placeholder="ค้นหาโปรเจกต์ / ห้องทีม…"
           className="chat-inbox__search-input"
         />
       </label>
@@ -63,8 +66,11 @@ export function ChatInboxList({
 
       <ul className="chat-inbox__list">
         {filtered.map((row) => {
-          const active = row.project_id === selectedProjectId
+          const active =
+            row.project_id === selectedProjectId && row.channel === selectedChannel
           const hasUnread = row.unread_count > 0
+          const roomTitle =
+            row.channel === 'client' ? row.project_name : `${row.project_name} · ${row.channel_label}`
           return (
             <li key={row.room_id}>
               <button
@@ -72,12 +78,12 @@ export function ChatInboxList({
                 className={`chat-inbox__item${active ? ' chat-inbox__item--active' : ''}${
                   hasUnread ? ' chat-inbox__item--unread' : ''
                 }`}
-                onClick={() => onSelect(row.project_id)}
+                onClick={() => onSelect(row.project_id, row.channel)}
               >
-                <ChatAvatar name={row.brand_name} seed={row.project_id} size="md" />
+                <ChatAvatar name={row.brand_name} seed={`${row.project_id}-${row.channel}`} size="md" />
                 <span className="chat-inbox__body">
                   <span className="chat-inbox__row">
-                    <strong className="chat-inbox__name">{row.project_name}</strong>
+                    <strong className="chat-inbox__name">{roomTitle}</strong>
                     {row.last_message_at && (
                       <time className="chat-inbox__time" dateTime={row.last_message_at}>
                         {formatChatListTime(row.last_message_at)}

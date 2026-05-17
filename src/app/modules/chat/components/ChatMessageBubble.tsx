@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getChatAttachmentUrl, isChatImageMime } from '../api/chatFiles'
+import { getChatAttachmentUrl } from '../api/chatFiles'
+import { ChatMediaAttachment } from './ChatMediaAttachment'
 import { formatChatBubbleTime, formatFullTimestamp } from '../utils/chatDisplay'
 import { renderChatBody } from '../utils/chatBody'
 import { formatReadReceiptLabel, readersForMessage } from '../utils/readReceipts'
@@ -138,41 +139,14 @@ export function ChatMessageBubble({
         <div className="chat-bubble__bubble">
           {isFile ? (
             <div className="chat-bubble__file">
-              {isChatImageMime(message.attachment_mime) && fileUrl ? (
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="chat-bubble__image-link"
-                >
-                  <img
-                    src={fileUrl}
-                    alt={message.attachment_name ?? 'รูปแนบ'}
-                    className="chat-bubble__image"
-                    loading="lazy"
-                  />
-                </a>
-              ) : (
-                <div className="chat-bubble__file-card">
-                  <span className="chat-bubble__file-icon" aria-hidden>
-                    📄
-                  </span>
-                  <span className="chat-bubble__file-name">
-                    {message.attachment_name ?? message.body}
-                  </span>
-                </div>
-              )}
-              {fileUrl && (
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="chat-bubble__file-open"
-                >
-                  เปิดไฟล์
-                </a>
-              )}
-              {fileError && <p className="crm-error chat-bubble__file-error">{fileError}</p>}
+              <ChatMediaAttachment
+                fileUrl={fileUrl}
+                fileError={fileError}
+                mime={message.attachment_mime}
+                name={message.attachment_name}
+                body={message.body}
+                size={message.attachment_size}
+              />
               {message.body && message.body !== message.attachment_name && (
                 <p className="chat-bubble__text">{renderChatBody(message.body)}</p>
               )}

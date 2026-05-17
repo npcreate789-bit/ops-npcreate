@@ -27,6 +27,8 @@ function projectsToInboxItems(
       project_name: p.project_name,
       customer_id: p.customer_id,
       brand_name: p.project_name,
+      channel: 'client' as const,
+      channel_label: 'ลูกค้า',
       last_message_body: null,
       last_message_at: null,
       last_sender_id: null,
@@ -43,7 +45,12 @@ export function ClientChatPage() {
   const { items: inboxItems, totalUnread } = useChatInbox(userId)
 
   const inboxByProject = useMemo(
-    () => new Map(inboxItems.map((row) => [row.project_id, row])),
+    () =>
+      new Map(
+        inboxItems
+          .filter((row) => row.channel === 'client')
+          .map((row) => [row.project_id, row]),
+      ),
     [inboxItems],
   )
 
@@ -110,7 +117,7 @@ export function ClientChatPage() {
             items={clientInboxItems}
             loading={loadingProjects}
             selectedProjectId={projectId}
-            onSelect={setProjectId}
+            onSelect={(id) => setProjectId(id)}
             emptyHint="ยังไม่มีโปรเจกต์ — ติดต่อทีม Account"
           />
 
@@ -130,6 +137,7 @@ export function ClientChatPage() {
                 brandName={brandLabel ?? undefined}
                 userId={userId}
                 canCreateTask={canCreateTask}
+                lockedChannel="client"
               />
             )}
           </div>

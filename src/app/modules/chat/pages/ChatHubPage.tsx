@@ -2,9 +2,11 @@ import { useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canViewChatHub, hasTasksTeamView } from '../../../../shared/auth/access'
+import { parseChatChannel } from '../constants/channels'
 import { ChatInboxList } from '../components/ChatInboxList'
 import { ProjectChatPanel } from '../components/ProjectChatPanel'
 import { useChatInbox } from '../hooks/useChatInbox'
+import type { ChatChannelKey } from '../types'
 import '../../crm/crm.css'
 import '../chat.css'
 
@@ -19,13 +21,18 @@ export function ChatHubPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const selectedProjectId = searchParams.get('project') ?? ''
+  const selectedChannel = parseChatChannel(searchParams.get('channel'))
 
   const { items, loading, error, totalUnread, reload } = useChatInbox(userId)
 
-  const selected = useMemo(
+  const projectMeta = useMemo(
     () => items.find((row) => row.project_id === selectedProjectId) ?? null,
     [items, selectedProjectId],
   )
+
+  function openRoom(projectId: string, channel: ChatChannelKey = 'client') {
+    navigate(`/app/chat?project=${projectId}&channel=${channel}`)
+  }
 
   if (!canAccess) {
     return (
@@ -41,7 +48,7 @@ export function ChatHubPage() {
         <div>
           <h1>แชท</h1>
           <p className="muted">
-            สนทนาต่อโปรเจกต์กับลูกค้าแบบเรียลไทม์
+            แชทแยกห้องต่อโปรเจกต์ — ลูกค้า · Account · Ads · Sales
             {totalUnread > 0 ? ` · ${totalUnread} ยังไม่อ่าน` : ''}
           </p>
         </div>
@@ -62,7 +69,8 @@ export function ChatHubPage() {
           items={items}
           loading={loading}
           selectedProjectId={selectedProjectId}
-          onSelect={(projectId) => navigate(`/app/chat?project=${projectId}`)}
+          selectedChannel={selectedChannel}
+          onSelect={openRoom}
         />
 
         <div className="chat-hub-shell__main">
@@ -81,18 +89,20 @@ export function ChatHubPage() {
             </section>
           )}
 
-          {selected && (
+          {selectedProjectId && projectMeta && (
             <ProjectChatPanel
-              projectId={selected.project_id}
-              projectName={selected.project_name}
-              customerId={selected.customer_id}
-              brandName={selected.brand_name}
+              projectId={projectMeta.project_id}
+              projectName={projectMeta.project_name}
+              customerId={projectMeta.customer_id}
+              brandName={projectMeta.brand_name}
               userId={userId}
               canCreateTask={canCreateTask}
+              channel={selectedChannel}
+              onChannelChange={(ch) => openRoom(projectMeta.project_id, ch)}
             />
           )}
 
-          {selectedProjectId && !selected && !loading && (
+          {selectedProjectId && !projectMeta && !loading && (
             <section className="chat-hub-welcome">
               <h2>ไม่พบห้องแชท</h2>
               <p className="muted">โปรเจกต์นี้อาจยังไม่มีห้องแชท</p>

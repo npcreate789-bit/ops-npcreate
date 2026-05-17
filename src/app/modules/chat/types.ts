@@ -26,16 +26,28 @@ export interface ChatMessageInput {
   body: string
 }
 
+import type { ChatChannelKey } from './constants/channels'
+
+export type { ChatChannelKey }
+
 export interface ChatInboxItem {
   room_id: string
   project_id: string
   project_name: string
   customer_id: string
   brand_name: string
+  channel: ChatChannelKey
+  channel_label: string
   last_message_body: string | null
   last_message_at: string | null
   last_sender_id: string | null
   unread_count: number
+}
+
+export interface ChatChannelTab {
+  channel: ChatChannelKey
+  room_id: string
+  label: string
 }
 
 export interface ChatMentionCandidate {

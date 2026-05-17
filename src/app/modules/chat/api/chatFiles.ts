@@ -1,7 +1,8 @@
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 
 const BUCKET = 'chat-attachments'
-const MAX_BYTES = 25 * 1024 * 1024
+export const CHAT_FILE_MAX_BYTES = 50 * 1024 * 1024
+const VOICE_SOFT_MAX_BYTES = 10 * 1024 * 1024
 
 const ALLOWED_TYPES = [
   'image/jpeg',
@@ -9,16 +10,57 @@ const ALLOWED_TYPES = [
   'image/webp',
   'image/gif',
   'application/pdf',
+  'audio/webm',
+  'audio/ogg',
+  'audio/mpeg',
+  'audio/mp4',
+  'audio/wav',
+  'audio/x-m4a',
+  'video/webm',
+  'video/mp4',
+  'video/quicktime',
 ]
+
+/** สำหรับ input[type=file] แนบทั่วไป */
+export const CHAT_FILE_ACCEPT =
+  'image/jpeg,image/png,image/webp,image/gif,application/pdf,audio/*,video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm,.m4a,.mp3,.wav,.ogg'
+
+export const CHAT_VIDEO_ACCEPT = 'video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm'
 
 function sanitizeFileName(name: string): string {
   return name.replace(/[^\w.\-ก-๙() ]+/gu, '_').slice(0, 120) || 'file'
 }
 
+export function isChatImageMime(mime: string | null | undefined): boolean {
+  return Boolean(mime?.startsWith('image/'))
+}
+
+export function isChatAudioMime(mime: string | null | undefined): boolean {
+  return Boolean(mime?.startsWith('audio/'))
+}
+
+export function isChatVideoMime(mime: string | null | undefined): boolean {
+  return Boolean(mime?.startsWith('video/'))
+}
+
+export function chatMediaKind(
+  mime: string | null | undefined,
+): 'image' | 'audio' | 'video' | 'file' {
+  if (isChatImageMime(mime)) return 'image'
+  if (isChatAudioMime(mime)) return 'audio'
+  if (isChatVideoMime(mime)) return 'video'
+  return 'file'
+}
+
 export function validateChatFile(file: File): string | null {
-  if (file.size > MAX_BYTES) return 'ไฟล์ใหญ่เกิน 25 MB'
+  if (file.size > CHAT_FILE_MAX_BYTES) {
+    return 'ไฟล์ใหญ่เกิน 50 MB'
+  }
   if (file.type && !ALLOWED_TYPES.includes(file.type)) {
-    return 'รองรับเฉพาะรูปภาพ (JPG, PNG, WebP, GIF) หรือ PDF'
+    return 'รองรับรูป, PDF, เสียง (WebM/MP3/M4A) หรือวิดีโอสั้น (MP4/MOV/WebM)'
+  }
+  if (isChatAudioMime(file.type) && file.size > VOICE_SOFT_MAX_BYTES) {
+    return 'ไฟล์เสียงใหญ่เกิน 10 MB — ลองบันทึกใหม่สั้นลง'
   }
   return null
 }
@@ -74,6 +116,8 @@ export async function getChatAttachmentUrl(storagePath: string): Promise<string 
   return data.signedUrl
 }
 
-export function isChatImageMime(mime: string | null | undefined): boolean {
-  return Boolean(mime?.startsWith('image/'))
+export function formatMediaByteSize(bytes: number | null | undefined): string {
+  if (bytes == null || bytes <= 0) return ''
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }

@@ -1,5 +1,6 @@
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
-import type { ChatInboxItem, ChatMessage, ChatMessageInput } from '../types'
+import { parseChatChannel, type ChatChannelKey } from '../constants/channels'
+import type { ChatChannelTab, ChatInboxItem, ChatMessage, ChatMessageInput } from '../types'
 
 const MESSAGE_SELECT =
   'id, room_id, sender_id, body, message_type, attachment_path, attachment_name, attachment_mime, attachment_size, created_task_id, created_at'
@@ -50,22 +51,70 @@ async function senderName(id: string): Promise<string | null> {
   return (data.full_name as string | null) || (data.email as string)
 }
 
-export async function ensureProjectChatRoom(projectId: string): Promise<string> {
+function mockStoreKey(projectId: string, channel: ChatChannelKey): string {
+  return `${projectId}::${channel}`
+}
+
+export async function ensureProjectChatChannel(
+  projectId: string,
+  channel: ChatChannelKey = 'client',
+): Promise<string> {
+  const ch = parseChatChannel(channel)
+
   if (!isSupabaseConfigured || !supabase) {
-    if (!loadMock()[projectId]) saveMock({ ...loadMock(), [projectId]: [] })
-    return projectId
+    const key = mockStoreKey(projectId, ch)
+    if (!loadMock()[key]) saveMock({ ...loadMock(), [key]: [] })
+    return key
   }
 
-  const { data, error } = await supabase.rpc('ensure_project_chat_room', {
+  const { data, error } = await supabase.rpc('ensure_project_chat_channel', {
     p_project_id: projectId,
+    p_channel: ch,
   })
   if (error) throw new Error(error.message)
   return data as string
 }
 
-export async function listChatMessages(roomId: string, projectIdForMock?: string): Promise<ChatMessage[]> {
+export async function ensureProjectChatRoom(projectId: string): Promise<string> {
+  return ensureProjectChatChannel(projectId, 'client')
+}
+
+export async function listProjectChatChannels(projectId: string): Promise<ChatChannelTab[]> {
   if (!isSupabaseConfigured || !supabase) {
-    const key = projectIdForMock ?? roomId
+    return [
+      { channel: 'client', room_id: mockStoreKey(projectId, 'client'), label: 'ลูกค้า' },
+      { channel: 'account', room_id: mockStoreKey(projectId, 'account'), label: 'Account' },
+      { channel: 'ads', room_id: mockStoreKey(projectId, 'ads'), label: 'Ads' },
+      { channel: 'sales', room_id: mockStoreKey(projectId, 'sales'), label: 'Sales' },
+    ]
+  }
+
+  const { data, error } = await supabase.rpc('list_project_chat_channels', {
+    p_project_id: projectId,
+  })
+  if (error) throw new Error(error.message)
+  const rows = Array.isArray(data) ? data : []
+  return rows.map((row) => {
+    const r = row as Record<string, unknown>
+    const channel = parseChatChannel(r.channel as string)
+    return {
+      channel,
+      room_id: r.room_id as string,
+      label: (r.label as string) ?? channel,
+    }
+  })
+}
+
+export async function listChatMessages(
+  roomId: string,
+  projectIdForMock?: string,
+  channelForMock?: ChatChannelKey,
+): Promise<ChatMessage[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    const key =
+      projectIdForMock && channelForMock
+        ? mockStoreKey(projectIdForMock, channelForMock)
+        : (projectIdForMock ?? roomId)
     return (loadMock()[key] ?? []).slice().sort((a, b) => a.created_at.localeCompare(b.created_at))
   }
 
@@ -93,12 +142,16 @@ export async function listChatMessages(roomId: string, projectIdForMock?: string
 export async function sendChatMessage(
   input: ChatMessageInput,
   projectIdForMock?: string,
+  channelForMock?: ChatChannelKey,
 ): Promise<ChatMessage> {
   const body = input.body.trim()
   if (!body) throw new Error('ข้อความว่าง')
 
   if (!isSupabaseConfigured || !supabase) {
-    const key = projectIdForMock ?? input.room_id
+    const key =
+      projectIdForMock && channelForMock
+        ? mockStoreKey(projectIdForMock, channelForMock)
+        : (projectIdForMock ?? input.room_id)
     const store = loadMock()
     const row: ChatMessage = {
       id: crypto.randomUUID(),
@@ -198,19 +251,36 @@ function mockUnreadCount(roomKey: string, userId: string): number {
 export async function listChatInbox(userId: string): Promise<ChatInboxItem[]> {
   if (!isSupabaseConfigured || !supabase) {
     const store = loadMock()
-    return Object.keys(store).map((projectId) => {
-      const messages = store[projectId] ?? []
+    const channels: ChatChannelKey[] = ['client', 'account', 'ads', 'sales']
+    const labels: Record<ChatChannelKey, string> = {
+      client: 'ลูกค้า',
+      account: 'Account',
+      ads: 'Ads',
+      sales: 'Sales',
+    }
+    const projectId = 'demo-project'
+    for (const ch of channels) {
+      const mk = mockStoreKey(projectId, ch)
+      if (!store[mk]) {
+        saveMock({ ...store, [mk]: [] })
+      }
+    }
+    return channels.map((ch) => {
+      const mk = mockStoreKey(projectId, ch)
+      const messages = loadMock()[mk] ?? []
       const last = messages[messages.length - 1]
       return {
-        room_id: projectId,
+        room_id: mk,
         project_id: projectId,
-        project_name: `โปรเจกต์ ${projectId.slice(0, 6)}`,
+        project_name: 'โปรเจกต์ Demo',
         customer_id: '',
-        brand_name: 'Demo',
+        brand_name: 'แบรนด์ Demo',
+        channel: ch,
+        channel_label: labels[ch],
         last_message_body: last?.body ?? null,
         last_message_at: last?.created_at ?? null,
         last_sender_id: last?.sender_id ?? null,
-        unread_count: mockUnreadCount(projectId, userId),
+        unread_count: mockUnreadCount(mk, userId),
       }
     })
   }

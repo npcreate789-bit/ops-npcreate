@@ -8,6 +8,7 @@ import { useKeyboardHelp } from '../hooks/useKeyboardHelp'
 import { PageHistoryTracker } from '../modules/quick-access/components/PageHistoryTracker'
 import { LeadNotificationToasts } from '../modules/notifications/components/LeadNotificationToasts'
 import { NotificationRealtimeProvider } from '../modules/notifications/NotificationRealtimeContext'
+import { useChatMessageNotificationSound } from '../modules/chat/hooks/useChatMessageNotificationSound'
 import { useNotificationSoundPrime } from '../modules/notifications/useNotificationSoundPrime'
 import { Sidebar } from './Sidebar'
 import './AppLayout.css'
@@ -25,6 +26,7 @@ export function AppLayout() {
   const { open, close, openPalette } = useCommandPalette(paletteEnabled)
   useKeyboardHelp(canViewHelp(roles) && !open)
   useNotificationSoundPrime()
+  useChatMessageNotificationSound(userId)
 
   return (
     <NotificationRealtimeProvider userId={userId} roles={roles}>

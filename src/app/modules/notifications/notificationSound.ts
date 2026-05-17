@@ -1,4 +1,7 @@
+import { isActiveChatNotificationLink } from '../chat/activeChatFocus'
+import { isChatNotification } from './chatNotification'
 import { isLeadNotification } from './leadNotification'
+import type { UserNotification } from './types'
 
 const STORAGE_KEY = 'npc-notification-sound-enabled'
 const DEBOUNCE_MS = 900
@@ -14,6 +17,13 @@ const LEAD_CHIME_PATTERN = [
 const DEFAULT_CHIME_PATTERN = [
   { freq: 880, at: 0, dur: 0.12 },
   { freq: 1174.66, at: 0.14, dur: 0.18 },
+] as const
+
+/** เสียงข้อความแชท — สั้น นุ่ม แยกจาก Lead */
+const CHAT_CHIME_PATTERN = [
+  { freq: 523.25, at: 0, dur: 0.07, gain: 0.1 },
+  { freq: 659.25, at: 0.08, dur: 0.1, gain: 0.12 },
+  { freq: 783.99, at: 0.17, dur: 0.12, gain: 0.1 },
 ] as const
 
 let audioContext: AudioContext | null = null
@@ -130,13 +140,30 @@ export function playLeadNotificationSound() {
   playPattern(LEAD_CHIME_PATTERN)
 }
 
+/** เสียงข้อความแชทใหม่ */
+export function playChatNotificationSound() {
+  playPattern(CHAT_CHIME_PATTERN)
+}
+
 /** เลือกเสียงตามประเภทแจ้งเตือน — ครั้งเดียว */
 export function playNotificationAlert(dedupeKey?: string) {
   if (dedupeKey && isLeadNotification(dedupeKey)) {
     playLeadNotificationSound()
     return
   }
+  if (dedupeKey && isChatNotification(dedupeKey)) {
+    playChatNotificationSound()
+    return
+  }
   playNotificationSound()
+}
+
+/** เล่นเสียงเมื่อมีแจ้งเตือนเข้า (Realtime) — ข้าม Lead loop และห้องที่เปิดอยู่ */
+export function tryPlayIncomingNotificationSound(row: UserNotification) {
+  if (!isNotificationSoundEnabled() || row.read_at) return
+  if (isLeadNotification(row.dedupe_key)) return
+  if (isChatNotification(row.dedupe_key) && isActiveChatNotificationLink(row.link)) return
+  playNotificationAlert(row.dedupe_key)
 }
 
 function playLeadChimeOnce() {

@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { hasTasksTeamView } from '../../../../shared/auth/access'
 import { createTask } from '../../tasks/api/tasks'
-import { insertChatSystemMessage, linkChatMessageToTask } from '../api/chat'
-import { validateChatFile } from '../api/chatFiles'
+import { insertChatSystemMessage, linkChatMessageToTask, listProjectChatChannels } from '../api/chat'
+import { CHAT_CHANNEL_HINTS, parseChatChannel, type ChatChannelKey } from '../constants/channels'
+import { CHAT_FILE_ACCEPT, CHAT_VIDEO_ACCEPT, validateChatFile } from '../api/chatFiles'
 import {
   fetchChatRoomSocial,
   listChatMentionCandidates,
@@ -14,6 +15,7 @@ import {
 } from '../api/chatSocial'
 import { messageMatchesSearch } from '../utils/chatDisplay'
 import type { ChatMessage, ChatMessageTemplate, ChatMentionCandidate, ChatReactionEmoji } from '../types'
+import { ChatChannelTabs } from './ChatChannelTabs'
 import { ChatComposer } from './ChatComposer'
 import { ChatMessageList } from './ChatMessageList'
 import { ChatPinnedBar } from './ChatPinnedBar'
@@ -32,6 +34,9 @@ interface ProjectChatPanelProps {
   userId?: string
   canCreateTask?: boolean
   variant?: 'card' | 'shell'
+  channel?: ChatChannelKey
+  onChannelChange?: (channel: ChatChannelKey) => void
+  lockedChannel?: ChatChannelKey
 }
 
 export function ProjectChatPanel({
@@ -42,23 +47,41 @@ export function ProjectChatPanel({
   userId = DEV_OWNER,
   canCreateTask: canCreateTaskProp,
   variant = 'shell',
+  channel: channelProp,
+  onChannelChange,
+  lockedChannel,
 }: ProjectChatPanelProps) {
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const canCreateTask = canCreateTaskProp ?? (hasTasksTeamView(roles) || !configured)
   const isClientOnly = roles.length > 0 && roles.every((r) => r === 'client')
+  const activeChannel = parseChatChannel(lockedChannel ?? channelProp ?? 'client')
 
+  const [channelTabs, setChannelTabs] = useState<{ channel: ChatChannelKey; label: string }[]>([])
   const [draft, setDraft] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [creatingFromId, setCreatingFromId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<ChatMessageTemplate[]>([])
   const [mentionCandidates, setMentionCandidates] = useState<ChatMentionCandidate[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   const { messages, loading, sending, error, bottomRef, send, sendFile, reload, roomId } =
-    useProjectChat(projectId, userId)
+    useProjectChat(projectId, userId, activeChannel)
 
   const { social, reload: reloadSocial, setSocial } = useChatRoomSocial(roomId, messages.length)
+
+  useEffect(() => {
+    if (lockedChannel) {
+      setChannelTabs([])
+      return
+    }
+    listProjectChatChannels(projectId)
+      .then((rows) =>
+        setChannelTabs(rows.map((r) => ({ channel: r.channel, label: r.label }))),
+      )
+      .catch(() => setChannelTabs([]))
+  }, [projectId, lockedChannel])
 
   useEffect(() => {
     if (isClientOnly) {
@@ -97,6 +120,15 @@ export function ProjectChatPanel({
 
   function handlePickFile() {
     fileInputRef.current?.click()
+  }
+
+  function handlePickVideo() {
+    videoInputRef.current?.click()
+  }
+
+  async function handleVoiceRecorded(file: File) {
+    await sendFile(file)
+    await reloadSocial()
   }
 
   async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
@@ -171,9 +203,26 @@ export function ProjectChatPanel({
     <section
       className={`chat-shell${variant === 'card' ? ' chat-shell--card card card--wide' : ''}`}
     >
+      {!lockedChannel && (
+        <ChatChannelTabs
+          channels={channelTabs}
+          active={activeChannel}
+          disabled={loading}
+          onChange={(ch) => onChannelChange?.(ch)}
+        />
+      )}
+
       <ChatRoomHeader
         title={projectName}
-        subtitle={brandName ? `แบรนด์ ${brandName}` : 'แชทโปรเจกต์'}
+        subtitle={
+          lockedChannel
+            ? brandName
+              ? `แบรนด์ ${brandName} · แชทกับทีม`
+              : 'แชทกับทีม'
+            : brandName
+              ? `แบรนด์ ${brandName} · ${CHAT_CHANNEL_HINTS[activeChannel]}`
+              : CHAT_CHANNEL_HINTS[activeChannel]
+        }
         projectId={projectId}
         customerId={customerId}
         brandName={brandName}
@@ -214,7 +263,14 @@ export function ProjectChatPanel({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+        accept={CHAT_FILE_ACCEPT}
+        className="visually-hidden"
+        onChange={(e) => void handleFileChange(e)}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept={CHAT_VIDEO_ACCEPT}
         className="visually-hidden"
         onChange={(e) => void handleFileChange(e)}
       />
@@ -224,6 +280,9 @@ export function ProjectChatPanel({
         onDraftChange={setDraft}
         onSubmit={submitMessage}
         onPickFile={handlePickFile}
+        onPickVideo={handlePickVideo}
+        onVoiceRecorded={handleVoiceRecorded}
+        onVoiceError={(msg) => alert(msg)}
         sending={sending}
         disabled={loading}
         templates={templates}

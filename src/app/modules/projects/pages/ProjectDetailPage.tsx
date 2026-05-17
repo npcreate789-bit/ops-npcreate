@@ -10,6 +10,7 @@ import {
   projectStatusLabel,
 } from '../constants'
 import { ProjectChatPanel } from '../../chat/components/ProjectChatPanel'
+import type { ChatChannelKey } from '../../chat/types'
 import { ProjectTasksSection } from '../components/ProjectTasksSection'
 import type { Project, ProjectServiceType, ProjectStatus } from '../types'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
@@ -27,6 +28,7 @@ export function ProjectDetailPage() {
   const userId = profile?.id ?? DEV_OWNER
   const canCreateTask = hasTasksTeamView(profile?.roles ?? []) || !configured
 
+  const [chatChannel, setChatChannel] = useState<ChatChannelKey>('client')
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [project, setProject] = useState<Project | null>(null)
   const [customerId, setCustomerId] = useState('')
@@ -248,6 +250,8 @@ export function ProjectDetailPage() {
               userId={userId}
               canCreateTask={canCreateTask}
               variant="card"
+              channel={chatChannel}
+              onChannelChange={setChatChannel}
             />
           </div>
           <section className="card card--wide">
@@ -259,7 +263,9 @@ export function ProjectDetailPage() {
               {' · '}
               <Link to={`/app/tasks?project=${project.id}`}>งานทั้งหมดของโปรเจกต์</Link>
               {' · '}
-              <Link to={`/app/chat?project=${project.id}`}>เปิดในกล่องแชท</Link>
+              <Link to={`/app/chat?project=${project.id}&channel=${chatChannel}`}>
+                เปิดในกล่องแชท
+              </Link>
             </p>
           </section>
         </>

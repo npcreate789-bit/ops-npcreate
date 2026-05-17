@@ -13,6 +13,7 @@ import { isLeadNotification } from '../leadNotification'
 import type { UserNotification } from '../types'
 import {
   isNotificationSoundEnabled,
+  playChatNotificationSound,
   playLeadNotificationSound,
   playNotificationSound,
   setNotificationSoundEnabled,
@@ -177,7 +178,7 @@ export function NotificationsPage() {
           </label>
           <label className="notif-sound-toggle">
             <input type="checkbox" checked={soundEnabled} onChange={handleSoundToggle} />
-            <span>เสียงแจ้งเตือน (Lead ใหม่วนจนกว่ากดรับทราบ)</span>
+            <span>เสียงแจ้งเตือน (Lead วนจนรับทราบ · แชทเล่นครั้งเดียว)</span>
           </label>
           <button
             type="button"
@@ -185,7 +186,15 @@ export function NotificationsPage() {
             disabled={!soundEnabled}
             onClick={() => playNotificationSound()}
           >
-            ทดสอบเสียง
+            ทดสอบทั่วไป
+          </button>
+          <button
+            type="button"
+            className="crm-btn crm-btn--ghost notif-sound-test"
+            disabled={!soundEnabled}
+            onClick={() => playChatNotificationSound()}
+          >
+            ทดสอบแชท
           </button>
         </div>
 

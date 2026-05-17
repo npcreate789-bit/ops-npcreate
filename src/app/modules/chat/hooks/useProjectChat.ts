@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
+import { parseChatChannel, type ChatChannelKey } from '../constants/channels'
 import {
-  ensureProjectChatRoom,
+  ensureProjectChatChannel,
   listChatMessages,
   markChatRoomRead,
   sendChatMessage,
 } from '../api/chat'
 import { uploadChatFile } from '../api/chatFiles'
+import { setActiveChatFocus } from '../activeChatFocus'
 import type { ChatMessage } from '../types'
 
-export function useProjectChat(projectId: string | undefined, userId: string) {
+export function useProjectChat(
+  projectId: string | undefined,
+  userId: string,
+  channel: ChatChannelKey = 'client',
+) {
+  const activeChannel = parseChatChannel(channel)
   const [roomId, setRoomId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,20 +38,27 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
     setLoading(true)
     setError(null)
     try {
-      const rid = await ensureProjectChatRoom(projectId)
+      const rid = await ensureProjectChatChannel(projectId, activeChannel)
       setRoomId(rid)
-      setMessages(await listChatMessages(rid, projectId))
+      setMessages(await listChatMessages(rid, projectId, activeChannel))
       await markChatRoomRead(rid)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'โหลดแชทไม่สำเร็จ')
     } finally {
       setLoading(false)
     }
-  }, [projectId])
+  }, [projectId, activeChannel])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (roomId && projectId) {
+      setActiveChatFocus(roomId, projectId, activeChannel)
+    }
+    return () => setActiveChatFocus(null)
+  }, [roomId, projectId, activeChannel])
 
   useEffect(() => {
     scrollToBottom()
@@ -53,7 +67,7 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
   useEffect(() => {
     if (!roomId || !isSupabaseConfigured || !supabase) return
 
-    const channel = supabase
+    const sub = supabase
       .channel(`chat-room-${roomId}`)
       .on(
         'postgres_changes',
@@ -64,7 +78,7 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
           filter: `room_id=eq.${roomId}`,
         },
         () => {
-          void listChatMessages(roomId, projectId)
+          void listChatMessages(roomId, projectId, activeChannel)
             .then((rows) => {
               setMessages(rows)
               return markChatRoomRead(roomId)
@@ -75,9 +89,9 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
       .subscribe()
 
     return () => {
-      void supabase!.removeChannel(channel)
+      void supabase!.removeChannel(sub)
     }
-  }, [roomId, projectId])
+  }, [roomId, projectId, activeChannel])
 
   const send = useCallback(
     async (body: string) => {
@@ -88,6 +102,7 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
         const row = await sendChatMessage(
           { room_id: roomId, sender_id: userId, body },
           projectId,
+          activeChannel,
         )
         if (!isSupabaseConfigured) {
           setMessages((prev) => [...prev, row])
@@ -99,7 +114,7 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
         setSending(false)
       }
     },
-    [roomId, userId, projectId],
+    [roomId, userId, projectId, activeChannel],
   )
 
   const sendFile = useCallback(
@@ -119,11 +134,12 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
         setSending(false)
       }
     },
-    [roomId, userId, projectId, load],
+    [roomId, projectId, load],
   )
 
   return {
     roomId,
+    channel: activeChannel,
     messages,
     loading,
     sending,

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import type { ChatMentionCandidate, ChatMessageTemplate } from '../types'
 import { getActiveMentionQuery, insertMention } from '../utils/chatBody'
+import { ChatVoiceRecorder } from './ChatVoiceRecorder'
 import '../chat.css'
 
 interface ChatComposerProps {
@@ -8,6 +9,9 @@ interface ChatComposerProps {
   onDraftChange: (value: string) => void
   onSubmit: () => void | Promise<void>
   onPickFile: () => void
+  onPickVideo?: () => void
+  onVoiceRecorded?: (file: File) => void | Promise<void>
+  onVoiceError?: (message: string) => void
   sending: boolean
   disabled?: boolean
   templates?: ChatMessageTemplate[]
@@ -21,6 +25,9 @@ export function ChatComposer({
   onDraftChange,
   onSubmit,
   onPickFile,
+  onPickVideo,
+  onVoiceRecorded,
+  onVoiceError,
   sending,
   disabled = false,
   templates = [],
@@ -154,7 +161,7 @@ export function ChatComposer({
           <button
             type="button"
             className="chat-composer__icon-btn"
-            title="แนบรูปหรือ PDF"
+            title="แนบรูป PDF หรือไฟล์เสียง"
             disabled={disabled || sending}
             onClick={onPickFile}
             aria-label="แนบไฟล์"
@@ -169,6 +176,43 @@ export function ChatComposer({
               />
             </svg>
           </button>
+
+          {onVoiceRecorded && (
+            <ChatVoiceRecorder
+              disabled={disabled || sending}
+              onRecorded={onVoiceRecorded}
+              onError={onVoiceError}
+            />
+          )}
+
+          {onPickVideo && (
+            <button
+              type="button"
+              className="chat-composer__icon-btn"
+              title="แนบวิดีโอสั้น"
+              disabled={disabled || sending}
+              onClick={onPickVideo}
+              aria-label="แนบวิดีโอ"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <rect
+                  x="3"
+                  y="6"
+                  width="13"
+                  height="12"
+                  rx="2"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                />
+                <path
+                  d="M16 10l5-3v10l-5-3"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
 
           <textarea
             ref={textareaRef}
@@ -212,7 +256,7 @@ export function ChatComposer({
       </div>
 
       <p className="chat-composer__hint muted">
-        Enter ส่ง · Shift+Enter บรรทัดใหม่ · พิมพ์ @ เพื่อกล่าวถึงทีม
+        Enter ส่ง · @ แท็กทีม · ไมค์บันทึกเสียง · วิดีโอสูงสุด 50 MB
       </p>
     </footer>
   )
