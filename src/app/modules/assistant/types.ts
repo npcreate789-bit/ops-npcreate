@@ -22,9 +22,17 @@ export interface StaffCustomerContext {
   open_tasks: number | null
 }
 
+export interface StaffAdsMetrics {
+  last_7_days_spend: number
+  last_7_days_gmv: number
+  last_7_days_roi: number | null
+  latest_report_date: string | null
+}
+
 export interface StaffReplyInput {
   promptKey: StaffPromptKey
   customer: StaffCustomerContext | null
+  adsMetrics?: StaffAdsMetrics | null
   userDisplayName?: string
 }
 

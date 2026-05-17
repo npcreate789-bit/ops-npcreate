@@ -1,11 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { canAccessStaffAssistant } from '../../../../shared/auth/access'
+import {
+  canAccessStaffAssistant,
+  canViewCustomer360,
+  hasClientPortalStaffPreview,
+} from '../../../../shared/auth/access'
 import { listCustomersForSelect } from '../../finance/api/payments'
 import type { CustomerOption } from '../../finance/types'
 import { isStaffAssistantScoped, staffPromptOptionsForRoles } from '../access'
-import { buildStaffReply, fetchStaffCustomerContext } from '../api/buildStaffReply'
+import {
+  buildStaffReply,
+  fetchStaffAdsMetrics,
+  fetchStaffCustomerContext,
+} from '../api/buildStaffReply'
 import { logAssistantUsage } from '../api/usageLog'
+import { AssistantPromptBar } from '../components/AssistantPromptBar'
+import { AssistantRoleGuide } from '../components/AssistantRoleGuide'
+import { STAFF_PROMPT_META, staffPromptNeedsCustomer, staffPromptRelatedLinks } from '../promptLinks'
 import type { StaffPromptKey } from '../types'
 import '../../crm/crm.css'
 import '../../tasks/tasks.css'
@@ -21,6 +33,9 @@ export function AssistantPage() {
   const allowed = canAccessStaffAssistant(roles) || !configured
   const promptOptions = useMemo(() => staffPromptOptionsForRoles(roles), [roles])
   const scoped = isStaffAssistantScoped(roles) && configured
+  const showCustomers = canViewCustomer360(roles) || !configured
+  const showClientPortal = hasClientPortalStaffPreview(roles) || !configured
+
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [promptKey, setPromptKey] = useState<StaffPromptKey>('crm_followup')
   const [customerId, setCustomerId] = useState('')
@@ -28,6 +43,27 @@ export function AssistantPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  const promptBarOptions = useMemo(
+    () =>
+      promptOptions.map((o) => ({
+        value: o.value,
+        label: o.label.split(' — ')[0] ?? o.label,
+        hint: STAFF_PROMPT_META[o.value].hint,
+      })),
+    [promptOptions],
+  )
+
+  const needsCustomer = staffPromptNeedsCustomer(promptKey)
+  const relatedLinks = useMemo(
+    () => staffPromptRelatedLinks(promptKey, customerId || undefined),
+    [promptKey, customerId],
+  )
+
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.id === customerId),
+    [customers, customerId],
+  )
 
   useEffect(() => {
     if (!allowed || promptOptions.some((o) => o.value === promptKey)) return
@@ -40,11 +76,6 @@ export function AssistantPage() {
       .then(setCustomers)
       .catch(() => setCustomers([]))
   }, [allowed])
-
-  const needsCustomer =
-    promptKey === 'renewal_pitch' ||
-    promptKey === 'onboarding_checkin' ||
-    promptKey === 'ads_summary'
 
   async function handleGenerate() {
     if (promptOptions.length === 0) {
@@ -65,9 +96,16 @@ export function AssistantPage() {
         setError('ไม่พบลูกค้าหรือไม่มีสิทธิ์ดูข้อมูลลูกค้านี้')
         return
       }
+
+      let adsMetrics = null
+      if (promptKey === 'ads_summary' && customerId) {
+        adsMetrics = await fetchStaffAdsMetrics(customerId)
+      }
+
       const text = buildStaffReply({
         promptKey,
         customer,
+        adsMetrics,
         userDisplayName: profile?.full_name ?? undefined,
       })
       setOutput(text)
@@ -94,6 +132,11 @@ export function AssistantPage() {
       <div className="page">
         <h1>ผู้ช่วย AI</h1>
         <p className="crm-error">บัญชีลูกค้าไม่สามารถใช้ผู้ช่วยทีมภายในได้</p>
+        {showClientPortal && (
+          <p className="muted">
+            ลูกค้าใช้ผู้ช่วยใน <Link to="/app/client">พื้นที่ลูกค้า</Link>
+          </p>
+        )}
       </div>
     )
   }
@@ -108,15 +151,30 @@ export function AssistantPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page assistant-page">
       <header className="page__header crm-page__header phase2-page__header">
         <div>
           <h1>ผู้ช่วย AI</h1>
           <p className="muted">
-            สร้างข้อความและบรีฟจากเทมเพลต + ข้อมูลในระบบ — ไม่ส่งข้อมูลออกนอกองค์กร (ไม่ใช้ OpenAI)
+            สร้างข้อความจากเทมเพลต + ข้อมูลในระบบ — ไม่ส่งออกนอกองค์กร (ไม่ใช้ OpenAI)
           </p>
         </div>
+        <div className="assistant-page__header-actions">
+          <Link to="/app/dashboard" className="crm-btn crm-btn--ghost">
+            แดชบอร์ด
+          </Link>
+          <Link to="/app/activity" className="crm-btn crm-btn--ghost">
+            บันทึกกิจกรรม
+          </Link>
+          {showClientPortal && (
+            <Link to="/app/client" className="crm-btn crm-btn--ghost">
+              พื้นที่ลูกค้า
+            </Link>
+          )}
+        </div>
       </header>
+
+      <AssistantRoleGuide showClientPortal={showClientPortal} />
 
       {!configured && (
         <p className="crm-banner crm-banner--warn">โหมดพัฒนา — ใช้ข้อมูลตัวอย่างเมื่อเลือกลูกค้า</p>
@@ -124,16 +182,24 @@ export function AssistantPage() {
 
       {scoped && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
-          แสดงเฉพาะเทมเพลตตามบทบาทของคุณ — รายชื่อลูกค้าถูกกรองตามสิทธิ์ในระบบ
+          แสดงเฉพาะเทมเพลตตามบทบาท — รายชื่อลูกค้าถูกกรองตามสิทธิ์ในระบบ
         </p>
       )}
 
       <section className="card card--wide">
+        <AssistantPromptBar
+          options={promptBarOptions}
+          active={promptKey}
+          onSelect={setPromptKey}
+        />
+
+        <p className="muted assistant-template-hint">{STAFF_PROMPT_META[promptKey].hint}</p>
+
         <div className="task-filters">
           <label className="task-field">
-            <span className="task-field__label">ประเภท</span>
+            <span className="task-field__label">เทมเพลต (ละเอียด)</span>
             <select
-              className="task-select"
+              className="task-select crm-select"
               value={promptKey}
               onChange={(e) => setPromptKey(e.target.value as StaffPromptKey)}
             >
@@ -149,7 +215,7 @@ export function AssistantPage() {
               ลูกค้า{needsCustomer ? ' (จำเป็น)' : ' (ไม่บังคับ)'}
             </span>
             <select
-              className="task-select"
+              className="task-select crm-select"
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
             >
@@ -163,11 +229,28 @@ export function AssistantPage() {
           </label>
         </div>
 
-        {customers.length === 0 && configured && (
-          <p className="assistant-hint muted">
-            ยังไม่มีลูกค้าในขอบเขตที่คุณเข้าถึงได้ — ลองเทมเพลตที่ไม่ต้องเลือกลูกค้า
+        {selectedCustomer && showCustomers && (
+          <p className="assistant-customer-chip muted">
+            กำลังอ้างอิง: <strong>{selectedCustomer.brand_name}</strong>
+            {' · '}
+            <Link to={`/app/customers/${customerId}`}>เปิด 360°</Link>
           </p>
         )}
+
+        {customers.length === 0 && configured && needsCustomer && (
+          <p className="assistant-hint muted">
+            ยังไม่มีลูกค้าในขอบเขตที่คุณเข้าถึงได้ — ลองเทมเพลต CRM ที่ไม่ต้องเลือกลูกค้า
+          </p>
+        )}
+
+        <div className="assistant-related-links" aria-label="ทางลัดโมดูลที่เกี่ยวข้อง">
+          <span className="muted">ไปต่อที่:</span>
+          {relatedLinks.map((l) => (
+            <Link key={l.to} to={l.to} className="crm-btn crm-btn--ghost">
+              {l.label}
+            </Link>
+          ))}
+        </div>
 
         <div className="assistant-actions">
           <button
@@ -187,7 +270,7 @@ export function AssistantPage() {
 
         {error && <p className="crm-error">{error}</p>}
 
-        <label className="task-field task-field--full" style={{ marginTop: '0.75rem' }}>
+        <label className="task-field task-field--full assistant-output-field">
           <span className="task-field__label">ข้อความที่สร้าง (แก้ไขก่อนส่งได้)</span>
           <textarea
             className="crm-input assistant-output"
@@ -196,7 +279,7 @@ export function AssistantPage() {
               setOutput(e.target.value)
               setCopied(false)
             }}
-            placeholder="เลือกประเภทและกดสร้างข้อความ — ข้อความจะแสดงที่นี่"
+            placeholder="เลือกเทมเพลต · เลือกลูกค้า (ถ้าจำเป็น) · กดสร้างข้อความ"
             rows={12}
             disabled={loading}
           />

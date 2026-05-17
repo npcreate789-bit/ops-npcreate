@@ -1,7 +1,78 @@
-import { formatBangkokDate } from '../../../../shared/dates/bangkok'
+import { bangkokTodayIsoDate, formatBangkokDate } from '../../../../shared/dates/bangkok'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { STAFF_PROMPT_OPTIONS } from '../constants'
-import type { StaffCustomerContext, StaffPromptKey, StaffReplyInput } from '../types'
+import type {
+  StaffAdsMetrics,
+  StaffCustomerContext,
+  StaffPromptKey,
+  StaffReplyInput,
+} from '../types'
+
+function formatMoney(n: number) {
+  return n.toLocaleString('th-TH', { maximumFractionDigits: 0 })
+}
+
+function daysAgoIso(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return bangkokTodayIsoDate(d)
+}
+
+export async function fetchStaffAdsMetrics(
+  customerId: string,
+): Promise<StaffAdsMetrics | null> {
+  if (!isSupabaseConfigured || !supabase) {
+    return {
+      last_7_days_spend: 42_000,
+      last_7_days_gmv: 156_000,
+      last_7_days_roi: 3.71,
+      latest_report_date: bangkokTodayIsoDate(),
+    }
+  }
+
+  const { data: campaigns } = await supabase
+    .from('campaigns')
+    .select('id')
+    .eq('customer_id', customerId)
+
+  const campaignIds = (campaigns ?? []).map((c) => c.id as string)
+  if (campaignIds.length === 0) {
+    return {
+      last_7_days_spend: 0,
+      last_7_days_gmv: 0,
+      last_7_days_roi: null,
+      latest_report_date: null,
+    }
+  }
+
+  const since = daysAgoIso(6)
+  const { data: metrics, error } = await supabase
+    .from('daily_metrics')
+    .select('report_date, spend, gmv')
+    .in('campaign_id', campaignIds)
+    .gte('report_date', since)
+    .order('report_date', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  let last_7_days_spend = 0
+  let last_7_days_gmv = 0
+  let latest_report_date: string | null = null
+
+  for (const m of metrics ?? []) {
+    last_7_days_spend += Number(m.spend ?? 0)
+    last_7_days_gmv += Number(m.gmv ?? 0)
+    if (!latest_report_date) latest_report_date = m.report_date as string
+  }
+
+  return {
+    last_7_days_spend,
+    last_7_days_gmv,
+    last_7_days_roi:
+      last_7_days_spend > 0 ? last_7_days_gmv / last_7_days_spend : null,
+    latest_report_date,
+  }
+}
 
 export async function fetchStaffCustomerContext(
   customerId: string,
@@ -67,7 +138,7 @@ export async function fetchStaffCustomerContext(
 }
 
 export function buildStaffReply(input: StaffReplyInput): string {
-  const { promptKey, customer, userDisplayName } = input
+  const { promptKey, customer, adsMetrics, userDisplayName } = input
   const who = userDisplayName?.trim() || 'ทีม NP Create'
   const brand = customer?.brand_name ?? '[ชื่อแบรนด์]'
 
@@ -108,10 +179,28 @@ ${
     : 'กรอกรายละเอียดสินค้าจาก Onboarding ก่อนส่งต่อทีมผลิต'
 }`
 
-    case 'ads_summary':
+    case 'ads_summary': {
+      const ads = adsMetrics
+      const roiLine =
+        ads?.last_7_days_roi != null
+          ? ads.last_7_days_roi.toFixed(2)
+          : ads && ads.last_7_days_spend > 0
+            ? '—'
+            : 'ยังไม่มีข้อมูล'
+      const metricsBlock = ads
+        ? `ช่วง 7 วันที่ผ่านมา (จากรายงานรายวันในระบบ):
+- Spend: ${formatMoney(ads.last_7_days_spend)} บาท
+- GMV: ${formatMoney(ads.last_7_days_gmv)} บาท
+- ROI: ${roiLine}${
+            ads.latest_report_date
+              ? `\n- รายงานล่าสุด: ${formatBangkokDate(ads.latest_report_date)}`
+              : ''
+          }`
+        : `ช่วง 7 วันที่ผ่านมา — เลือกลูกค้าแล้วกดสร้างใหม่เพื่อดึงตัวเลขจากระบบ`
+
       return `สรุปผลแอดสำหรับ ${brand} (ร่างส่งลูกค้า)
 
-ช่วง 7 วันที่ผ่านมา ทีมดูแลแคมเปญอยู่ระหว่างรวบรวมตัวเลขรายวัน — โดยทั่วไปจะสรุป Spend, GMV และ ROI ให้ในรายงานประจำสัปดาห์
+${metricsBlock}
 
 ${
   customer?.ready_for_ads
@@ -119,7 +208,8 @@ ${
     : 'ยังอยู่ระหว่างเตรียมบัญชี/สินค้า — แนะนำเช็ก Onboarding ให้ครบก่อนเร่งงบ'
 }
 
-ข้อความนี้เป็นร่าง — แทนที่ตัวเลขจริงจากหน้า Ads ก่อนส่งลูกค้า`
+แก้ไขข้อความก่อนส่ง — ตรวจตัวเลขเพิ่มที่หน้างานยิงแอดได้`
+    }
 
     case 'onboarding_checkin':
       return `เช็กลิสต์ Onboarding — ${brand}
