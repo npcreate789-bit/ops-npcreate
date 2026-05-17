@@ -1,3 +1,109 @@
+.reports-page__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.reports-role-guide h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.reports-role-guide__flow {
+  margin: 0;
+  padding-left: 1.15rem;
+  line-height: 1.75;
+  color: var(--npc-text-muted);
+  font-size: 0.88rem;
+}
+
+.reports-role-guide__flow a {
+  color: var(--npc-accent);
+}
+
+.reports-hint-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.08);
+}
+
+.reports-hint-banner p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--npc-text-muted);
+}
+
+.reports-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.reports-section-head h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.reports-section-head__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.reports-insights-intro {
+  margin: 0 0 0.75rem;
+}
+
+.reports-focus-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.reports-focus-bar__stage {
+  flex: 1 1 8rem;
+  min-width: 7rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--npc-text-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.reports-focus-bar__stage--active {
+  border-color: rgba(110, 231, 255, 0.55);
+  background: rgba(110, 231, 255, 0.1);
+  color: var(--npc-text);
+}
+
+.reports-focus-bar__label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: inherit;
+}
+
+.reports-focus-bar__meta {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+  opacity: 0.85;
+}
+
 .report-stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
@@ -10,6 +116,25 @@
   border-radius: 8px;
   border: 1px solid var(--npc-glass-border);
   background: rgba(0, 0, 0, 0.28);
+}
+
+.report-stat--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.report-stat--link:hover {
+  border-color: rgba(110, 231, 255, 0.45);
+  background: rgba(110, 231, 255, 0.08);
+}
+
+.report-stat--link small {
+  display: block;
+  margin-top: 0.25rem;
 }
 
 .report-stat strong {

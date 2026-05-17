@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { canAccessNavPath } from '../../../config/navigation'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canUseGlobalSearch,
   canViewActivityLog,
   canViewCustomer360,
+  canViewRenewals,
+  canViewReportFinanceMetrics,
+  canViewReports,
   canViewWeeklyReport,
+  canViewWorkHub,
+  hasClientPortalStaffPreview,
 } from '../../../../shared/auth/access'
 import { bangkokTodayIsoDate } from '../../../../shared/dates/bangkok'
+import { DashboardRoleGuide } from '../components/DashboardRoleGuide'
 import { fetchExecutiveDashboard } from '../api/dashboard'
 import type { ExecutiveDashboard } from '../types'
 import '../../crm/crm.css'
@@ -20,14 +27,44 @@ function formatMoney(n: number) {
   return n.toLocaleString('th-TH', { maximumFractionDigits: 0 })
 }
 
+function DashStat({
+  to,
+  title,
+  stat,
+  meta,
+  accent,
+}: {
+  to: string
+  title: string
+  stat: string
+  meta: string
+  accent?: boolean
+}) {
+  return (
+    <Link
+      to={to}
+      className={`card dashboard-stat${accent ? ' card--accent' : ''}`}
+    >
+      <h2>{title}</h2>
+      <p className="stat">{stat}</p>
+      <span className="muted">{meta}</span>
+    </Link>
+  )
+}
+
 export function DashboardPage() {
   const { profile, configured } = useAuth()
   const userId = profile?.id ?? DEV_OWNER
   const roles = profile?.roles ?? []
+  const showFinance = canViewReportFinanceMetrics(roles) || !configured
   const showWeekly = canViewWeeklyReport(roles) || !configured
+  const showReports = canViewReports(roles) || !configured
   const showActivity = canViewActivityLog(roles) || !configured
   const showCustomers = canViewCustomer360(roles) || !configured
+  const showRenewals = canViewRenewals(roles) || !configured
   const showSearch = canUseGlobalSearch(roles) || !configured
+  const showWork = canViewWorkHub(roles) || !configured
+  const showClient = hasClientPortalStaffPreview(roles) || !configured
   const today = bangkokTodayIsoDate()
 
   const [data, setData] = useState<ExecutiveDashboard | null>(null)
@@ -51,6 +88,68 @@ export function DashboardPage() {
     }
   }, [userId, roles])
 
+  const alerts = useMemo(() => {
+    if (!data) return []
+    return data.alerts.filter(
+      (a) => !configured || canAccessNavPath(roles, a.link),
+    )
+  }, [data, roles, configured])
+
+  const shortcutGroups = useMemo(() => {
+    const can = (path: string) => !configured || canAccessNavPath(roles, path)
+    return [
+      {
+        title: 'การเงินและลูกค้า',
+        links: [
+          { to: '/app/finance', label: 'การเงิน', show: can('/app/finance') },
+          { to: '/app/customers', label: 'ลูกค้า 360°', show: showCustomers && can('/app/customers') },
+          { to: '/app/renewals', label: 'ต่อสัญญา', show: showRenewals && can('/app/renewals') },
+          { to: '/app/client', label: 'พื้นที่ลูกค้า', show: showClient && can('/app/client') },
+        ],
+      },
+      {
+        title: 'ขาย · แอด · คอนเทนต์',
+        links: [
+          { to: '/app/crm', label: 'CRM', show: can('/app/crm') },
+          { to: '/app/sales', label: 'ขาย', show: can('/app/sales') },
+          { to: '/app/onboarding', label: 'รับบรีฟ', show: can('/app/onboarding') },
+          { to: '/app/ads', label: 'งานยิงแอด', show: can('/app/ads') },
+          { to: '/app/content', label: 'งานคอนเทนต์', show: can('/app/content') },
+          { to: '/app/creators', label: 'ครีเอเตอร์', show: can('/app/creators') },
+        ],
+      },
+      {
+        title: 'งานและรายงาน',
+        links: [
+          { to: '/app/tasks', label: 'งานภายใน', show: can('/app/tasks') },
+          { to: '/app/work', label: 'งานของฉัน', show: showWork && can('/app/work') },
+          { to: '/app/weekly', label: 'สรุปรายสัปดาห์', show: showWeekly && can('/app/weekly') },
+          { to: '/app/reports', label: 'รายงานขั้นสูง', show: showReports && can('/app/reports') },
+          { to: '/app/activity', label: 'บันทึกกิจกรรม', show: showActivity && can('/app/activity') },
+          { to: '/app/search', label: 'ค้นหารวม', show: showSearch && can('/app/search') },
+        ],
+      },
+      {
+        title: 'ระบบ',
+        links: [
+          { to: '/app/admin', label: 'จัดการผู้ใช้', show: can('/app/admin') },
+          { to: '/app/settings', label: 'ตั้งค่า', show: can('/app/settings') },
+        ],
+      },
+    ]
+  }, [
+    roles,
+    configured,
+    showCustomers,
+    showRenewals,
+    showClient,
+    showWork,
+    showWeekly,
+    showReports,
+    showActivity,
+    showSearch,
+  ])
+
   if (loading) {
     return (
       <div className="page">
@@ -67,20 +166,56 @@ export function DashboardPage() {
     )
   }
 
-  const { finance, leads, customers, ads, tasks, content, alerts } = data
+  const { finance, leads, customers, contracts_expiring_30d, ads, tasks, content } = data
   const adsReportPct =
     ads.reports_expected > 0
       ? Math.round((ads.reports_submitted / ads.reports_expected) * 100)
       : 0
 
   return (
-    <div className="page">
-      <header className="page__header">
-        <h1>ภาพรวมผู้บริหาร</h1>
-        <p>
-          รายได้ ลูกค้า Pipeline แอด และงานที่ต้องติดตาม — ข้อมูล ณ วันที่ {today}
-        </p>
+    <div className="page dashboard-page">
+      <header className="page__header crm-page__header sales-page__header">
+        <div>
+          <h1>ภาพรวมผู้บริหาร</h1>
+          <p className="muted">
+            ตัวเลขจากระบบจริง ณ วันที่ {today} — คลิกการ์ดเพื่อเปิดโมดูลที่เกี่ยวข้อง
+          </p>
+        </div>
+        <div className="dashboard-page__header-actions">
+          {showWork && (
+            <Link to="/app/work" className="crm-btn crm-btn--ghost">
+              งานของฉัน
+            </Link>
+          )}
+          {showWeekly && (
+            <Link to="/app/weekly" className="crm-btn crm-btn--ghost">
+              สรุปรายสัปดาห์
+            </Link>
+          )}
+          {showReports && (
+            <Link to="/app/reports" className="crm-btn crm-btn--ghost">
+              รายงานรายเดือน
+            </Link>
+          )}
+          {showCustomers && (
+            <Link to="/app/customers" className="crm-btn crm-btn--ghost">
+              ลูกค้า 360°
+            </Link>
+          )}
+        </div>
       </header>
+
+      <DashboardRoleGuide />
+
+      {(showWeekly || showReports) && (
+        <div className="dashboard-hint-banner">
+          <p>
+            แดชบอร์ด = ภาพรวมวันนี้
+            {showReports ? ' · รายเดือนลึก → รายงานขั้นสูง' : ''}
+            {showWeekly ? ' · ช่วง 7 วัน → สรุปรายสัปดาห์' : ''}
+          </p>
+        </div>
+      )}
 
       {!configured && (
         <p className="crm-banner crm-banner--warn">
@@ -92,7 +227,10 @@ export function DashboardPage() {
 
       {alerts.length > 0 && (
         <section className="card card--wide">
-          <h2 className="dashboard-section-title">ต้องดำเนินการ</h2>
+          <div className="dashboard-section-head">
+            <h2 className="dashboard-section-title">ต้องดำเนินการ</h2>
+            <span className="muted">{alerts.length} รายการ</span>
+          </div>
           <ul className="dashboard-alerts">
             {alerts.map((a) => (
               <li key={a.id} className={`dashboard-alert dashboard-alert--${a.severity}`}>
@@ -104,83 +242,153 @@ export function DashboardPage() {
         </section>
       )}
 
-      <section className="card-grid">
-        <article className="card card--accent">
-          <h2>รายรับเดือนนี้</h2>
-          <p className="stat">{formatMoney(finance.revenue_this_month)}</p>
-          <span className="muted">บาท · {finance.paid_count_this_month} รายการ</span>
-        </article>
-        <article className="card">
-          <h2>ลูกหนี้ค้าง</h2>
-          <p className="stat">{formatMoney(finance.pending_total)}</p>
-          <span className="muted">บาท</span>
-        </article>
-        <article className="card">
-          <h2>ลูกค้า Active</h2>
-          <p className="stat">{customers.active}</p>
-          <span className="muted">ราย · พร้อมยิงแอด {customers.ready_for_ads}</span>
-        </article>
-        <article className="card">
-          <h2>Lead Pipeline</h2>
-          <p className="stat">{leads.pipeline}</p>
-          <span className="muted">จากทั้งหมด {leads.total} · ปิดแล้ว {leads.won}</span>
-        </article>
+      {showFinance && (
+        <section className="dashboard-block">
+          <div className="dashboard-section-head">
+            <h2 className="dashboard-section-title">การเงิน · เดือนนี้</h2>
+            <Link to="/app/finance" className="crm-btn crm-btn--ghost">
+              เปิดการเงิน
+            </Link>
+          </div>
+          <div className="card-grid">
+            <DashStat
+              to="/app/finance"
+              title="รายรับเดือนนี้"
+              stat={formatMoney(finance.revenue_this_month)}
+              meta={`บาท · ${finance.paid_count_this_month} รายการ`}
+              accent
+            />
+            <DashStat
+              to="/app/finance"
+              title="ลูกหนี้ค้าง"
+              stat={formatMoney(finance.pending_total)}
+              meta={
+                finance.overdue_count > 0
+                  ? `เกินกำหนด ${finance.overdue_count} รายการ`
+                  : 'รอชำระ + เกินกำหนด'
+              }
+            />
+          </div>
+        </section>
+      )}
+
+      <section className="dashboard-block">
+        <div className="dashboard-section-head">
+          <h2 className="dashboard-section-title">ลูกค้าและขาย</h2>
+          <div className="dashboard-section-head__links">
+            {showCustomers && (
+              <Link to="/app/customers" className="crm-btn crm-btn--ghost">
+                ลูกค้า 360°
+              </Link>
+            )}
+            <Link to="/app/crm" className="crm-btn crm-btn--ghost">
+              CRM
+            </Link>
+            <Link to="/app/onboarding" className="crm-btn crm-btn--ghost">
+              รับบรีฟ
+            </Link>
+          </div>
+        </div>
+        <div className="card-grid">
+          <DashStat
+            to="/app/customers"
+            title="ลูกค้า Active"
+            stat={String(customers.active)}
+            meta={`พร้อมยิงแอด ${customers.ready_for_ads} · รอรับบรีฟ ${customers.pending_onboarding}`}
+          />
+          {showRenewals && (
+            <DashStat
+              to="/app/renewals"
+              title="สัญญาหมดใน 30 วัน"
+              stat={String(contracts_expiring_30d)}
+              meta="ควรเปิดเคสต่อสัญญา"
+            />
+          )}
+          <DashStat
+            to="/app/crm"
+            title="Lead Pipeline"
+            stat={String(leads.pipeline)}
+            meta={`จากทั้งหมด ${leads.total} · ปิดแล้ว ${leads.won}`}
+          />
+        </div>
       </section>
 
-      <section className="card-grid">
-        <article className="card">
-          <h2>แอดวันนี้ — Spend</h2>
-          <p className="stat">{formatMoney(ads.spend_today)}</p>
-          <span className="muted">บาท</span>
-        </article>
-        <article className="card">
-          <h2>แอดวันนี้ — GMV</h2>
-          <p className="stat">{formatMoney(ads.gmv_today)}</p>
-          <span className="muted">
-            ROI เฉลี่ย {ads.avg_roi != null ? ads.avg_roi.toFixed(2) : '—'}
-          </span>
-        </article>
-        <article className="card">
-          <h2>รายงานแอดวันนี้</h2>
-          <p className="stat">{adsReportPct}%</p>
-          <span className="muted">
-            {ads.reports_submitted}/{ads.reports_expected} แบรนด์
-          </span>
-        </article>
-        <article className="card">
-          <h2>งานภายใน</h2>
-          <p className="stat">{tasks.open_count}</p>
-          <span className="muted">
-            เปิดอยู่ · ติดขัด {tasks.blocked_count} · เกินกำหนด {tasks.overdue_count}
-          </span>
-        </article>
-        <article className="card">
-          <h2>งานคอนเทนต์</h2>
-          <p className="stat">{content.in_production_count}</p>
-          <span className="muted">
-            กำลังผลิต · รอตรวจ {content.review_count} · เกินกำหนด {content.overdue_count}
-          </span>
-        </article>
+      <section className="dashboard-block">
+        <div className="dashboard-section-head">
+          <h2 className="dashboard-section-title">แอดวันนี้</h2>
+          <Link to="/app/ads" className="crm-btn crm-btn--ghost">
+            งานยิงแอด
+          </Link>
+        </div>
+        <div className="card-grid">
+          <DashStat
+            to="/app/ads"
+            title="Spend วันนี้"
+            stat={formatMoney(ads.spend_today)}
+            meta="จากรายงานรายวัน"
+          />
+          <DashStat
+            to="/app/ads"
+            title="GMV วันนี้"
+            stat={formatMoney(ads.gmv_today)}
+            meta={`ROI เฉลี่ย ${ads.avg_roi != null ? ads.avg_roi.toFixed(2) : '—'}`}
+          />
+          <DashStat
+            to="/app/ads"
+            title="ส่งรายงานแอดวันนี้"
+            stat={`${adsReportPct}%`}
+            meta={`${ads.reports_submitted}/${ads.reports_expected} แบรนด์`}
+          />
+        </div>
+      </section>
+
+      <section className="dashboard-block">
+        <div className="dashboard-section-head">
+          <h2 className="dashboard-section-title">งานภายในและคอนเทนต์</h2>
+          <div className="dashboard-section-head__links">
+            <Link to="/app/tasks" className="crm-btn crm-btn--ghost">
+              งานภายใน
+            </Link>
+            <Link to="/app/content" className="crm-btn crm-btn--ghost">
+              คอนเทนต์
+            </Link>
+          </div>
+        </div>
+        <div className="card-grid">
+          <DashStat
+            to="/app/tasks"
+            title="งานภายใน"
+            stat={String(tasks.open_count)}
+            meta={`ติดขัด ${tasks.blocked_count} · เกินกำหนด ${tasks.overdue_count}`}
+          />
+          <DashStat
+            to="/app/content"
+            title="งานคอนเทนต์"
+            stat={String(content.in_production_count)}
+            meta={`รอตรวจ ${content.review_count} · เกินกำหนด ${content.overdue_count}`}
+          />
+        </div>
       </section>
 
       <section className="card card--wide">
-        <h2 className="dashboard-section-title">ทางลัด</h2>
-        <div className="dashboard-links">
-          <Link to="/app/finance">การเงิน</Link>
-          <Link to="/app/crm">CRM</Link>
-          <Link to="/app/sales">ขาย</Link>
-          <Link to="/app/onboarding">รับบรีฟ</Link>
-          <Link to="/app/ads">งานยิงแอด</Link>
-          <Link to="/app/tasks">งานภายใน</Link>
-          <Link to="/app/content">งานคอนเทนต์</Link>
-          <Link to="/app/admin">จัดการผู้ใช้</Link>
-          <Link to="/app/client">รายงานลูกค้า</Link>
-          {showCustomers && <Link to="/app/customers">ลูกค้า 360</Link>}
-          {showWeekly && <Link to="/app/weekly">สรุปรายสัปดาห์</Link>}
-          {showActivity && <Link to="/app/activity">บันทึกกิจกรรม</Link>}
-          {showSearch && <Link to="/app/search">ค้นหารวม</Link>}
-          <Link to="/app/reports">รายงานขั้นสูง</Link>
-          <Link to="/app/work">งานของฉัน</Link>
+        <h2 className="dashboard-section-title">ทางลัดตามหมวด</h2>
+        <div className="dashboard-shortcut-groups">
+          {shortcutGroups.map((group) => {
+            const links = group.links.filter((l) => l.show)
+            if (links.length === 0) return null
+            return (
+              <div key={group.title} className="dashboard-shortcut-group">
+                <h3>{group.title}</h3>
+                <div className="dashboard-links">
+                  {links.map((l) => (
+                    <Link key={l.to} to={l.to}>
+                      {l.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </section>
     </div>

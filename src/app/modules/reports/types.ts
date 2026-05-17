@@ -12,10 +12,13 @@ export interface AdvancedReport {
   open_tasks: number
 }
 
+export type ReportInsightFocus = 'finance' | 'ads' | 'operations'
+
 export interface ReportInsight {
   id: string
   severity: 'info' | 'warn' | 'danger'
   title: string
   body: string
+  focus?: ReportInsightFocus
   link?: string
 }

@@ -33,6 +33,7 @@ export interface ExecutiveDashboard {
   finance: FinanceSummary
   leads: LeadStats
   customers: CustomerStats
+  contracts_expiring_30d: number
   ads: AdsStats
   tasks: TaskSummary
   content: ContentJobSummary

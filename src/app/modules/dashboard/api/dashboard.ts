@@ -8,8 +8,9 @@ import { bangkokTodayIsoDate } from '../../../../shared/dates/bangkok'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { listLeads } from '../../crm/api/leads'
 import type { Lead } from '../../crm/types'
-import { getFinanceSummary } from '../../finance/api/payments'
 import { getContentSummary } from '../../content/api/contentJobs'
+import { getFinanceSummary } from '../../finance/api/payments'
+import { countExpiringContracts } from '../../renewals/api/renewals'
 import { getTaskSummary } from '../../tasks/api/tasks'
 import type {
   AdsStats,
@@ -181,11 +182,21 @@ async function fetchAdsStats(expectedCustomers: number): Promise<AdsStats> {
 function buildAlerts(
   finance: ExecutiveDashboard['finance'],
   customers: CustomerStats,
+  contractsExpiring30d: number,
   ads: AdsStats,
   tasks: ExecutiveDashboard['tasks'],
   content: ExecutiveDashboard['content'],
 ): DashboardAlert[] {
   const alerts: DashboardAlert[] = []
+
+  if (contractsExpiring30d > 0) {
+    alerts.push({
+      id: 'renewals-expiring',
+      severity: contractsExpiring30d >= 3 ? 'danger' : 'warn',
+      message: `สัญญาหมดภายใน 30 วัน ${contractsExpiring30d} ลูกค้า`,
+      link: '/app/renewals',
+    })
+  }
 
   if (finance.overdue_count > 0) {
     alerts.push({
@@ -317,12 +328,31 @@ export async function fetchExecutiveDashboard(
     safeDashboardPart(() => getContentSummary(userId, contentTeamView), EMPTY_CONTENT),
   ])
 
-  const ads = await safeDashboardPart(
-    () => fetchAdsStats(customers.ready_for_ads),
-    { ...EMPTY_ADS, reports_expected: customers.ready_for_ads },
-  )
+  const [ads, contracts_expiring_30d] = await Promise.all([
+    safeDashboardPart(
+      () => fetchAdsStats(customers.ready_for_ads),
+      { ...EMPTY_ADS, reports_expected: customers.ready_for_ads },
+    ),
+    safeDashboardPart(() => countExpiringContracts(30), 0),
+  ])
   const lead = leadStats(leads)
-  const alerts = buildAlerts(finance, customers, ads, tasks, content)
+  const alerts = buildAlerts(
+    finance,
+    customers,
+    contracts_expiring_30d,
+    ads,
+    tasks,
+    content,
+  )
 
-  return { finance, leads: lead, customers, ads, tasks, content, alerts }
+  return {
+    finance,
+    leads: lead,
+    customers,
+    contracts_expiring_30d,
+    ads,
+    tasks,
+    content,
+    alerts,
+  }
 }

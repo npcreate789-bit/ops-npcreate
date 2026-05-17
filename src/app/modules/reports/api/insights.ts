@@ -21,6 +21,7 @@ export function buildReportInsights(
       severity: report.contracts_expiring_30d >= 3 ? 'danger' : 'warn',
       title: 'สัญญาใกล้หมดอายุ',
       body: `มี ${report.contracts_expiring_30d} ลูกค้าที่สัญญาหมดภายใน 30 วัน — ควรเปิดเคสต่อสัญญา`,
+      focus: 'operations',
       link: '/app/renewals',
     })
     if (item) insights.push(item)
@@ -32,6 +33,7 @@ export function buildReportInsights(
       severity: 'warn',
       title: 'ลูกหนี้ค้าง',
       body: `มูลค่าค้างชำระรวม ${report.pending_receivables.toLocaleString('th-TH')} บาท`,
+      focus: 'finance',
       link: '/app/finance',
     })
     if (item) insights.push(item)
@@ -43,6 +45,7 @@ export function buildReportInsights(
       severity: 'warn',
       title: 'ROI แอดต่ำ',
       body: `ROI เฉลี่ยเดือนนี้ ${report.ads_avg_roi.toFixed(2)} — ตรวจสอบแคมเปญที่ผลลัพธ์ต่ำ`,
+      focus: 'ads',
       link: '/app/ads',
     })
     if (item) insights.push(item)
@@ -54,6 +57,7 @@ export function buildReportInsights(
       severity: 'info',
       title: 'คิวงานภายใน',
       body: `มีงานเปิดอยู่ ${report.open_tasks} รายการ — แนะนำจัดลำดับงานติดขัดก่อน`,
+      focus: 'operations',
       link: '/app/tasks',
     })
     if (item) insights.push(item)
@@ -66,7 +70,8 @@ export function buildReportInsights(
       severity: 'info',
       title: 'รายได้ต่อลูกค้า Active',
       body: `ประมาณ ${arpu.toLocaleString('th-TH', { maximumFractionDigits: 0 })} บาท/ลูกค้า ในเดือนนี้`,
-      link: '/app/dashboard',
+      focus: 'finance',
+      link: '/app/finance',
     })
     if (item) insights.push(item)
   }
