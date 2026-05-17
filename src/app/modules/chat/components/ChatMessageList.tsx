@@ -29,10 +29,9 @@ interface ChatMessageListProps {
   onToggleReaction?: (messageId: string, emoji: ChatReactionEmoji) => void
   onReply?: (message: ChatMessage) => void
   onJumpToMessage?: (messageId: string) => void
-  canViewNotes?: boolean
   notes?: ChatNotesMap
   openNotesMessageId?: string | null
-  onToggleNotes?: (messageId: string) => void
+  onToggleNotes?: (messageId: string, anchor: HTMLElement) => void
 }
 
 export function ChatMessageList({
@@ -52,7 +51,6 @@ export function ChatMessageList({
   onToggleReaction,
   onReply,
   onJumpToMessage,
-  canViewNotes = false,
   notes = {},
   openNotesMessageId = null,
   onToggleNotes,
@@ -154,11 +152,12 @@ export function ChatMessageList({
                         ? () => onJumpToMessage(message.reply_to_id!)
                         : undefined
                     }
-                    canViewNotes={canViewNotes}
                     notes={notes[message.id] ?? []}
                     notesOpen={openNotesMessageId === message.id}
                     onToggleNotes={
-                      onToggleNotes ? () => onToggleNotes(message.id) : undefined
+                      onToggleNotes
+                        ? (anchor) => onToggleNotes(message.id, anchor)
+                        : undefined
                     }
                   />
                 )

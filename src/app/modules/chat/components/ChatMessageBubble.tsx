@@ -34,10 +34,30 @@ interface ChatMessageBubbleProps {
   onToggleReaction?: (emoji: ChatReactionEmoji) => void
   onReply?: () => void
   onJumpToReply?: () => void
-  canViewNotes?: boolean
   notes?: ChatMessageNote[]
   notesOpen?: boolean
-  onToggleNotes?: () => void
+  onToggleNotes?: (anchor: HTMLElement) => void
+}
+
+function ChatNoteIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M7 4h10a2 2 0 0 1 2 2v11.2a.8.8 0 0 1-1.3.6L14 15H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"
+        stroke="currentColor"
+        strokeWidth="1.65"
+        strokeLinejoin="round"
+        fill={active ? 'currentColor' : 'none'}
+        fillOpacity={active ? 0.22 : 0}
+      />
+      <path
+        d="M9 8h6M9 11.5h4"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
 }
 
 export function ChatMessageBubble({
@@ -57,7 +77,6 @@ export function ChatMessageBubble({
   onToggleReaction,
   onReply,
   onJumpToReply,
-  canViewNotes = false,
   notes = [],
   notesOpen = false,
   onToggleNotes,
@@ -133,9 +152,7 @@ export function ChatMessageBubble({
       id={`chat-msg-${message.id}`}
       className={`chat-bubble${mine ? ' chat-bubble--mine' : ' chat-bubble--theirs'}${
         compact ? ' chat-bubble--compact' : ''
-      }${isPinned ? ' chat-bubble--pinned' : ''}${
-        notesOpen ? ' chat-bubble--notes-target' : ''
-      }`}
+      }${isPinned ? ' chat-bubble--pinned' : ''}${notesOpen ? ' chat-bubble--notes-open' : ''}`}
     >
       {!mine && !compact && (
         <ChatAvatar name={message.sender_name} seed={message.sender_id} size="sm" className="chat-bubble__avatar" />
@@ -147,11 +164,6 @@ export function ChatMessageBubble({
           <header className="chat-bubble__head">
             <strong className="chat-bubble__sender">{senderLabel}</strong>
             {isPinned && <span className="chat-bubble__pin-badge">ปักหมุด</span>}
-            {canViewNotes && notes.length > 0 && (
-              <span className="chat-bubble__note-badge" title={`${notes.length} โน้ตภายใน`}>
-                📝 {notes.length}
-              </span>
-            )}
             <time
               className="chat-bubble__time"
               dateTime={message.created_at}
@@ -163,6 +175,26 @@ export function ChatMessageBubble({
         )}
 
         <div className="chat-bubble__bubble">
+          {onToggleNotes && message.message_type !== 'system' && (
+            <button
+              type="button"
+              className={`chat-bubble__note-icon${
+                notes.length > 0 ? ' chat-bubble__note-icon--has-notes' : ''
+              }${notesOpen ? ' chat-bubble__note-icon--open' : ''}`}
+              onClick={(e) => onToggleNotes(e.currentTarget)}
+              aria-label={
+                notes.length > 0 ? `ดูโน้ต ${notes.length} รายการ` : 'เพิ่มโน้ตข้อความ'
+              }
+              aria-expanded={notesOpen}
+            >
+              <ChatNoteIcon active={notes.length > 0 || notesOpen} />
+              {notes.length > 0 && (
+                <span className="chat-bubble__note-count" aria-hidden>
+                  {notes.length > 9 ? '9+' : notes.length}
+                </span>
+              )}
+            </button>
+          )}
           <ChatReplyQuote
             message={message}
             userId={userId}
@@ -211,15 +243,6 @@ export function ChatMessageBubble({
             {onReply && (
               <button type="button" className="chat-bubble__tool" onClick={onReply}>
                 ตอบกลับ
-              </button>
-            )}
-            {canViewNotes && onToggleNotes && message.message_type !== 'system' && (
-              <button
-                type="button"
-                className={`chat-bubble__tool${notesOpen ? ' chat-bubble__tool--active' : ''}`}
-                onClick={onToggleNotes}
-              >
-                โน้ต{notes.length > 0 ? ` (${notes.length})` : ''}
               </button>
             )}
             {onPin && !isPinned && (

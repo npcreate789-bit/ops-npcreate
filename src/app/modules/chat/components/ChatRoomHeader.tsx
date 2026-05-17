@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ChatAvatar } from './ChatAvatar'
 import '../chat.css'
@@ -13,7 +12,6 @@ interface ChatRoomHeaderProps {
   onSearchChange: (value: string) => void
   onRefresh?: () => void
   refreshing?: boolean
-  notesDock?: ReactNode
 }
 
 export function ChatRoomHeader({
@@ -26,7 +24,6 @@ export function ChatRoomHeader({
   onSearchChange,
   onRefresh,
   refreshing,
-  notesDock,
 }: ChatRoomHeaderProps) {
   return (
     <header className="chat-room-header">
@@ -80,7 +77,6 @@ export function ChatRoomHeader({
             </button>
           )}
         </div>
-        {notesDock}
       </div>
     </header>
   )

@@ -30,7 +30,7 @@ import { ChatComposer } from './ChatComposer'
 import { ChatReplyBar } from './ChatReplyBar'
 import { ChatMessageList } from './ChatMessageList'
 import { ChatPinnedBar } from './ChatPinnedBar'
-import { ChatNotesDock } from './ChatNotesDock'
+import { ChatNotesPopover } from './ChatNotesPopover'
 import { ChatRoomHeader } from './ChatRoomHeader'
 import { useChatRoomSocial } from '../hooks/useChatRoomSocial'
 import { useProjectChat } from '../hooks/useProjectChat'
@@ -73,6 +73,7 @@ export function ProjectChatPanel({
   const [draft, setDraft] = useState('')
   const [replyTarget, setReplyTarget] = useState<ChatReplyTarget | null>(null)
   const [openNotesMessageId, setOpenNotesMessageId] = useState<string | null>(null)
+  const [openNotesAnchor, setOpenNotesAnchor] = useState<HTMLElement | null>(null)
   const [notesSaving, setNotesSaving] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [creatingFromId, setCreatingFromId] = useState<string | null>(null)
@@ -115,9 +116,8 @@ export function ProjectChatPanel({
   useEffect(() => {
     setReplyTarget(null)
     setOpenNotesMessageId(null)
+    setOpenNotesAnchor(null)
   }, [projectId, activeChannel])
-
-  const canViewNotes = !isClientOnly
 
   const notesTarget = useMemo(
     () => (openNotesMessageId ? messages.find((m) => m.id === openNotesMessageId) : undefined),
@@ -127,6 +127,7 @@ export function ProjectChatPanel({
   useEffect(() => {
     if (openNotesMessageId && !notesTarget) {
       setOpenNotesMessageId(null)
+      setOpenNotesAnchor(null)
     }
   }, [openNotesMessageId, notesTarget])
 
@@ -159,8 +160,19 @@ export function ProjectChatPanel({
     document.querySelector<HTMLTextAreaElement>('.chat-composer__input')?.focus()
   }
 
-  function toggleNotes(messageId: string) {
-    setOpenNotesMessageId((prev) => (prev === messageId ? null : messageId))
+  function toggleNotes(messageId: string, anchor: HTMLElement) {
+    if (openNotesMessageId === messageId) {
+      setOpenNotesMessageId(null)
+      setOpenNotesAnchor(null)
+      return
+    }
+    setOpenNotesMessageId(messageId)
+    setOpenNotesAnchor(anchor)
+  }
+
+  function closeNotes() {
+    setOpenNotesMessageId(null)
+    setOpenNotesAnchor(null)
   }
 
   async function handleSaveNote(messageId: string, body: string) {
@@ -331,21 +343,20 @@ export function ProjectChatPanel({
           void reloadSocial()
         }}
         refreshing={loading}
-        notesDock={
-          canViewNotes && notesTarget ? (
-            <ChatNotesDock
-              message={notesTarget}
-              userId={userId}
-              notes={social.notes[notesTarget.id] ?? []}
-              saving={notesSaving}
-              onSave={(body) => handleSaveNote(notesTarget.id, body)}
-              onDelete={(noteId) => handleDeleteNote(notesTarget.id, noteId)}
-              onClose={() => setOpenNotesMessageId(null)}
-              onJumpToMessage={() => scrollToMessage(notesTarget.id)}
-            />
-          ) : undefined
-        }
       />
+
+      {openNotesMessageId && notesTarget && openNotesAnchor && (
+        <ChatNotesPopover
+          message={notesTarget}
+          userId={userId}
+          notes={social.notes[notesTarget.id] ?? []}
+          saving={notesSaving}
+          anchorEl={openNotesAnchor}
+          onSave={(body) => handleSaveNote(notesTarget.id, body)}
+          onDelete={(noteId) => handleDeleteNote(notesTarget.id, noteId)}
+          onClose={closeNotes}
+        />
+      )}
 
       {error && <p className="crm-error chat-shell__error">{error}</p>}
 
@@ -372,7 +383,6 @@ export function ProjectChatPanel({
         onToggleReaction={(id, emoji) => void handleToggleReaction(id, emoji)}
         onReply={startReply}
         onJumpToMessage={scrollToMessage}
-        canViewNotes={canViewNotes}
         notes={social.notes}
         openNotesMessageId={openNotesMessageId}
         onToggleNotes={toggleNotes}
