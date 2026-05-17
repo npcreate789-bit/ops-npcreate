@@ -19,6 +19,7 @@ function formatMoney(n: number) {
   return n.toLocaleString('th-TH', { maximumFractionDigits: 0 })
 }
 
+/** @deprecated ใช้ ClientDashboardPage ผ่าน /app/client */
 export function ClientPortalPage() {
   const { profile, configured } = useAuth()
   const userId = profile?.id ?? DEV_OWNER

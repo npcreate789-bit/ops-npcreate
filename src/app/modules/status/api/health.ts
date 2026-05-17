@@ -1,3 +1,8 @@
+import {
+  APP_CANONICAL_HOST,
+  isCanonicalProductionHost,
+  isLocalDevHost,
+} from '../../../../shared/config/appUrl'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 
 export type HealthStatus = 'ok' | 'warn' | 'error' | 'skip'
@@ -19,6 +24,24 @@ export async function runHealthChecks(): Promise<HealthCheckResult[]> {
       detail: 'โหลดและรันในบราว์เซอร์ได้',
     },
   ]
+
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    checks.push({
+      id: 'host',
+      label: 'โดเมนแอป',
+      status: isCanonicalProductionHost()
+        ? 'ok'
+        : isLocalDevHost()
+          ? 'skip'
+          : 'warn',
+      detail: isCanonicalProductionHost()
+        ? `${host} (production)`
+        : isLocalDevHost()
+          ? `${host} — พัฒนาในเครื่อง`
+          : `คาดหวัง ${APP_CANONICAL_HOST} · ปัจจุบัน ${host}`,
+    })
+  }
 
   if (!isSupabaseConfigured || !supabase) {
     checks.push({

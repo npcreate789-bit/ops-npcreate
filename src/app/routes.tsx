@@ -5,6 +5,7 @@ import { RequireModuleAccess } from '../shared/auth/RequireModuleAccess'
 import { AppLayout } from './layout/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { RootRedirect } from './pages/RootRedirect'
 import { SetPasswordPage } from './pages/SetPasswordPage'
 import { CrmLeadsPage } from './modules/crm/pages/CrmLeadsPage'
 import { LeadEditorPage } from './modules/crm/pages/LeadEditorPage'
@@ -23,7 +24,16 @@ import { AdminAuditPage } from './modules/admin/pages/AdminAuditPage'
 import { AdminUsersPage } from './modules/admin/pages/AdminUsersPage'
 import { ContentListPage } from './modules/content/pages/ContentListPage'
 import { ContentJobEditorPage } from './modules/content/pages/ContentJobEditorPage'
-import { ClientPortalPage } from './modules/client/pages/ClientPortalPage'
+import { ClientWorkspaceLayout } from './modules/client/layout/ClientWorkspaceLayout'
+import { ClientBriefPage } from './modules/client/pages/ClientBriefPage'
+import { ClientChatPage } from './modules/client/pages/ClientChatPage'
+import { ClientDashboardPage } from './modules/client/pages/ClientDashboardPage'
+import { ClientPaymentPage } from './modules/client/pages/ClientPaymentPage'
+import { ClientProjectsPage } from './modules/client/pages/ClientProjectsPage'
+import { ClientReportsPage } from './modules/client/pages/ClientReportsPage'
+import { ContactPage } from './modules/contact/pages/ContactPage'
+import { ProjectDetailPage } from './modules/projects/pages/ProjectDetailPage'
+import { ProjectsListPage } from './modules/projects/pages/ProjectsListPage'
 import { NotificationsPage } from './modules/notifications/pages/NotificationsPage'
 import { CreatorsListPage } from './modules/creators/pages/CreatorsListPage'
 import { CreatorEditorPage } from './modules/creators/pages/CreatorEditorPage'
@@ -57,6 +67,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route
         path="/set-password"
         element={
@@ -110,7 +121,19 @@ export function AppRoutes() {
           path="content/:id"
           element={<Module path="/app/content" element={<ContentJobEditorPage />} />}
         />
-        <Route path="client" element={<Module path="/app/client" element={<ClientPortalPage />} />} />
+        <Route path="client" element={<Module path="/app/client" element={<ClientWorkspaceLayout />} />}>
+          <Route index element={<ClientDashboardPage />} />
+          <Route path="projects" element={<ClientProjectsPage />} />
+          <Route path="brief" element={<ClientBriefPage />} />
+          <Route path="reports" element={<ClientReportsPage />} />
+          <Route path="chat" element={<ClientChatPage />} />
+          <Route path="payment" element={<ClientPaymentPage />} />
+        </Route>
+        <Route path="projects" element={<Module path="/app/projects" element={<ProjectsListPage />} />} />
+        <Route
+          path="projects/:id"
+          element={<Module path="/app/projects" element={<ProjectDetailPage />} />}
+        />
         <Route
           path="notifications"
           element={<Module path="/app/notifications" element={<NotificationsPage />} />}
@@ -150,8 +173,8 @@ export function AppRoutes() {
         <Route path="about" element={<Module path="/app/about" element={<AboutPage />} />} />
         <Route path="status" element={<Module path="/app/status" element={<StatusPage />} />} />
       </Route>
-      <Route path="/" element={<Navigate to="/app" replace />} />
-      <Route path="*" element={<Navigate to="/app" replace />} />
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="*" element={<RootRedirect />} />
     </Routes>
   )
 }

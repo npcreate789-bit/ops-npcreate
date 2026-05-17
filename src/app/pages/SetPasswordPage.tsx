@@ -1,12 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
+import { resolvePostLoginPath } from '../../shared/auth/postLoginPath'
 import { updateOwnPassword } from '../../shared/auth/passwordChange'
 import '../../shared/auth/auth.css'
 import './LoginPage.css'
 
 export function SetPasswordPage() {
   const { profile, configured, refreshProfile } = useAuth()
+  const navigate = useNavigate()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -17,7 +19,7 @@ export function SetPasswordPage() {
   }
 
   if (profile && !profile.must_change_password) {
-    return <Navigate to="/app" replace />
+    return <Navigate to={resolvePostLoginPath(profile.roles)} replace />
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -38,6 +40,8 @@ export function SetPasswordPage() {
     try {
       await updateOwnPassword(password)
       await refreshProfile()
+      const roles = profile?.roles ?? []
+      navigate(resolvePostLoginPath(roles), { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ตั้งรหัสผ่านไม่สำเร็จ')
     } finally {

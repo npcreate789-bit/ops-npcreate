@@ -1,3 +1,4 @@
+import { isClientOnlyAccount } from '../../../shared/auth/postLoginPath'
 import { BANGKOK_TZ } from '../../../shared/dates/bangkok'
 import type { AppRole } from '../../../shared/types/roles'
 import { canAccessNavPath, sidebarNavItemsForRoles, type NavItem } from '../../config/navigation'
@@ -10,7 +11,7 @@ import {
 } from './constants'
 
 export function isClientOnlyHome(roles: AppRole[], configured: boolean): boolean {
-  return configured && roles.length > 0 && roles.every((r) => r === 'client')
+  return configured && isClientOnlyAccount(roles)
 }
 
 export function bangkokGreeting(base = new Date()): string {

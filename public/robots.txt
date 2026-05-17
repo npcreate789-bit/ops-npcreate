@@ -1,0 +1,10 @@
+# NP Create OS — app.npcreate.co.th
+# อนุญาตให้ค้นหาฟอร์มติดต่อ ส่วนระบบภายในห้าม index
+
+User-agent: *
+Allow: /contact
+Disallow: /app
+Disallow: /login
+Disallow: /set-password
+
+Sitemap: https://app.npcreate.co.th/sitemap.xml

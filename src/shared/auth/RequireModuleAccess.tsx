@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { canAccessNavPath } from '../../app/config/navigation'
 import { useAuth } from './AuthProvider'
+import { defaultAppHome } from './postLoginPath'
 import './auth.css'
 
 interface RequireModuleAccessProps {
@@ -28,7 +29,7 @@ export function RequireModuleAccess({ navPath, children }: RequireModuleAccessPr
 
   const roles = profile?.roles ?? []
   if (!canAccessNavPath(roles, navPath)) {
-    return <Navigate to="/app" replace />
+    return <Navigate to={defaultAppHome(roles)} replace />
   }
 
   return <>{children}</>

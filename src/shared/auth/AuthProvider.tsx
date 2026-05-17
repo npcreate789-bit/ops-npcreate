@@ -28,7 +28,10 @@ interface AuthContextValue {
   loading: boolean
   configured: boolean
   profileLoadError: string | null
-  signIn: (loginId: string, password: string) => Promise<{ error: string | null }>
+  signIn: (
+    loginId: string,
+    password: string,
+  ) => Promise<{ error: string | null; profile?: UserProfile }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
   hasRole: (role: AppRole) => boolean
@@ -182,6 +185,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       return { error: 'รหัสผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }
     }
+
+    const { data: sessionData } = await supabase.auth.getSession()
+    const active = sessionData.session
+    if (active) {
+      setSession(active)
+      try {
+        const p = await fetchProfile(active.user.id, active.user.email ?? '')
+        setProfile(p)
+        setProfileLoadError(null)
+        return { error: null, profile: p }
+      } catch (e) {
+        setProfileLoadError(
+          e instanceof Error ? e.message : 'โหลดข้อมูลผู้ใช้ไม่สำเร็จ',
+        )
+      }
+    }
+
     return { error: null }
   }, [])
 

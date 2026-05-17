@@ -1,7 +1,8 @@
-import { Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { AppRole } from '../types/roles'
 import { useAuth } from './AuthProvider'
+import { defaultAppHome, loginPathForAudience } from './postLoginPath'
 import './auth.css'
 
 interface RequireAuthProps {
@@ -16,7 +17,7 @@ export function RequireAuth({
   roles,
   allowMustChangePassword = false,
 }: RequireAuthProps) {
-  const { session, profile, loading, configured } = useAuth()
+  const { session, profile, loading, configured, signOut } = useAuth()
   const location = useLocation()
 
   if (!configured) {
@@ -33,7 +34,10 @@ export function RequireAuth({
   }
 
   if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    const loginPath = location.pathname.startsWith('/app/client')
+      ? loginPathForAudience('client')
+      : '/login'
+    return <Navigate to={loginPath} state={{ from: location }} replace />
   }
 
   if (profile && profile.roles.length === 0) {
@@ -41,14 +45,30 @@ export function RequireAuth({
       <div className="auth-loading auth-loading--blocked">
         <h2>ยังไม่ได้รับสิทธิ์ใช้งาน</h2>
         <p className="muted">
-          บัญชี {profile.login_id || profile.email} ยังไม่มีบทบาทในระบบ — ติดต่อผู้ดูแลเพื่อมอบหมาย role
+          บัญชี <strong>{profile.login_id || profile.email}</strong> ยังไม่ถูกเปิดใช้งาน
+          — ทีมจะมอบสิทธิ์หลังเริ่มสัญญาหรือสร้างบัญชีให้แล้ว
         </p>
+        <div className="auth-blocked__actions">
+          <Link to="/contact" className="auth-blocked__btn auth-blocked__btn--primary">
+            ติดต่อทีมงาน
+          </Link>
+          <Link to={loginPathForAudience('client')} className="auth-blocked__btn">
+            กลับหน้าเข้าสู่ระบบ
+          </Link>
+          <button
+            type="button"
+            className="auth-blocked__btn auth-blocked__btn--ghost"
+            onClick={() => void signOut()}
+          >
+            ออกจากระบบ
+          </button>
+        </div>
       </div>
     )
   }
 
   if (roles?.length && profile && !roles.some((r) => profile.roles.includes(r))) {
-    return <Navigate to="/app" replace />
+    return <Navigate to={defaultAppHome(profile.roles)} replace />
   }
 
   if (

@@ -1,4 +1,9 @@
 import { useAuth } from '../../../../shared/auth/AuthProvider'
+import {
+  APP_CANONICAL_ORIGIN,
+  appHostLabel,
+  isCanonicalProductionHost,
+} from '../../../../shared/config/appUrl'
 import { APP_DESCRIPTION, APP_PACKAGE_NAME, APP_VERSION } from '../appMeta'
 import '../about.css'
 
@@ -29,6 +34,21 @@ export function AboutInfoSection() {
           <dt>โหมดรันไทม์</dt>
           <dd>
             <code className="about-code">{mode}</code>
+          </dd>
+        </div>
+        <div>
+          <dt>โดเมนแอป</dt>
+          <dd>
+            <code className="about-code">{appHostLabel()}</code>
+            {isCanonicalProductionHost() ? (
+              <span className="muted"> · production</span>
+            ) : null}
+          </dd>
+        </div>
+        <div>
+          <dt>URL หลัก</dt>
+          <dd>
+            <code className="about-code">{APP_CANONICAL_ORIGIN}</code>
           </dd>
         </div>
         <div>
