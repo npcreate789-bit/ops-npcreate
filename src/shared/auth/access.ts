@@ -373,6 +373,13 @@ export function canUseGlobalSearch(roles: AppRole[]): boolean {
   return roles.some((r) => GLOBAL_SEARCH_VIEW_ROLES.includes(r))
 }
 
+/** หน้าสถานะระบบ (health check) — ทีมภายในเท่านั้น */
+export const SYSTEM_STATUS_VIEW_ROLES: AppRole[] = GLOBAL_SEARCH_VIEW_ROLES
+
+export function canViewSystemStatus(roles: AppRole[]): boolean {
+  return canUseGlobalSearch(roles)
+}
+
 // --- Phase 12: Quick access ---
 
 /** หน้าล่าสุดและปักหมุด — สอดคล้องค้นหาด่วน (ทีมภายใน) */

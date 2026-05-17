@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
+import { canUseGlobalSearch, canViewSystemStatus } from '../../../../shared/auth/access'
 import { ROLE_LABELS } from '../../../../shared/types/roles'
 import { useScrollToHash } from '../../../hooks/useScrollToHash'
 import { StartChecklistSection } from '../../start/components/StartChecklistSection'
@@ -114,10 +115,24 @@ export function HelpPage() {
           </ul>
         )}
         <p className="muted" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
-          ค้นหารวมใช้ <kbd>⌘K</kbd> · แจ้งเตือนจัดการจาก{' '}
-          <Link to="/app/notifications">หน้าแจ้งเตือน</Link>
-          {' · '}
-          <Link to="/app/status">สถานะระบบ</Link>
+          {isClientOnly ? (
+            <>ใช้แท็บ <Link to="/app/client">พื้นที่ลูกค้า</Link> เพื่อสลับหน้างาน</>
+          ) : (
+            <>
+              {(canUseGlobalSearch(roles) || !configured) && (
+                <>
+                  ค้นหารวมใช้ <kbd>⌘K</kbd> · แจ้งเตือนจัดการจาก{' '}
+                  <Link to="/app/notifications">หน้าแจ้งเตือน</Link>
+                </>
+              )}
+              {(canViewSystemStatus(roles) || !configured) && (
+                <>
+                  {(canUseGlobalSearch(roles) || !configured) && ' · '}
+                  <Link to="/app/status">สถานะระบบ</Link>
+                </>
+              )}
+            </>
+          )}
         </p>
       </section>
     </div>

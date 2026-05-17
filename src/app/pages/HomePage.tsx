@@ -5,6 +5,7 @@ import {
   canAccessNotifications,
   canUseGlobalSearch,
   canUseQuickAccess,
+  canViewSystemStatus,
   canViewWorkHub,
 } from '../../shared/auth/access'
 import { ROLE_LABELS } from '../../shared/types/roles'
@@ -288,7 +289,9 @@ export function HomePage() {
         <Link to="/app/help">ช่วยเหลือ</Link>
         <Link to="/app/help#start">เริ่มใช้งาน</Link>
         <Link to="/app/settings">ตั้งค่า</Link>
-        <Link to="/app/status">สถานะระบบ</Link>
+        {(canViewSystemStatus(roles) || !configured) && (
+          <Link to="/app/status">สถานะระบบ</Link>
+        )}
         <span className="muted">
           {configured ? `${navModuleCount} เมนูพร้อมใช้` : 'โหมดพัฒนา'}
         </span>

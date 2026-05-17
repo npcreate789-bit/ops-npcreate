@@ -5,6 +5,7 @@ import {
   canUseGlobalSearch,
   canUseQuickAccess,
   canViewOpsCenter,
+  canViewSystemStatus,
   canViewWorkHub,
 } from '../../../shared/auth/access'
 import type { AppRole } from '../../../shared/types/roles'
@@ -87,7 +88,9 @@ export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
   if (canViewOpsCenter(roles) || devMode) {
     links.push({ path: '/app/ops', label: 'ศูนย์ Ops', detail: 'เช็กลิสต์ deploy' })
   }
-  links.push({ path: '/app/status', label: 'สถานะระบบ', detail: 'ตรวจ Supabase · เวอร์ชันแอป' })
+  if (canViewSystemStatus(roles) || devMode) {
+    links.push({ path: '/app/status', label: 'สถานะระบบ', detail: 'ตรวจ Supabase · เวอร์ชันแอป' })
+  }
 
   return links.filter((link) => canOpenHelpNavLink(roles, link.path, configured))
 }
