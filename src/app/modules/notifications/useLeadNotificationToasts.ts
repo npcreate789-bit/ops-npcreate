@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { isSupabaseConfigured, supabase } from '../../../shared/supabase/client'
+import { isSupabaseConfigured } from '../../../shared/supabase/client'
+import { useRealtimeChannel } from '../../../shared/supabase/useRealtimeChannel'
 import {
   listUnreadLeadNotifications,
   markNotificationRead,
@@ -63,59 +64,52 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
     return () => window.removeEventListener(NOTIFICATION_PUSH_EVENT, onPush)
   }, [userId, enabled, load])
 
-  useEffect(() => {
-    if (!userId || !enabled || !isSupabaseConfigured || !supabase) return
+  const handleRealtimeRow = useCallback((payload: { new: Record<string, unknown> }) => {
+    const row = mapNotificationRow(payload.new)
+    if (!isLeadNotification(row.dedupe_key)) return
 
-    const channel = supabase
-      .channel(`lead-notifications:${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'user_notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const row = mapNotificationRow(payload.new as Record<string, unknown>)
-          if (!isLeadNotification(row.dedupe_key) || row.read_at) return
-          setToasts((prev) => {
-            const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
-            if (!had) playLeadNotificationSound()
-            knownKeysRef.current.add(row.dedupe_key)
-            return upsertToast(prev, row)
-          })
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'user_notifications',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const row = mapNotificationRow(payload.new as Record<string, unknown>)
-          if (!isLeadNotification(row.dedupe_key)) return
-          if (row.read_at) {
-            setToasts((prev) => prev.filter((t) => t.id !== row.id))
-            return
-          }
-          setToasts((prev) => {
-            const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
-            if (!had && !row.read_at) playLeadNotificationSound()
-            knownKeysRef.current.add(row.dedupe_key)
-            return upsertToast(prev, row)
-          })
-        },
-      )
-      .subscribe()
-
-    return () => {
-      if (supabase) void supabase.removeChannel(channel)
+    if (row.read_at) {
+      setToasts((prev) => prev.filter((t) => t.id !== row.id))
+      return
     }
-  }, [userId, enabled])
+
+    setToasts((prev) => {
+      const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
+      if (!had) playLeadNotificationSound()
+      knownKeysRef.current.add(row.dedupe_key)
+      return upsertToast(prev, row)
+    })
+  }, [])
+
+  useRealtimeChannel(
+    Boolean(userId && enabled && isSupabaseConfigured),
+    useCallback(
+      (channel) =>
+        channel
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'user_notifications',
+              filter: `user_id=eq.${userId}`,
+            },
+            handleRealtimeRow,
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'user_notifications',
+              filter: `user_id=eq.${userId}`,
+            },
+            handleRealtimeRow,
+          ),
+      [userId, handleRealtimeRow],
+    ),
+    [userId, enabled],
+  )
 
   const dismiss = useCallback(
     async (id: string) => {

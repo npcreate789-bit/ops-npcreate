@@ -87,36 +87,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [profileLoadError, setProfileLoadError] = useState<string | null>(null)
 
-  const loadProfile = useCallback(async (s: Session | null) => {
-    if (!s?.user) {
-      setProfile(null)
-      return
-    }
-    if (isSupabaseConfigured && supabase) {
-      setLoading(true)
-    }
-    try {
-      const p = await fetchProfile(s.user.id, s.user.email ?? '')
-      setProfile(p)
-      setProfileLoadError(null)
-    } catch (e) {
-      setProfileLoadError(
-        e instanceof Error ? e.message : 'โหลดข้อมูลผู้ใช้ไม่สำเร็จ',
-      )
-      setProfile({
-        id: s.user.id,
-        login_id: normalizeLoginId((s.user.email ?? '').split('@')[0] || 'user'),
-        email: s.user.email ?? '',
-        full_name: null,
-        must_change_password: false,
-        roles: [],
-      })
-    } finally {
-      if (isSupabaseConfigured && supabase) {
-        setLoading(false)
+  const loadProfile = useCallback(
+    async (s: Session | null, opts?: { blockUi?: boolean }) => {
+      if (!s?.user) {
+        setProfile(null)
+        if (opts?.blockUi) setLoading(false)
+        return
       }
-    }
-  }, [])
+      if (opts?.blockUi && isSupabaseConfigured && supabase) {
+        setLoading(true)
+      }
+      try {
+        const p = await fetchProfile(s.user.id, s.user.email ?? '')
+        setProfile(p)
+        setProfileLoadError(null)
+      } catch (e) {
+        setProfileLoadError(
+          e instanceof Error ? e.message : 'โหลดข้อมูลผู้ใช้ไม่สำเร็จ',
+        )
+        setProfile({
+          id: s.user.id,
+          login_id: normalizeLoginId((s.user.email ?? '').split('@')[0] || 'user'),
+          email: s.user.email ?? '',
+          full_name: null,
+          must_change_password: false,
+          roles: [],
+        })
+      } finally {
+        if (opts?.blockUi && isSupabaseConfigured && supabase) {
+          setLoading(false)
+        }
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
@@ -138,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return
       setSession(data.session)
-      void loadProfile(data.session).finally(() => {
+      void loadProfile(data.session, { blockUi: true }).finally(() => {
         if (mounted) setLoading(false)
       })
     })
@@ -147,6 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession)
+      if (!nextSession?.user) {
+        setProfile(null)
+        setLoading(false)
+        return
+      }
       void loadProfile(nextSession)
     })
 
