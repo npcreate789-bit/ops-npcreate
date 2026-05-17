@@ -24,6 +24,9 @@ import { getLead } from '../../crm/api/leads'
 import { LeadAttachmentsSection } from '../../crm/components/LeadAttachmentsSection'
 import { CustomerTimelineSection } from '../components/CustomerTimelineSection'
 import { getCustomer360 } from '../api/customers'
+import { listProjectsForCustomer } from '../../projects/api/projects'
+import { projectStatusLabel } from '../../projects/constants'
+import type { Project } from '../../projects/types'
 import { customerStatusLabel } from '../constants'
 import type { Customer360 } from '../types'
 import '../../crm/crm.css'
@@ -49,7 +52,9 @@ export function Customer360Page() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [leadOwnerId, setLeadOwnerId] = useState<string | null>(null)
+  const [customerProjects, setCustomerProjects] = useState<Project[]>([])
   const userId = profile?.id ?? ''
+  const showProjects = canShowCustomer360Link(roles, '/app/projects') || !configured
 
   const timelineContext = useMemo(
     () =>
@@ -87,6 +92,24 @@ export function Customer360Page() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!id || !showProjects) {
+      setCustomerProjects([])
+      return
+    }
+    let cancelled = false
+    listProjectsForCustomer(id)
+      .then((rows) => {
+        if (!cancelled) setCustomerProjects(rows)
+      })
+      .catch(() => {
+        if (!cancelled) setCustomerProjects([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id, showProjects])
 
   const leadId = data?.customer.lead_id ?? null
 
@@ -222,6 +245,14 @@ export function Customer360Page() {
                   รับบรีฟ
                 </Link>
               )}
+              {showProjects && (
+                <Link
+                  to={`/app/projects/new?customerId=${c.id}`}
+                  className="crm-btn crm-btn--ghost"
+                >
+                  + โปรเจกต์
+                </Link>
+              )}
               {canLinkCustomerFinance(roles) && (
                 <Link to="/app/finance" className="crm-btn crm-btn--ghost">
                   การเงิน
@@ -266,6 +297,32 @@ export function Customer360Page() {
               ownerId={leadOwnerId}
               canUpload={false}
             />
+          )}
+
+          {showProjects && (
+            <section className="card card--wide">
+              <h2 className="crm-section-title">โปรเจกต์</h2>
+              {customerProjects.length === 0 ? (
+                <p className="muted">
+                  ยังไม่มีโปรเจกต์ —{' '}
+                  <Link to={`/app/projects/new?customerId=${c.id}`}>สร้างโปรเจกต์</Link>
+                </p>
+              ) : (
+                <ul className="customer-360-project-list">
+                  {customerProjects.map((p) => (
+                    <li key={p.id}>
+                      <Link to={`/app/projects/${p.id}`}>
+                        <strong>{p.project_name}</strong>
+                      </Link>
+                      <span className="muted">
+                        {' '}
+                        · {projectStatusLabel(p.status)} · {p.progress}%
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           )}
 
           <section className="card-grid">

@@ -17,6 +17,10 @@ export function OnboardingRoleGuide() {
           <strong>Account (หน้านี้)</strong> — ตรวจ checklist 8 ข้อให้ครบ → มอบหมายทีม
         </li>
         <li>
+          <strong>Ops / Account</strong> — สร้าง{' '}
+          <Link to="/app/projects">โปรเจกต์</Link> แยกงานตามบริการ
+        </li>
+        <li>
           <strong>Ads</strong> — เมื่อพร้อมยิงแอด ไปบันทึกผลรายวัน
         </li>
       </ol>

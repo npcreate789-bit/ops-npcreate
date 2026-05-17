@@ -97,7 +97,7 @@ export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
 
 const FLOW_STAFF = [
   'Lead ใน CRM → ใบเสนอราคา (/app/sales) → ลูกค้าเปิดลิงก์ยอมรับ',
-  'Finance ยืนยันชำระ → ลูกค้ากรอกบรีฟ → Account ตรวจ checklist ที่ /app/onboarding',
+  'Finance ยืนยันชำระ → ลูกค้ากรอกบรีฟ → Account ตรวจ checklist → สร้างโปรเจกต์ (/app/projects)',
   'ปิดการขาย → Admin บันทึกชำระเงิน',
   'ลูกค้ากรอกบรีฟใน Client Workspace → Account ตรวจในรับบรีฟ',
   'แชทลูกค้าและบรีฟค้างปรากฏในงานของฉัน (/app/work)',
@@ -106,6 +106,7 @@ const FLOW_STAFF = [
 
 const FLOW_CLIENT = [
   'ดูสถานะชำระเงินและเอกสารในเมนูการชำระเงิน — แจ้งสลิปผ่านแชท',
+  'ติดตามโปรเจกต์และแชททีมในเมนูโปรเจกต์',
   'กรอกบรีฟงานให้ครบ — เมนูบรีฟใน Client Workspace',
   'แชทกับทีม NP Create — ทีมจะเห็นในศูนย์งานของฉัน',
   'ดูรายงานผลโฆษณาและสรุปรายเดือนในเมนูรายงาน',

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { listCustomersForSelect } from '../../finance/api/payments'
 import type { CustomerOption } from '../../finance/types'
 import { createProject, getProject, updateProject } from '../api/projects'
@@ -11,17 +11,21 @@ import {
 } from '../constants'
 import { ProjectChatPanel } from '../../chat/components/ProjectChatPanel'
 import type { ChatChannelKey } from '../../chat/types'
+import { ProjectNextStepsPanel } from '../components/ProjectNextStepsPanel'
 import { ProjectTasksSection } from '../components/ProjectTasksSection'
 import type { Project, ProjectServiceType, ProjectStatus } from '../types'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { hasTasksTeamView } from '../../../../shared/auth/access'
 import '../../crm/crm.css'
+import '../../sales/sales.css'
 import '../projects.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  const presetCustomerId = searchParams.get('customerId')
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
   const { profile, configured } = useAuth()
@@ -78,6 +82,10 @@ export function ProjectDetailPage() {
   }, [])
 
   useEffect(() => {
+    if (isNew && presetCustomerId) setCustomerId(presetCustomerId)
+  }, [isNew, presetCustomerId])
+
+  useEffect(() => {
     void load()
   }, [load])
 
@@ -131,6 +139,8 @@ export function ProjectDetailPage() {
       </header>
 
       {error && <p className="crm-error">{error}</p>}
+
+      {!isNew && project && <ProjectNextStepsPanel project={project} />}
 
       <form className="card card--wide crm-form" onSubmit={handleSubmit}>
         <label className="task-field">
@@ -192,7 +202,7 @@ export function ProjectDetailPage() {
         </label>
 
         <label className="task-field">
-          <span className="task-field__label">Progress (%)</span>
+          <span className="task-field__label">ความคืบหน้า (%)</span>
           <input
             className="task-input"
             type="number"
@@ -255,16 +265,20 @@ export function ProjectDetailPage() {
             />
           </div>
           <section className="card card--wide">
-            <h2>ลิงก์ที่เกี่ยวข้อง</h2>
+            <h2 className="crm-section-title">ลิงก์ที่เกี่ยวข้อง</h2>
             <p className="muted">
-              <Link to={`/app/customers/${project.customer_id}`}>Customer 360</Link>
+              <Link to={`/app/customers/${project.customer_id}`}>ลูกค้า 360°</Link>
               {' · '}
-              <Link to={`/app/onboarding/${project.customer_id}`}>บรีฟ / Onboarding</Link>
+              <Link to={`/app/onboarding/${project.customer_id}`}>รับบรีฟ</Link>
               {' · '}
-              <Link to={`/app/tasks?project=${project.id}`}>งานทั้งหมดของโปรเจกต์</Link>
+              <Link to="/app/finance">การเงิน</Link>
+              {' · '}
+              <Link to="/app/client/projects">มุมลูกค้า</Link>
+              {' · '}
+              <Link to={`/app/tasks?project=${project.id}`}>งานของโปรเจกต์</Link>
               {' · '}
               <Link to={`/app/chat?project=${project.id}&channel=${chatChannel}`}>
-                เปิดในกล่องแชท
+                แชท
               </Link>
             </p>
           </section>

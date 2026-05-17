@@ -64,6 +64,11 @@ export function buildPaymentNextSteps(payment: Payment): FinanceNextStep[] {
         path: `/app/customers/${payment.customer_id}`,
         detail: 'ภาพรวมหลังเปิดใช้งาน',
       })
+      steps.push({
+        label: 'สร้างโปรเจกต์ (ถ้าพร้อม)',
+        path: `/app/projects/new?customerId=${payment.customer_id}`,
+        detail: 'หลังรับบรีฟ — แยกงานตามบริการ',
+      })
       break
     case 'cancelled':
       break

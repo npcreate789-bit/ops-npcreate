@@ -94,10 +94,15 @@ export function buildOnboardingNextSteps(
       break
     case 'ready':
       steps.push({
+        label: 'สร้างโปรเจกต์',
+        path: `/app/projects/new?customerId=${id}`,
+        detail: 'เปิดงานตามบริการที่ขาย',
+        primary: true,
+      })
+      steps.push({
         label: 'งานยิงแอด',
         path: `/app/ads/${id}`,
         detail: 'บันทึกผลรายวัน',
-        primary: true,
       })
       steps.push({
         label: 'Client Workspace',
