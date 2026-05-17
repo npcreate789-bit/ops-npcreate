@@ -7,6 +7,9 @@ export function friendlyContactSubmitError(message: string): string {
   if (m.includes('network') || m.includes('failed to fetch')) {
     return 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
   }
+  if (m.includes('leads_owner_id_fkey') || m.includes('no lead owner')) {
+    return 'ระบบยังไม่ได้ตั้งผู้รับ Lead — กรุณาติดต่อทีม NP Create ทาง LINE หรือโทรศัพท์'
+  }
   return message
 }
 
