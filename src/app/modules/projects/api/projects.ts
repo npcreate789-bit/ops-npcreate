@@ -1,6 +1,7 @@
 import { logAudit } from '../../../../shared/audit/logAudit'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import type { Project, ProjectInsert, ProjectUpdate } from '../types'
+import type { ProjectTaskOption } from '../../tasks/types'
 
 const MOCK_KEY = 'npcreate_projects_dev'
 
@@ -29,6 +30,15 @@ export async function listProjects(): Promise<Project[]> {
 
   if (error) throw new Error(error.message)
   return (data ?? []) as Project[]
+}
+
+export async function listProjectsForTaskSelect(): Promise<ProjectTaskOption[]> {
+  const rows = await listProjects()
+  return rows.map((p) => ({
+    id: p.id,
+    label: p.project_name,
+    customer_id: p.customer_id,
+  }))
 }
 
 export async function listProjectsForCustomer(customerId: string): Promise<Project[]> {

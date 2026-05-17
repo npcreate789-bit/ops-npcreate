@@ -5,7 +5,7 @@ import {
 } from '../../../../shared/dates/bangkok'
 import type { CustomerOption } from '../../finance/types'
 import { TASK_PRIORITY_OPTIONS, TASK_STATUS_OPTIONS } from '../constants'
-import type { AssigneeOption, Task, TaskInput } from '../types'
+import type { AssigneeOption, ProjectTaskOption, Task, TaskInput } from '../types'
 import '../../crm/crm.css'
 import '../tasks.css'
 
@@ -16,6 +16,7 @@ export interface TaskFormState {
   priority: Task['priority']
   assignee_id: string
   customer_id: string
+  project_id: string
   due_at: string
 }
 
@@ -30,6 +31,7 @@ function toState(
     priority: initial?.priority ?? 'medium',
     assignee_id: initial?.assignee_id ?? assigneeId,
     customer_id: initial?.customer_id ?? '',
+    project_id: initial?.project_id ?? '',
     due_at: isoToDatetimeLocalBangkok(initial?.due_at),
   }
 }
@@ -38,6 +40,7 @@ interface TaskFormProps {
   initial?: Task | null
   assignees: AssigneeOption[]
   customers: CustomerOption[]
+  projects?: ProjectTaskOption[]
   ownerId: string
   saving?: boolean
   readOnly?: boolean
@@ -49,6 +52,7 @@ export function TaskForm({
   initial,
   assignees,
   customers,
+  projects = [],
   ownerId,
   saving,
   readOnly = false,
@@ -74,6 +78,7 @@ export function TaskForm({
       assignee_id: form.assignee_id || ownerId,
       created_by: initial?.created_by ?? ownerId,
       customer_id: form.customer_id || null,
+      project_id: form.project_id || null,
       lead_id: initial?.lead_id ?? null,
       due_at: dueAt,
     })
@@ -161,7 +166,21 @@ export function TaskForm({
           <select
             className="task-select"
             value={form.customer_id}
-            onChange={(e) => setForm((f) => ({ ...f, customer_id: e.target.value }))}
+            onChange={(e) => {
+              const customer_id = e.target.value
+              setForm((f) => {
+                const projectStillValid =
+                  !f.project_id ||
+                  projects.some(
+                    (p) => p.id === f.project_id && (!customer_id || p.customer_id === customer_id),
+                  )
+                return {
+                  ...f,
+                  customer_id,
+                  project_id: projectStillValid ? f.project_id : '',
+                }
+              })
+            }}
           >
             <option value="">— ไม่ระบุ —</option>
             {customers.map((c) => (
@@ -169,6 +188,31 @@ export function TaskForm({
                 {c.brand_name}
               </option>
             ))}
+          </select>
+        </label>
+        <label className="task-field">
+          <span className="task-field__label">โปรเจกต์</span>
+          <select
+            className="task-select"
+            value={form.project_id}
+            onChange={(e) => {
+              const project_id = e.target.value
+              const project = projects.find((p) => p.id === project_id)
+              setForm((f) => ({
+                ...f,
+                project_id,
+                customer_id: project ? project.customer_id : f.customer_id,
+              }))
+            }}
+          >
+            <option value="">— ไม่ระบุ —</option>
+            {projects
+              .filter((p) => !form.customer_id || p.customer_id === form.customer_id)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
           </select>
         </label>
       </div>

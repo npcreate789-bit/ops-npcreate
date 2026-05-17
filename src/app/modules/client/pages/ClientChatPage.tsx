@@ -1,15 +1,50 @@
+import { useEffect, useState } from 'react'
+import { listProjectsForCustomer } from '../../projects/api/projects'
+import { ProjectChatPanel } from '../../chat/components/ProjectChatPanel'
+import type { Project } from '../../projects/types'
 import { ClientPreviewBar } from '../components/ClientPreviewBar'
 import { useClientWorkspace } from '../hooks/useClientWorkspace'
+import { useAuth } from '../../../../shared/auth/AuthProvider'
+import { hasTasksTeamView } from '../../../../shared/auth/access'
 import '../client-workspace.css'
+
+const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function ClientChatPage() {
   const ws = useClientWorkspace()
+  const { profile, configured } = useAuth()
+  const userId = profile?.id ?? DEV_OWNER
+  const canCreateTask = hasTasksTeamView(profile?.roles ?? []) || !configured
+
+  const [projects, setProjects] = useState<Project[]>([])
+  const [projectId, setProjectId] = useState('')
+  const [loadingProjects, setLoadingProjects] = useState(false)
+
+  const customerId = ws.customerId
+
+  useEffect(() => {
+    if (!customerId) {
+      setProjects([])
+      setProjectId('')
+      return
+    }
+    setLoadingProjects(true)
+    listProjectsForCustomer(customerId)
+      .then((rows) => {
+        setProjects(rows)
+        setProjectId((prev) => prev || rows[0]?.id || '')
+      })
+      .catch(() => setProjects([]))
+      .finally(() => setLoadingProjects(false))
+  }, [customerId])
+
+  const selected = projects.find((p) => p.id === projectId)
 
   return (
     <div className="page">
       <header className="page__header">
         <h1>แชทกับทีม</h1>
-        <p className="muted">Group Chat ต่อโปรเจกต์ — กำลังพัฒนา (MVP Phase ถัดไป)</p>
+        <p className="muted">สนทนาต่อโปรเจกต์ — ทีมงานจะเห็นข้อความแบบเรียลไทม์</p>
       </header>
 
       <ClientPreviewBar
@@ -23,12 +58,44 @@ export function ClientChatPage() {
         isClientOnly={ws.isClientOnly}
       />
 
-      <section className="card card--wide client-placeholder">
-        <p>
-          ระบบแชทกลุ่มจะเชื่อมกับโปรเจกต์ของคุณ — ส่งข้อความ รูป ไฟล์ และสร้าง Task จากแชทได้
-        </p>
-        <p className="muted">ระหว่างนี้ติดต่อ Account Manager ผ่าน LINE ตามช่องทางเดิม</p>
-      </section>
+      {!customerId && (
+        <section className="card card--wide client-placeholder">
+          <p className="muted">ยังไม่พบข้อมูลลูกค้าที่เชื่อมกับบัญชีนี้</p>
+        </section>
+      )}
+
+      {customerId && (
+        <>
+          <section className="card card--wide" style={{ marginBottom: '1rem' }}>
+            <label className="task-field">
+              <span className="task-field__label">เลือกโปรเจกต์</span>
+              <select
+                className="task-select"
+                value={projectId}
+                disabled={loadingProjects || projects.length === 0}
+                onChange={(e) => setProjectId(e.target.value)}
+              >
+                {projects.length === 0 && <option value="">— ยังไม่มีโปรเจกต์ —</option>}
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.project_name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </section>
+
+          {selected && (
+            <ProjectChatPanel
+              projectId={selected.id}
+              projectName={selected.project_name}
+              customerId={selected.customer_id}
+              userId={userId}
+              canCreateTask={canCreateTask}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canEditTask, hasDbPrivilegedRole } from '../../../../shared/auth/access'
 import { listCustomersForSelect } from '../../finance/api/payments'
@@ -11,8 +11,9 @@ import {
   listAssignees,
   updateTask,
 } from '../api/tasks'
+import { listProjectsForTaskSelect } from '../../projects/api/projects'
 import { TaskForm } from '../components/TaskForm'
-import type { Task, TaskInput } from '../types'
+import type { ProjectTaskOption, Task, TaskInput } from '../types'
 import '../../crm/crm.css'
 import '../../sales/sales.css'
 import '../../phase2/phase2.css'
@@ -22,8 +23,11 @@ const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function TaskEditorPage() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
+  const prefillProjectId = searchParams.get('project') ?? ''
+  const prefillCustomerId = searchParams.get('customer') ?? ''
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const ownerId = profile?.id ?? DEV_OWNER
@@ -36,6 +40,7 @@ export function TaskEditorPage() {
   const [initial, setInitial] = useState<Task | null>(null)
   const [assignees, setAssignees] = useState<{ id: string; label: string }[]>([])
   const [customers, setCustomers] = useState<CustomerOption[]>([])
+  const [projects, setProjects] = useState<ProjectTaskOption[]>([])
 
   const canEdit = canEditTask(roles, initial, ownerId) || !configured
   const readOnly = !canEdit && configured
@@ -44,13 +49,33 @@ export function TaskEditorPage() {
     let cancelled = false
     async function load() {
       try {
-        const [people, custList] = await Promise.all([
+        const [people, custList, projectList] = await Promise.all([
           listAssignees(),
           listCustomersForSelect(),
+          listProjectsForTaskSelect(),
         ])
         if (!cancelled) {
           setAssignees(people)
           setCustomers(custList)
+          setProjects(projectList)
+        }
+        if (isNew && (prefillProjectId || prefillCustomerId) && !cancelled) {
+          setInitial({
+            id: '',
+            title: '',
+            description: null,
+            status: 'todo',
+            priority: 'medium',
+            assignee_id: ownerId,
+            created_by: ownerId,
+            customer_id: prefillCustomerId || null,
+            project_id: prefillProjectId || null,
+            lead_id: null,
+            due_at: null,
+            completed_at: null,
+            created_at: '',
+            updated_at: '',
+          })
         }
         if (!isNew && id) {
           const task = await getTask(id)
@@ -69,7 +94,7 @@ export function TaskEditorPage() {
     return () => {
       cancelled = true
     }
-  }, [id, isNew])
+  }, [id, isNew, ownerId, prefillProjectId, prefillCustomerId])
 
   async function handleSubmit(input: TaskInput) {
     setSaving(true)
@@ -133,6 +158,7 @@ export function TaskEditorPage() {
           initial={initial}
           assignees={assignees}
           customers={customers}
+          projects={projects}
           ownerId={ownerId}
           saving={saving}
           readOnly={readOnly}

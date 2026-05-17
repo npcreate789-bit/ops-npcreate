@@ -32,8 +32,8 @@ Sales / Account / Ads / Content / Admin / CEO
 | 4 | Customer / Brand | พร้อมใช้ | `/app/customers/:id` | `customers` = Customer 360 |
 | 5 | Project Workspace | **เพิ่มแล้ว** | `/app/projects` | `projects` (1 ลูกค้าหลายโปรเจกต์) |
 | 6 | Brief Form | บางส่วน | `/app/onboarding`, `/app/client/brief` | `onboarding_forms`, `onboarding_checklist` |
-| 7 | Task Management | พร้อมใช้ | `/app/tasks` | `tasks` |
-| 8 | Group Chat | ยังไม่มี | — | Phase ถัดไป: `chat_rooms`, `chat_messages` |
+| 7 | Task Management | พร้อมใช้ | `/app/tasks` | `tasks` + `project_id` |
+| 8 | Group Chat | **MVP** | `/app/client/chat`, แชทใน `/app/projects/:id` | `chat_rooms`, `chat_messages` |
 | 9 | Ads Management | พร้อมใช้ | `/app/ads` | `campaigns`, `daily_metrics` |
 | 10 | Content Management | พร้อมใช้ | `/app/content` | `content_jobs` |
 | 11 | Creator / TikTok One | พร้อมใช้ | `/app/creators` | `creators`, `creator_campaigns` |
@@ -65,7 +65,7 @@ Sales / Account / Ads / Content / Admin / CEO
 | Project | `projects` | สถานะงานต่อบริการ (GMV Max, Content, …) |
 | Brief | `onboarding_forms` + checklist | GMV Max fields ครบตามสเปก |
 | Task | `tasks` | แยก `department` |
-| Chat | — | ยังไม่ implement |
+| Chat | `chat_rooms`, `chat_messages` | 1 ห้องต่อโปรเจกต์ |
 | File | Storage buckets + lead attachments | |
 | Ads Metrics | `daily_metrics` | ต่อ `campaigns` |
 | Content Asset | `content_jobs` | |
@@ -224,18 +224,18 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 | ลำดับ | งาน | สถานะ | หมายเหตุ |
 |-------|-----|--------|----------|
 | A | `/contact` UI + route | ✅ UI ใหม่ | Deploy โปรเจกต์ `ops-npcreate` |
-| B | RPC `submit_public_inquiry` | ⏳ | รัน `npm run db:push` migration `00044` |
-| C | `platform_settings.default_lead_owner_id` | ⏳ | SQL ใน §10 |
+| B | RPC `submit_public_inquiry` + antiflood | ✅ | migration `00044`–`00047` |
+| C | `platform_settings.default_lead_owner_id` | ⏳ | SQL snippet / ตั้ง Sales จริง |
 | D | Client Workspace แท็บ | ✅ | `/app/client/*` |
 | E | โมดูล Projects | ✅ พื้นฐาน | ขยายผูก Task / Timeline |
 
 ### Sprint ถัดไป — ทำให้ระบบครบ MVP สเปก
 
-1. **ฐานข้อมูล** — `db:push` 00044 + ตั้ง Sales รับ Lead อัตโนมัติ  
-2. **Group Chat** — `chat_rooms`, `chat_messages`, Realtime, สร้าง Task จากข้อความ  
-3. **Project ↔ Task** — `tasks.project_id`, board แยกตามโปรเจกต์  
-4. **Brief ลูกค้า** — อัปโหลดไฟล์ (Storage RLS), แจ้ง Account เมื่อครบ  
-5. **Quotation flow** — สถานะ `viewed` / `accepted`, ลิงก์สาธารณะให้ลูกค้า  
+1. ~~**Project ↔ Task**~~ — `tasks.project_id`, รายการงานในโปรเจกต์ ✅  
+2. ~~**Group Chat (MVP)**~~ — แชทต่อโปรเจกต์, Realtime, สร้าง Task จากข้อความ ✅  
+3. **Brief ลูกค้า** — อัปโหลดไฟล์ (Storage RLS), แจ้ง Account เมื่อครบ  
+4. **Quotation flow** — สถานะ `viewed` / `accepted`, ลิงก์สาธารณะให้ลูกค้า  
+5. **Wizard สร้างบัญชีลูกค้า** (Admin)  
 
 ### Phase 2–5 (มีโมดูลแล้ว — ขยายความลึก)
 

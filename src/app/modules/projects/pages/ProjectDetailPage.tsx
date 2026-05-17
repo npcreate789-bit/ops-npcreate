@@ -9,14 +9,23 @@ import {
   projectServiceLabel,
   projectStatusLabel,
 } from '../constants'
+import { ProjectChatPanel } from '../../chat/components/ProjectChatPanel'
+import { ProjectTasksSection } from '../components/ProjectTasksSection'
 import type { Project, ProjectServiceType, ProjectStatus } from '../types'
+import { useAuth } from '../../../../shared/auth/AuthProvider'
+import { hasTasksTeamView } from '../../../../shared/auth/access'
 import '../../crm/crm.css'
 import '../projects.css'
+
+const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
+  const { profile, configured } = useAuth()
+  const userId = profile?.id ?? DEV_OWNER
+  const canCreateTask = hasTasksTeamView(profile?.roles ?? []) || !configured
 
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [project, setProject] = useState<Project | null>(null)
@@ -229,16 +238,28 @@ export function ProjectDetailPage() {
       </form>
 
       {!isNew && project && (
-        <section className="card card--wide" style={{ marginTop: '1rem' }}>
-          <h2>ลิงก์ที่เกี่ยวข้อง</h2>
-          <p className="muted">
-            <Link to={`/app/customers/${project.customer_id}`}>Customer 360</Link>
-            {' · '}
-            <Link to={`/app/onboarding/${project.customer_id}`}>บรีฟ / Onboarding</Link>
-            {' · '}
-            <Link to={`/app/tasks`}>งานภายใน</Link>
-          </p>
-        </section>
+        <>
+          <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <ProjectTasksSection projectId={project.id} />
+            <ProjectChatPanel
+              projectId={project.id}
+              projectName={project.project_name}
+              customerId={project.customer_id}
+              userId={userId}
+              canCreateTask={canCreateTask}
+            />
+          </div>
+          <section className="card card--wide">
+            <h2>ลิงก์ที่เกี่ยวข้อง</h2>
+            <p className="muted">
+              <Link to={`/app/customers/${project.customer_id}`}>Customer 360</Link>
+              {' · '}
+              <Link to={`/app/onboarding/${project.customer_id}`}>บรีฟ / Onboarding</Link>
+              {' · '}
+              <Link to={`/app/tasks?project=${project.id}`}>งานทั้งหมดของโปรเจกต์</Link>
+            </p>
+          </section>
+        </>
       )}
     </div>
   )

@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
+import { AuthPasswordField } from '../../shared/auth/AuthPasswordField'
 import { resolvePostLoginPath } from '../../shared/auth/postLoginPath'
 import { updateOwnPassword } from '../../shared/auth/passwordChange'
+import { appHostLabel } from '../../shared/config/appUrl'
+import { COMPANY_ICON_SRC } from '../../shared/company/companyProfile'
 import '../../shared/auth/auth.css'
 import './LoginPage.css'
 
 export function SetPasswordPage() {
-  const { profile, configured, refreshProfile } = useAuth()
+  const { profile, configured, loading, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -16,6 +19,17 @@ export function SetPasswordPage() {
 
   if (!configured) {
     return <Navigate to="/app" replace />
+  }
+
+  if (loading) {
+    return (
+      <div className="login">
+        <div className="login__card login__card--loading" role="status">
+          <div className="auth-loading__spinner" aria-hidden />
+          <p className="muted">กำลังโหลดบัญชี…</p>
+        </div>
+      </div>
+    )
   }
 
   if (profile && !profile.must_change_password) {
@@ -50,46 +64,57 @@ export function SetPasswordPage() {
   }
 
   return (
-    <div className="login">
-      <form className="login__card" onSubmit={(e) => void handleSubmit(e)}>
+    <div className="login login--set-password">
+      <form className="login__card" onSubmit={(e) => void handleSubmit(e)} noValidate>
         <div className="login__brand">
-          <span className="login__logo">NP</span>
+          <img
+            className="login__logo"
+            src={COMPANY_ICON_SRC}
+            alt="NP Create"
+            width={64}
+            height={64}
+          />
           <h1>ตั้งรหัสผ่านใหม่</h1>
-          <p>เข้าใช้ครั้งแรก — กำหนดรหัสผ่านของคุณเองก่อนใช้งานระบบ</p>
+          <p>เข้าใช้ครั้งแรก — กำหนดรหัสผ่านของคุณก่อนใช้งานระบบ</p>
+          <p className="login__domain muted">{appHostLabel()}</p>
         </div>
 
-        {profile && (
-          <p className="muted" style={{ margin: 0, fontSize: '0.85rem' }}>
+        {profile?.login_id ? (
+          <p className="login__user-chip">
             รหัสผู้ใช้: <strong>{profile.login_id}</strong>
           </p>
-        )}
+        ) : null}
 
-        <label>
-          รหัสผ่านใหม่
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={8}
-            required
-            autoComplete="new-password"
-          />
-        </label>
-        <label>
-          ยืนยันรหัสผ่านใหม่
-          <input
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            minLength={8}
-            required
-            autoComplete="new-password"
-          />
-        </label>
+        <AuthPasswordField
+          id="set-password-new"
+          label="รหัสผ่านใหม่"
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+          placeholder="อย่างน้อย 8 ตัวอักษร"
+          hint="ใช้อย่างน้อย 8 ตัวอักษร — หลีกเลี่ยงรหัสที่เดาง่าย เช่น 12345678"
+          minLength={8}
+          disabled={submitting}
+        />
 
-        {error && <p className="login__error">{error}</p>}
+        <AuthPasswordField
+          id="set-password-confirm"
+          label="ยืนยันรหัสผ่านใหม่"
+          value={confirm}
+          onChange={setConfirm}
+          autoComplete="new-password"
+          placeholder="พิมพ์รหัสผ่านอีกครั้ง"
+          minLength={8}
+          disabled={submitting}
+        />
 
-        <button type="submit" disabled={submitting}>
+        {error ? (
+          <p className="login__error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <button type="submit" className="login__submit" disabled={submitting}>
           {submitting ? 'กำลังบันทึก…' : 'บันทึกและเข้าใช้งาน'}
         </button>
       </form>

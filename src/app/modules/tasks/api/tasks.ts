@@ -7,6 +7,7 @@ import { mockTasksApi } from './mockStore'
 
 function mapTask(row: Record<string, unknown>, assigneeName?: string | null): Task {
   const customer = row.customers as { brand_name: string } | null
+  const project = row.projects as { project_name: string } | null
   return {
     id: row.id as string,
     title: row.title as string,
@@ -16,6 +17,7 @@ function mapTask(row: Record<string, unknown>, assigneeName?: string | null): Ta
     assignee_id: row.assignee_id as string,
     created_by: row.created_by as string,
     customer_id: (row.customer_id as string) ?? null,
+    project_id: (row.project_id as string) ?? null,
     lead_id: (row.lead_id as string) ?? null,
     due_at: (row.due_at as string) ?? null,
     completed_at: (row.completed_at as string) ?? null,
@@ -23,10 +25,11 @@ function mapTask(row: Record<string, unknown>, assigneeName?: string | null): Ta
     updated_at: row.updated_at as string,
     assignee_name: assigneeName ?? null,
     customer_brand_name: customer?.brand_name ?? null,
+    project_name: project?.project_name ?? null,
   }
 }
 
-const taskSelect = '*, customers(brand_name)'
+const taskSelect = '*, customers(brand_name), projects(project_name)'
 
 async function assigneeNameMap(): Promise<Map<string, string>> {
   const list = await listAssignees()
@@ -51,6 +54,7 @@ export async function listTasks(
   }
   if (filters.status) query = query.eq('status', filters.status)
   if (filters.assignee_id) query = query.eq('assignee_id', filters.assignee_id)
+  if (filters.project_id) query = query.eq('project_id', filters.project_id)
 
   const { data, error } = await query
   if (error) throw new Error(error.message)
@@ -58,6 +62,10 @@ export async function listTasks(
   return (data ?? []).map((r) =>
     mapTask(r as Record<string, unknown>, names.get((r as { assignee_id: string }).assignee_id)),
   )
+}
+
+export async function listTasksForProject(projectId: string): Promise<Task[]> {
+  return listTasks('', { project_id: projectId, scope: 'all' }, true)
 }
 
 export async function getTask(id: string): Promise<Task | null> {
@@ -123,6 +131,7 @@ export async function createTask(input: TaskInput): Promise<Task> {
     assignee_id: input.assignee_id,
     created_by: input.created_by,
     customer_id: input.customer_id,
+    project_id: input.project_id,
     lead_id: input.lead_id,
     due_at: input.due_at,
     completed_at: input.status === 'done' ? new Date().toISOString() : null,
@@ -147,6 +156,7 @@ export async function updateTask(id: string, input: TaskInput): Promise<Task> {
     priority: input.priority,
     assignee_id: input.assignee_id,
     customer_id: input.customer_id,
+    project_id: input.project_id,
     lead_id: input.lead_id,
     due_at: input.due_at,
   }

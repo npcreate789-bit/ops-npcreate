@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { hasTasksTeamView } from '../../../../shared/auth/access'
 import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
@@ -16,6 +16,8 @@ const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function TasksPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const projectFilter = searchParams.get('project') ?? undefined
   const { profile, configured } = useAuth()
   const userId = profile?.id ?? DEV_OWNER
   const roles = profile?.roles ?? []
@@ -27,7 +29,12 @@ export function TasksPage() {
   const [filters, setFilters] = useState<TaskFilters>({
     scope: teamView ? 'all' : 'mine',
     status: '',
+    project_id: projectFilter,
   })
+
+  useEffect(() => {
+    setFilters((f) => ({ ...f, project_id: projectFilter }))
+  }, [projectFilter])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,7 +66,11 @@ export function TasksPage() {
       <header className="page__header sales-page__header">
         <div>
           <h1>งานภายใน</h1>
-          <p>มอบหมาย ติดตามสถานะ และงานที่ค้างเกินกำหนด</p>
+          <p>
+            {projectFilter
+              ? 'แสดงเฉพาะงานของโปรเจกต์ที่เลือก'
+              : 'มอบหมาย ติดตามสถานะ และงานที่ค้างเกินกำหนด'}
+          </p>
         </div>
         <Link to="/app/tasks/new" className="crm-btn crm-btn--primary">
           + สร้างงาน
@@ -169,6 +180,7 @@ export function TasksPage() {
                 <tr>
                   <th>งาน</th>
                   <th>ลูกค้า</th>
+                  <th>โปรเจกต์</th>
                   <th>ผู้รับผิดชอบ</th>
                   <th>ความสำคัญ</th>
                   <th>สถานะ</th>
@@ -194,6 +206,18 @@ export function TasksPage() {
                             onClick={(e) => e.stopPropagation()}
                           >
                             {row.customer_brand_name}
+                          </Link>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                      <td>
+                        {row.project_id && row.project_name ? (
+                          <Link
+                            to={`/app/projects/${row.project_id}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {row.project_name}
                           </Link>
                         ) : (
                           '—'

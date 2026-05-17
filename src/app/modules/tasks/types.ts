@@ -10,6 +10,7 @@ export interface Task {
   assignee_id: string
   created_by: string
   customer_id: string | null
+  project_id: string | null
   lead_id: string | null
   due_at: string | null
   completed_at: string | null
@@ -17,6 +18,7 @@ export interface Task {
   updated_at: string
   assignee_name?: string | null
   customer_brand_name?: string | null
+  project_name?: string | null
 }
 
 export interface TaskInput {
@@ -27,6 +29,7 @@ export interface TaskInput {
   assignee_id: string
   created_by: string
   customer_id: string | null
+  project_id: string | null
   lead_id: string | null
   due_at: string | null
 }
@@ -35,6 +38,13 @@ export interface TaskFilters {
   scope?: 'mine' | 'all'
   status?: TaskStatus | ''
   assignee_id?: string
+  project_id?: string
+}
+
+export interface ProjectTaskOption {
+  id: string
+  label: string
+  customer_id: string
 }
 
 export interface TaskSummary {

@@ -46,6 +46,7 @@ export const mockTasksApi = {
     }
     if (filters.status) rows = rows.filter((t) => t.status === filters.status)
     if (filters.assignee_id) rows = rows.filter((t) => t.assignee_id === filters.assignee_id)
+    if (filters.project_id) rows = rows.filter((t) => t.project_id === filters.project_id)
     return rows.sort((a, b) => b.updated_at.localeCompare(a.updated_at))
   },
 
