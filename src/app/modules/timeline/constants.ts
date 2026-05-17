@@ -7,6 +7,8 @@ export const TIMELINE_KIND_OPTIONS: { value: TimelineKind | ''; label: string }[
   { value: 'contract_end', label: 'สัญญาสิ้นสุด' },
   { value: 'lead_reminder', label: 'ติดตาม Lead' },
   { value: 'payment_due', label: 'ครบกำหนดชำระ' },
+  { value: 'client_chat', label: 'แชทลูกค้า' },
+  { value: 'client_brief', label: 'บรีฟลูกค้า' },
 ]
 
 export const TIMELINE_WITHIN_OPTIONS = [

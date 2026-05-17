@@ -33,6 +33,24 @@ const MOCK: WorkItem[] = [
     link: '/app/tasks',
     overdue: false,
   },
+  {
+    id: 'client-chat-1',
+    kind: 'client_chat',
+    at: `${today}T11:15:00+07:00`,
+    title: 'แชทลูกค้า — แบรนด์ Demo',
+    detail: 'ลูกค้าถามเรื่องบรีฟ · 1 ยังไม่อ่าน',
+    link: '/app/chat?project=demo-project&channel=client',
+    overdue: true,
+  },
+  {
+    id: 'client-brief-1',
+    kind: 'client_brief',
+    at: today,
+    title: 'บรีฟยังไม่ครบ — แบรนด์ Demo',
+    detail: 'ความคืบหน้า 40% · มีฟอร์มแล้ว',
+    link: '/app/onboarding/demo-customer',
+    overdue: true,
+  },
 ]
 
 function sortMock(items: WorkItem[]): WorkItem[] {

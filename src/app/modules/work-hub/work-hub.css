@@ -41,3 +41,19 @@
   font-size: 0.75rem;
   color: #fbbf24;
 }
+
+.work-hub__client-bridge h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.work-hub__client-bridge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.work-hub__item--client {
+  border-left: 3px solid rgba(110, 231, 255, 0.55);
+}

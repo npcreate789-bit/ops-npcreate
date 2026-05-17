@@ -1,4 +1,5 @@
 import {
+  canViewChatHub,
   canViewFinanceDocuments,
   canViewRenewals,
   hasCrmTeamView,
@@ -22,6 +23,13 @@ export function canShowTimelineKind(roles: AppRole[], kind: TimelineKind): boole
       return hasCrmTeamView(roles) || roles.includes('sales')
     case 'payment_due':
       return canViewFinanceDocuments(roles)
+    case 'client_chat':
+      return canViewChatHub(roles)
+    case 'client_brief':
+      return (
+        hasNavFullAccess(roles) ||
+        roles.some((r) => (['account', 'operations'] as AppRole[]).includes(r))
+      )
     default:
       return false
   }

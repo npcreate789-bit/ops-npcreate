@@ -13,10 +13,12 @@ function sortWorkItems(items: WorkItem[]): WorkItem[] {
   const today = bangkokTodayIsoDate()
   return [...items].sort((a, b) => {
     const score = (item: WorkItem) => {
-      if (item.kind === 'notification') return item.overdue ? 0 : 3
-      if (item.overdue) return 0
-      if (isDueTodayAt(item.at, today)) return 1
-      return 2
+      if (item.kind === 'client_chat') return 0
+      if (item.kind === 'notification') return item.overdue ? 1 : 4
+      if (item.kind === 'client_brief' && item.overdue) return 1
+      if (item.overdue) return 2
+      if (isDueTodayAt(item.at, today)) return 3
+      return 4
     }
     const diff = score(a) - score(b)
     if (diff !== 0) return diff

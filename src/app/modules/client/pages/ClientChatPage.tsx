@@ -88,7 +88,7 @@ export function ClientChatPage() {
       <header className="page__header">
         <h2>แชทกับทีม</h2>
         <p className="muted">
-          สนทนาต่อโปรเจกต์ — ทีมงานจะเห็นข้อความแบบเรียลไทม์
+          สนทนาต่อโปรเจกต์ — ทีม NP Create จะเห็นข้อความในแชทและศูนย์งานของฉัน
           {totalUnread > 0 ? ` · ${totalUnread} ข้อความใหม่` : ''}
         </p>
       </header>

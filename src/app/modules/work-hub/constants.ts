@@ -26,6 +26,8 @@ export const WORK_KIND_OPTIONS: { value: WorkItemKind | ''; label: string }[] = 
   { value: 'lead_reminder', label: 'Lead' },
   { value: 'payment_due', label: 'การเงิน' },
   { value: 'notification', label: 'แจ้งเตือน' },
+  { value: 'client_chat', label: 'แชทลูกค้า' },
+  { value: 'client_brief', label: 'บรีฟลูกค้า' },
 ]
 
 export function workKindLabel(kind: WorkItemKind): string {

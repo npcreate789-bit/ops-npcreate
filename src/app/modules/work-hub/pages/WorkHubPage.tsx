@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { canAccessNotifications } from '../../../../shared/auth/access'
+import {
+  canAccessNotifications,
+  hasClientPortalStaffPreview,
+} from '../../../../shared/auth/access'
 import { formatBangkokDate, formatBangkokDateTime } from '../../../../shared/dates/bangkok'
 import {
   canOpenWorkItemLink,
@@ -72,6 +75,7 @@ export function WorkHubPage() {
   const hasKinds = hasWorkHubKinds(roles) || !configured
   const scoped = isWorkHubScoped(roles) && configured
   const showNotifLink = canAccessNotifications(roles) || !configured
+  const showClientBridge = hasClientPortalStaffPreview(roles) || !configured
   const kindOptions = useMemo(() => workKindOptionsForRoles(roles), [roles])
   const scopedLabel = useMemo(
     () => scopedWorkKindLabels(roles, workKindLabel),
@@ -84,6 +88,14 @@ export function WorkHubPage() {
   const [error, setError] = useState<string | null>(null)
 
   const summary = useMemo(() => buildWorkHubSummary(rows), [rows])
+  const clientChatCount = useMemo(
+    () => rows.filter((r) => r.kind === 'client_chat').length,
+    [rows],
+  )
+  const clientBriefCount = useMemo(
+    () => rows.filter((r) => r.kind === 'client_brief').length,
+    [rows],
+  )
 
   useEffect(() => {
     if (!filters.kind || kindOptions.some((o) => o.value === filters.kind)) return
@@ -152,7 +164,7 @@ export function WorkHubPage() {
         <div>
           <h1>งานของฉัน</h1>
           <p className="muted">
-            งานค้าง นัดติดตาม สัญญา การเงิน และแจ้งเตือน — เรียงตามความเร่งด่วน
+            งานค้าง นัดติดตาม สัญญา การเงิน แชท/บรีฟจากลูกค้า และแจ้งเตือน — เรียงตามความเร่งด่วน
           </p>
         </div>
         <div className="work-hub__actions">
@@ -179,6 +191,30 @@ export function WorkHubPage() {
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
           แสดงเฉพาะ: {scopedLabel}
         </p>
+      )}
+
+      {showClientBridge && !loading && (clientChatCount > 0 || clientBriefCount > 0) && (
+        <section className="card card--wide work-hub__client-bridge" aria-label="งานจากลูกค้า">
+          <h2>จากพื้นที่ลูกค้า</h2>
+          <p className="muted" style={{ marginTop: 0 }}>
+            ลูกค้าแชทหรือกรอกบรีฟใน Client Workspace — รายการด้านล่างเชื่อมไปแชทและรับบรีฟโดยตรง
+          </p>
+          <div className="work-hub__client-bridge-actions">
+            {clientChatCount > 0 && (
+              <Link to="/app/chat" className="crm-btn crm-btn--primary">
+                แชทลูกค้า ({clientChatCount})
+              </Link>
+            )}
+            {clientBriefCount > 0 && (
+              <Link to="/app/onboarding" className="crm-btn crm-btn--ghost">
+                บรีฟค้าง ({clientBriefCount})
+              </Link>
+            )}
+            <Link to="/app/client" className="crm-btn crm-btn--ghost">
+              Client Workspace
+            </Link>
+          </div>
+        </section>
       )}
 
       <section className="card card--wide">
@@ -304,6 +340,10 @@ export function WorkHubPage() {
                   key={row.id}
                   className={`timeline-item${row.overdue ? ' timeline-item--overdue' : ''}${
                     row.kind === 'notification' ? ' work-hub__item--notif' : ''
+                  }${
+                    row.kind === 'client_chat' || row.kind === 'client_brief'
+                      ? ' work-hub__item--client'
+                      : ''
                   }`}
                 >
                   <div className="timeline-item__date">{formatWhen(row.at)}</div>

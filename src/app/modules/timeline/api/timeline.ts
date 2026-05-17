@@ -11,6 +11,7 @@ import { isTaskOverdue } from '../../tasks/constants'
 import { canShowTimelineKind } from '../access'
 import { addDaysIso, isDueTodayAt, isOverdueAt } from '../constants'
 import type { TimelineEntry, TimelineFilters, TimelineSummary } from '../types'
+import { fetchClientPulseEntries } from './clientPulse'
 import { mockTimelineApi } from './mockStore'
 
 function pushEntry(
@@ -130,6 +131,16 @@ export async function fetchTimeline(
     } catch {
       /* skip */
     }
+  }
+
+  try {
+    const clientRows = await fetchClientPulseEntries(userId, roles, filters)
+    for (const row of clientRows) {
+      if (filters.kind && filters.kind !== row.kind) continue
+      entries.push(row)
+    }
+  } catch {
+    /* skip */
   }
 
   let rows = entries.sort((a, b) => a.at.localeCompare(b.at))

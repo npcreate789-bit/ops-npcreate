@@ -1,4 +1,10 @@
-export type TimelineKind = 'task' | 'contract_end' | 'lead_reminder' | 'payment_due'
+export type TimelineKind =
+  | 'task'
+  | 'contract_end'
+  | 'lead_reminder'
+  | 'payment_due'
+  | 'client_chat'
+  | 'client_brief'
 
 export interface TimelineEntry {
   id: string

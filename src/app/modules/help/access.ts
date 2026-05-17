@@ -99,14 +99,14 @@ const FLOW_STAFF = [
   'Lead ลูกค้าใหม่ (CRM)',
   'Sales เสนอแพ็กเกจ / ใบเสนอราคา',
   'ปิดการขาย → Admin บันทึกชำระเงิน',
-  'Account รับบรีฟ (Onboarding)',
-  'Ads + Content ดำเนินงาน',
-  'รายงานลูกค้า → CEO ดูภาพรวม',
+  'ลูกค้ากรอกบรีฟใน Client Workspace → Account ตรวจในรับบรีฟ',
+  'แชทลูกค้าและบรีฟค้างปรากฏในงานของฉัน (/app/work)',
+  'Ads + Content ดำเนินงาน · รายงานใน Client Workspace',
 ] as const
 
 const FLOW_CLIENT = [
   'กรอกบรีฟงานให้ครบ — เมนูบรีฟใน Client Workspace',
-  'แชทกับทีม NP Create เมื่อมีคำถามหรือไฟล์แนบ',
+  'แชทกับทีม NP Create — ทีมจะเห็นในศูนย์งานของฉัน',
   'ดูรายงานผลโฆษณาและสรุปรายเดือนในเมนูรายงาน',
 ] as const
 
