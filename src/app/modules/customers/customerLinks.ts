@@ -12,13 +12,25 @@ export function financeUrlForCustomer(customerId: string): string {
   return `/app/finance?customerId=${encodeURIComponent(customerId)}`
 }
 
+export function renewalsUrlForCustomer(customerId: string): string {
+  return `/app/renewals?customerId=${encodeURIComponent(customerId)}`
+}
+
+export function adsUrlForCustomer(customerId: string): string {
+  return `/app/ads/${encodeURIComponent(customerId)}`
+}
+
 export function chatUrlForCustomer(projectId?: string | null): string {
   if (projectId) return `/app/chat?project=${encodeURIComponent(projectId)}&channel=client`
   return '/app/chat'
 }
 
-export function tasksUrlForCustomer(projectId?: string | null): string {
+export function tasksUrlForCustomer(
+  projectId?: string | null,
+  customerId?: string | null,
+): string {
   if (projectId) return `/app/tasks?project=${encodeURIComponent(projectId)}`
+  if (customerId) return `/app/tasks?customer=${encodeURIComponent(customerId)}`
   return '/app/tasks'
 }
 

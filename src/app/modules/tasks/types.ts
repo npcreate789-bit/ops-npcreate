@@ -39,6 +39,7 @@ export interface TaskFilters {
   status?: TaskStatus | ''
   assignee_id?: string
   project_id?: string
+  customer_id?: string
 }
 
 export interface ProjectTaskOption {

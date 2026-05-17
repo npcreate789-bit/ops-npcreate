@@ -1,0 +1,59 @@
+import { Link } from 'react-router-dom'
+
+interface ClientPortalGuideProps {
+  isStaffPreview: boolean
+}
+
+export function ClientPortalGuide({ isStaffPreview }: ClientPortalGuideProps) {
+  if (isStaffPreview) {
+    return (
+      <section className="card card--wide client-portal-guide" aria-label="คู่มือพื้นที่ลูกค้า">
+        <h2>โหมดตัวอย่าง (ทีมงาน)</h2>
+        <p className="muted client-portal-guide__lead">
+          หน้านี้คือสิ่งที่ลูกค้าเห็น — งานหลังบ้านทำที่โมดูลอื่น
+        </p>
+        <ol className="client-portal-guide__flow">
+          <li>
+            ลูกค้ากรอก <Link to="/app/client/brief">บรีฟงาน</Link> → ทีมตรวจที่{' '}
+            <Link to="/app/onboarding">รับบรีฟ</Link>
+          </li>
+          <li>
+            ทีมยิงแอดบันทึกที่ <Link to="/app/ads">งานยิงแอด</Link> → ลูกค้าดูที่{' '}
+            <Link to="/app/client/reports">รายงาน</Link>
+          </li>
+          <li>
+            คอนเทนต์ส่งมอบจาก <Link to="/app/content">งานคอนเทนต์</Link> → แสดงที่ภาพรวม
+          </li>
+          <li>
+            สัญญา/ชำระ — ลูกค้าดู <Link to="/app/client/payment">การชำระเงิน</Link> · ทีมที่{' '}
+            <Link to="/app/renewals">ต่อสัญญา</Link> และ <Link to="/app/finance">การเงิน</Link>
+          </li>
+          <li>แชทแยกตามโปรเจกต์ — ลูกค้าและทีมคุยที่แท็บแชท</li>
+        </ol>
+      </section>
+    )
+  }
+
+  return (
+    <section className="card card--wide client-portal-guide" aria-label="ขั้นตอนใช้งาน">
+      <h2>เริ่มต้นอย่างไร</h2>
+      <ol className="client-portal-guide__flow">
+        <li>
+          <Link to="/app/client/brief">บรีฟงาน</Link> — กรอกข้อมูลแบรนด์และส่งบรีฟ
+        </li>
+        <li>
+          <Link to="/app/client/projects">โปรเจกต์</Link> — ติดตามความคืบหน้าและเปิดแชท
+        </li>
+        <li>
+          <Link to="/app/client/reports">รายงาน</Link> — ดูผลโฆษณารายวัน/รายเดือน
+        </li>
+        <li>
+          <Link to="/app/client/payment">การชำระเงิน</Link> — วันสิ้นสัญญาและรายการชำระ
+        </li>
+        <li>
+          <Link to="/app/client/chat">แชท</Link> — คุยกับทีม NP Create ได้ตลอด
+        </li>
+      </ol>
+    </section>
+  )
+}

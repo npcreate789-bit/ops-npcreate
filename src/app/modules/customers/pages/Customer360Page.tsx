@@ -33,6 +33,7 @@ import {
   clientWorkspaceUrl,
   financeUrlForCustomer,
   chatUrlForCustomer,
+  renewalsUrlForCustomer,
   tasksUrlForCustomer,
   primaryProjectForCustomer,
 } from '../customerLinks'
@@ -288,7 +289,7 @@ export function Customer360Page() {
                   )}
                   {canShowCustomer360Link(roles, '/app/tasks') && (
                     <Link
-                      to={tasksUrlForCustomer(primaryProject?.id)}
+                      to={tasksUrlForCustomer(primaryProject?.id, c.id)}
                       className="crm-btn crm-btn--ghost"
                     >
                       งานภายใน
@@ -305,7 +306,7 @@ export function Customer360Page() {
                     </Link>
                   )}
                   {canLinkCustomerRenewals(roles) && (
-                    <Link to="/app/renewals" className="crm-btn crm-btn--ghost">
+                    <Link to={renewalsUrlForCustomer(c.id)} className="crm-btn crm-btn--ghost">
                       ต่อสัญญา
                     </Link>
                   )}

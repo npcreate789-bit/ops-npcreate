@@ -107,12 +107,30 @@ export function CreatorEditorPage() {
 
   return (
     <div className="page">
-      <header className="page__header">
-        <Link to="/app/creators" className="crm-back">
-          ← กลับรายการ
-        </Link>
-        <h1>{isNew ? 'เพิ่มครีเอเตอร์' : initial?.display_name ?? 'แก้ไขครีเอเตอร์'}</h1>
+      <header className="page__header crm-page__header">
+        <div>
+          <Link to="/app/creators" className="crm-back">
+            ← กลับรายการ
+          </Link>
+          <h1>{isNew ? 'เพิ่มครีเอเตอร์' : initial?.display_name ?? 'แก้ไขครีเอเตอร์'}</h1>
+          <p className="muted">
+            ข้อมูลครีเอเตอร์ภายในทีม — สร้างงาน UGC ที่{' '}
+            <Link to="/app/content">งานคอนเทนต์</Link> · ลูกค้ารับไฟล์ในพื้นที่ลูกค้า
+          </p>
+        </div>
       </header>
+
+      <nav className="creators-related-links" aria-label="ลิงก์ที่เกี่ยวข้อง">
+        <Link to="/app/content" className="crm-btn crm-btn--ghost crm-btn--sm">
+          งานคอนเทนต์
+        </Link>
+        <Link to="/app/content/new" className="crm-btn crm-btn--ghost crm-btn--sm">
+          + งาน UGC ใหม่
+        </Link>
+        <Link to="/app/client" className="crm-btn crm-btn--ghost crm-btn--sm">
+          พื้นที่ลูกค้า
+        </Link>
+      </nav>
 
       {readOnly && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">

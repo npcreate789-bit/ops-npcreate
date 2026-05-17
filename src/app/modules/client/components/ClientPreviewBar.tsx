@@ -25,7 +25,7 @@ export function ClientPreviewBar({
 }: ClientPreviewBarProps) {
   if (!data && !canPreview) {
     return (
-      <section className="card card--wide">
+      <section className="card card--wide client-preview-bar">
         <p className="crm-error">
           {error ?? 'ยังไม่มีสิทธิ์เข้าถึง — ติดต่อทีมงาน NP Create'}
         </p>
@@ -35,17 +35,16 @@ export function ClientPreviewBar({
 
   if (!data) {
     return (
-      <>
+      <div className="client-preview-bar">
         {!configured && (
           <p className="crm-banner crm-banner--warn">โหมดพัฒนา — ข้อมูลตัวอย่างในเครื่อง</p>
         )}
         {canPreview && customers.length > 0 && (
           <section className="card card--wide">
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem' }}>
-              <span>ดูตัวอย่าง (ทีมงาน)</span>
+            <label className="client-preview-bar__select">
+              เลือกลูกค้าเพื่อดูตัวอย่าง (ทีมงาน)
               <select
                 className="crm-select"
-                style={{ width: '100%', minWidth: 0 }}
                 value={previewId}
                 onChange={(e) => onPreviewChange(e.target.value)}
               >
@@ -65,26 +64,27 @@ export function ClientPreviewBar({
               'เลือกลูกค้าด้านบนเพื่อดูตัวอย่าง หรือผูกบัญชี client ที่หน้าจัดการผู้ใช้'}
           </p>
           {canPreview && (
-            <p className="muted admin-hint">
+            <p className="muted">
               <Link to="/app/admin">จัดการผู้ใช้</Link> → มอบบทบาท client + เลือกลูกค้า
             </p>
           )}
         </section>
-      </>
+      </div>
     )
   }
 
+  if (isClientOnly) {
+    return null
+  }
+
   return (
-    <>
-      {canPreview && !isClientOnly && (
-        <p className="phase2-scope-badge">โหมดตัวอย่าง (ทีมงาน)</p>
-      )}
-      {canPreview && (
-        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', minWidth: '12rem', marginBottom: '1rem' }}>
-          <span>เปลี่ยนลูกค้า</span>
+    <div className="client-preview-bar client-preview-bar--staff">
+      <p className="client-preview-bar__badge">โหมดตัวอย่าง — มุมมองลูกค้า</p>
+      {canPreview && customers.length > 1 && (
+        <label className="client-preview-bar__select">
+          เปลี่ยนลูกค้า
           <select
             className="crm-select"
-            style={{ width: '100%', minWidth: 0 }}
             value={previewId || data.customer.id}
             onChange={(e) => onPreviewChange(e.target.value)}
           >
@@ -96,6 +96,6 @@ export function ClientPreviewBar({
           </select>
         </label>
       )}
-    </>
+    </div>
   )
 }

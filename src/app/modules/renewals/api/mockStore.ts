@@ -97,6 +97,7 @@ function buildRows(filters: RenewalFilters): RenewalRow[] {
       }
       const q = filters.search?.trim().toLowerCase()
       if (q && !row.brand_name.toLowerCase().includes(q)) return false
+      if (filters.customer_id && row.customer_id !== filters.customer_id) return false
       return true
     })
     .sort((a, b) => (a.days_until_end ?? 999) - (b.days_until_end ?? 999))

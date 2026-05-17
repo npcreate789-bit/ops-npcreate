@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
 import { contentFormatLabel } from '../../content/constants'
 import type { ContentFormat } from '../../content/types'
+import { ClientPortalGuide } from '../components/ClientPortalGuide'
 import { ClientAiPanel } from '../components/ClientAiPanel'
 import { useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
 import '../../crm/crm.css'
@@ -14,10 +15,11 @@ function formatMoney(n: number) {
 }
 
 const QUICK_LINKS = [
-  { to: '/app/client/brief', label: 'บรีฟงาน', hint: 'กรอกข้อมูลแบรนด์' },
+  { to: '/app/client/brief', label: 'บรีฟงาน', hint: 'กรอกและส่งบรีฟ' },
+  { to: '/app/client/projects', label: 'โปรเจกต์', hint: 'ความคืบหน้า' },
   { to: '/app/client/reports', label: 'รายงาน', hint: 'ผลโฆษณา' },
   { to: '/app/client/chat', label: 'แชท', hint: 'คุยกับทีม' },
-  { to: '/app/client/projects', label: 'โปรเจกต์', hint: 'ความคืบหน้างาน' },
+  { to: '/app/client/payment', label: 'การชำระเงิน', hint: 'สัญญาและชำระ' },
 ] as const
 
 export function ClientDashboardPage() {
@@ -37,9 +39,12 @@ export function ClientDashboardPage() {
 
   const { brief_progress, brief_submitted, ads_summary, delivered_content } = ws.data
   const briefNeedsAction = !brief_submitted && brief_progress < 100
+  const isStaffPreview = ws.canPreview && !ws.isClientOnly
 
   return (
     <div className="page client-page">
+      <ClientPortalGuide isStaffPreview={isStaffPreview} />
+
       <section className="client-quick-links" aria-label="ทางลัด">
         {QUICK_LINKS.map((item) => (
           <Link key={item.to} to={item.to} className="client-quick-link">
@@ -107,6 +112,9 @@ export function ClientDashboardPage() {
           <li>
             <Link to="/app/client/chat">แชทกับทีม NP Create</Link>
           </li>
+          <li>
+            <Link to="/app/client/payment">ตรวจสอบสัญญาและการชำระเงิน</Link>
+          </li>
           {ws.projects.length > 0 && (
             <li>
               <Link to="/app/client/projects">
@@ -119,12 +127,6 @@ export function ClientDashboardPage() {
 
       <section className="card card--wide">
         <h2>คอนเทนต์ที่ส่งมอบแล้ว</h2>
-        {!ws.isClientOnly && (
-          <p className="muted client-dashboard__staff-hint">
-            ทีมจัดการงานที่ <Link to="/app/content">งานคอนเทนต์</Link> — ตั้งสถานะ「ส่งมอบแล้ว」และลิงก์ไฟล์
-            ลูกค้าจึงเห็นที่นี่
-          </p>
-        )}
         {delivered_content.length === 0 && (
           <p className="muted">ยังไม่มีไฟล์ส่งมอบ — ทีมจะอัปโหลดเมื่องานเสร็จ</p>
         )}

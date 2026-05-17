@@ -55,6 +55,7 @@ export async function listTasks(
   if (filters.status) query = query.eq('status', filters.status)
   if (filters.assignee_id) query = query.eq('assignee_id', filters.assignee_id)
   if (filters.project_id) query = query.eq('project_id', filters.project_id)
+  if (filters.customer_id) query = query.eq('customer_id', filters.customer_id)
 
   const { data, error } = await query
   if (error) throw new Error(error.message)

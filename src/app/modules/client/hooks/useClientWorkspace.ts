@@ -10,7 +10,7 @@ import type { ClientReport } from '../types'
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function useClientWorkspace() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const previewFromUrl = searchParams.get('preview') ?? ''
   const { profile, configured } = useAuth()
   const userId = profile?.id ?? DEV_OWNER
@@ -66,11 +66,24 @@ export function useClientWorkspace() {
     void load()
   }, [load])
 
+  const setPreviewIdWithUrl = useCallback(
+    (id: string) => {
+      setPreviewId(id)
+      if (!canPreview) return
+      if (id) {
+        setSearchParams({ preview: id }, { replace: true })
+      } else {
+        setSearchParams({}, { replace: true })
+      }
+    },
+    [canPreview, setSearchParams],
+  )
+
   return {
     data,
     customers,
     previewId,
-    setPreviewId,
+    setPreviewId: setPreviewIdWithUrl,
     customerId,
     loading,
     error,

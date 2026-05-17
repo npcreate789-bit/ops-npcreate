@@ -1,3 +1,137 @@
+.creators-page__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.creators-role-guide h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.creators-role-guide__flow {
+  margin: 0;
+  padding-left: 1.15rem;
+  line-height: 1.75;
+  color: var(--npc-text-muted);
+  font-size: 0.88rem;
+}
+
+.creators-role-guide__flow a {
+  color: var(--npc-accent);
+}
+
+.creators-hint-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+}
+
+.creators-hint-banner--warn {
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.creators-hint-banner p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.creators-kpi-grid .stat {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.creators-pipeline-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--npc-glass-border);
+}
+
+.creators-pipeline-bar__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--npc-text-muted);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.creators-pipeline-bar__stage--active {
+  border-color: rgba(110, 231, 255, 0.4);
+  background: rgba(110, 231, 255, 0.1);
+  color: var(--npc-text);
+}
+
+.creators-pipeline-bar__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.creators-pipeline-bar__meta {
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+.creators-filters {
+  margin-bottom: 1rem;
+  align-items: end;
+}
+
+.creators-filters__refresh {
+  display: flex;
+  align-items: flex-end;
+}
+
+.creators-table__actions-head {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.creators-table__actions {
+  white-space: nowrap;
+}
+
+.creators-table__link {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--npc-text-muted);
+  text-decoration: none;
+}
+
+.creators-table__link:hover {
+  color: var(--npc-accent);
+  text-decoration: underline;
+}
+
+.creators-table__link--primary {
+  color: var(--npc-accent);
+  font-weight: 600;
+}
+
+.creators-related-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
 .creator-badge {
   display: inline-block;
   padding: 0.15rem 0.45rem;

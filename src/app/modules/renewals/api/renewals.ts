@@ -80,6 +80,10 @@ export async function listRenewalRows(filters: RenewalFilters): Promise<RenewalR
   const q = filters.search?.trim().toLowerCase()
   if (q) rows = rows.filter((r) => r.brand_name.toLowerCase().includes(q))
 
+  if (filters.customer_id) {
+    rows = rows.filter((r) => r.customer_id === filters.customer_id)
+  }
+
   return rows
 }
 

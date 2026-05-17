@@ -1,3 +1,203 @@
+.renewals-page__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.renewals-role-guide h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.renewals-role-guide__flow {
+  margin: 0;
+  padding-left: 1.15rem;
+  line-height: 1.75;
+  color: var(--npc-text-muted);
+  font-size: 0.88rem;
+}
+
+.renewals-role-guide__flow a {
+  color: var(--npc-accent);
+}
+
+.renewals-context-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.08);
+}
+
+.renewals-context-banner p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.renewals-context-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.renewals-hint-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.renewals-hint-banner--muted {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.renewals-hint-banner p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.renewals-kpi-grid .stat {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.renewals-pipeline-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--npc-glass-border);
+}
+
+.renewals-pipeline-bar__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--npc-text-muted);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.renewals-pipeline-bar__stage--active {
+  border-color: rgba(110, 231, 255, 0.4);
+  background: rgba(110, 231, 255, 0.1);
+  color: var(--npc-text);
+}
+
+.renewals-pipeline-bar__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.renewals-pipeline-bar__meta {
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+.renewals-filters {
+  margin-bottom: 1rem;
+  align-items: end;
+}
+
+.renewals-filters__check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--npc-text-muted);
+  padding-bottom: 0.35rem;
+}
+
+.renewals-filters__refresh {
+  display: flex;
+  align-items: flex-end;
+}
+
+.renewals-table__links-head {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.renewals-table__links {
+  white-space: nowrap;
+}
+
+.renewals-table__link {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--npc-text-muted);
+  text-decoration: none;
+}
+
+.renewals-table__link:hover {
+  color: var(--npc-accent);
+  text-decoration: underline;
+}
+
+.renewals-table__link--primary {
+  color: var(--npc-accent);
+  font-weight: 600;
+}
+
+.renewal-badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.renewal-badge--none {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+.renewal-badge--open {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.renewal-badge--contacted {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.renewal-badge--quoted {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.renewal-badge--renewed {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.renewal-badge--declined {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
 .renewal-days--expired {
   color: var(--crm-muted, #616161);
   font-weight: 600;

@@ -38,6 +38,7 @@ export interface RenewalFilters {
   renewal_status?: RenewalStatusFilter
   include_expired?: boolean
   search?: string
+  customer_id?: string
 }
 
 export interface RenewalInput {

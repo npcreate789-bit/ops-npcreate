@@ -6,7 +6,8 @@ export function ContentRoleGuide() {
       <h2>ใช้หน้านี้อย่างไร</h2>
       <ol className="content-role-guide__flow">
         <li>
-          <strong>ทีม Content</strong> — สร้างงาน ติดตามสถานะ และใส่ลิงก์ไฟล์ส่งมอบที่นี่
+          <strong>ทีม Content</strong> — เลือกครีเอเตอร์จาก{' '}
+          <Link to="/app/creators">ครีเอเตอร์</Link> แล้วสร้างงาน ติดตามสถานะ และใส่ลิงก์ส่งมอบที่นี่
         </li>
         <li>
           <strong>Account</strong> — ตรวจบรีฟใน{' '}
