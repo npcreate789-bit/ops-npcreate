@@ -344,6 +344,42 @@ export async function updateChecklistItem(
   })
 }
 
+/** โหมด mock — บันทึกว่าลูกค้ากดส่งบรีฟแล้ว */
+export async function markClientBriefSubmitted(customerId: string): Promise<void> {
+  if (isSupabaseConfigured && supabase) return
+  const store = loadMockStore()
+  const detail = store[customerId] ?? (await getOnboardingDetail(customerId))
+  const now = new Date().toISOString()
+  if (detail.form) {
+    detail.form.client_submitted_at = detail.form.client_submitted_at ?? now
+  } else {
+    detail.form = {
+      id: crypto.randomUUID(),
+      customer_id: customerId,
+      client_submitted_at: now,
+      tiktok_shop_url: null,
+      product_links: null,
+      pricing_info: null,
+      promotion_info: null,
+      profit_margin: null,
+      commission_info: null,
+      target_roi: null,
+      daily_ad_budget: null,
+      existing_content: null,
+      ads_account_info: null,
+      seller_account_info: null,
+      business_center_info: null,
+      notes: null,
+      created_at: now,
+      updated_at: now,
+    }
+  }
+  detail.customer.has_form = true
+  applyMockReadyState(detail)
+  store[customerId] = detail
+  saveMock(store)
+}
+
 export async function assignOwners(
   customerId: string,
   accountOwnerId: string | null,

@@ -54,15 +54,20 @@ export function HomeClientDashboard({ displayName, profileLoadError }: HomeClien
     )
   }
 
-  const { customer, onboarding_progress, ads_summary } = ws.data
-  const briefIncomplete = onboarding_progress < 100
+  const { customer, brief_progress, brief_submitted, ads_summary } = ws.data
+  const briefNeedsAction = !brief_submitted && brief_progress < 100
 
   const todos: { label: string; path: string; urgent?: boolean }[] = []
-  if (briefIncomplete) {
+  if (briefNeedsAction) {
     todos.push({
-      label: `กรอกบรีฟให้ครบ (ตอนนี้ ${onboarding_progress}%)`,
+      label: `กรอกบรีฟให้ครบ (ตอนนี้ ${brief_progress}%)`,
       path: '/app/client/brief',
-      urgent: onboarding_progress < 50,
+      urgent: brief_progress < 50,
+    })
+  } else if (brief_submitted && !customer.ready_for_ads) {
+    todos.push({
+      label: 'ส่งบรีฟแล้ว — รอทีม Account ตรวจ',
+      path: '/app/client',
     })
   }
   todos.push({ label: 'แชทกับทีม — สอบถามหรือส่งไฟล์', path: '/app/client/chat' })
@@ -81,10 +86,10 @@ export function HomeClientDashboard({ displayName, profileLoadError }: HomeClien
         </div>
         <div className="home-hero__actions">
           <Link
-            to={briefIncomplete ? '/app/client/brief' : '/app/client'}
+            to={briefNeedsAction ? '/app/client/brief' : '/app/client'}
             className="crm-btn crm-btn--primary"
           >
-            {briefIncomplete ? 'กรอกบรีฟต่อ' : 'เปิดภาพรวม'}
+            {briefNeedsAction ? 'กรอกบรีฟต่อ' : brief_submitted ? 'เปิดภาพรวม' : 'ส่งบรีฟ'}
           </Link>
           <Link to="/app/client/chat" className="crm-btn crm-btn--ghost">
             เปิดแชท
@@ -108,12 +113,16 @@ export function HomeClientDashboard({ displayName, profileLoadError }: HomeClien
       <section className="home-kpi-grid" aria-label="ภาพรวมสั้น">
         <Link
           to="/app/client/brief"
-          className={`home-kpi${briefIncomplete ? ' home-kpi--warn' : ' home-kpi--accent'}`}
+          className={`home-kpi${briefNeedsAction ? ' home-kpi--warn' : ' home-kpi--accent'}`}
         >
           <span className="home-kpi__label">บรีฟ</span>
-          <span className="home-kpi__value">{onboarding_progress}%</span>
+          <span className="home-kpi__value">{brief_progress}%</span>
           <span className="home-kpi__hint">
-            {briefIncomplete ? 'ยังไม่ครบ — กรอกต่อ' : 'ครบแล้ว'}
+            {brief_submitted
+              ? 'ส่งแล้ว — รอทีมตรวจ'
+              : briefNeedsAction
+                ? 'ยังไม่ครบ — กรอกต่อ'
+                : 'พร้อมส่ง'}
           </span>
         </Link>
         <Link to="/app/client/reports" className="home-kpi">

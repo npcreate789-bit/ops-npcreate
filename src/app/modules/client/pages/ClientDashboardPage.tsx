@@ -33,8 +33,8 @@ export function ClientDashboardPage() {
     )
   }
 
-  const { onboarding_progress, ads_summary, delivered_content } = ws.data
-  const briefIncomplete = onboarding_progress < 100
+  const { brief_progress, brief_submitted, ads_summary, delivered_content } = ws.data
+  const briefNeedsAction = !brief_submitted && brief_progress < 100
 
   return (
     <div className="page client-page">
@@ -50,18 +50,22 @@ export function ClientDashboardPage() {
       <section className="card-grid">
         <Link
           to="/app/client/brief"
-          className={`card client-metric-card${briefIncomplete ? ' client-metric-card--warn' : ''}`}
+          className={`card client-metric-card${briefNeedsAction ? ' client-metric-card--warn' : ''}`}
         >
           <h2>ความคืบหน้าบรีฟ</h2>
-          <p className="stat">{onboarding_progress}%</p>
+          <p className="stat">{brief_progress}%</p>
           <div className="phase2-progress" aria-hidden>
             <div
               className="phase2-progress__bar"
-              style={{ width: `${Math.min(100, onboarding_progress)}%` }}
+              style={{ width: `${Math.min(100, brief_progress)}%` }}
             />
           </div>
           <p className="muted" style={{ marginTop: '0.75rem' }}>
-            {briefIncomplete ? 'กรอกต่อ →' : 'ครบแล้ว — แก้ไขได้'}
+            {brief_submitted
+              ? 'ส่งบรีฟแล้ว — รอทีมตรวจ'
+              : briefNeedsAction
+                ? 'กรอกต่อ →'
+                : 'พร้อมส่ง — กดส่งบรีฟในหน้าบรีฟงาน'}
           </p>
         </Link>
         <Link to="/app/client/reports" className="card client-metric-card">
@@ -87,10 +91,13 @@ export function ClientDashboardPage() {
       <section className="card card--wide">
         <h2>สิ่งที่ควรทำ</h2>
         <ul className="client-todo-list">
-          {briefIncomplete && (
+          {briefNeedsAction && (
             <li>
-              <Link to="/app/client/brief">กรอกบรีฟให้ครบ ({onboarding_progress}%)</Link>
+              <Link to="/app/client/brief">กรอกบรีฟให้ครบ ({brief_progress}%)</Link>
             </li>
+          )}
+          {brief_submitted && !ws.data.customer.ready_for_ads && (
+            <li className="muted">ส่งบรีฟแล้ว — ทีม Account กำลังตรวจความครบ</li>
           )}
           <li>
             <Link to="/app/client/reports">ดูรายงานผลโฆษณา</Link>

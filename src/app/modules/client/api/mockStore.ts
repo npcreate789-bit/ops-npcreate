@@ -8,7 +8,9 @@ const MOCK: ClientReport = {
     contract_end: '2026-12-31',
     ready_for_ads: true,
   },
-  onboarding_progress: 88,
+  brief_progress: 100,
+  brief_submitted: true,
+  team_checklist_progress: 88,
   ads_summary: {
     last_7_days_spend: 42000,
     last_7_days_gmv: 156000,

@@ -169,6 +169,12 @@ export function ClientBriefPage() {
         <p className="muted">กรอกทีละขั้น — บันทึก Draft ได้ตลอด · กดส่งบรีฟเมื่อพร้อม</p>
       </header>
 
+      {ws.data?.brief_submitted && (
+        <p className="crm-banner">
+          คุณส่งบรีฟแล้ว — ทีม Account กำลังตรวจ แก้ไขข้อมูลได้ตลอด แล้วกดบันทึก Draft
+        </p>
+      )}
+
       <div className="client-brief-intro" role="note">
         <strong>หลังชำระเงินแล้ว</strong> กรุณากรอกบรีฟให้ครบ แล้วกดส่ง — ทีม Account จะตรวจและเตรียมยิงแอด
         <ol>

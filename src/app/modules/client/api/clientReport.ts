@@ -3,6 +3,7 @@ import { hasClientPortalStaffPreview } from '../../../../shared/auth/access'
 import type { AppRole } from '../../../../shared/types/roles'
 import { bangkokTodayIsoDate } from '../../../../shared/dates/bangkok'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
+import { calcBriefFormProgress } from '../../onboarding/briefProgress'
 import { contentFormatLabel } from '../../content/constants'
 import type { ContentFormat } from '../../content/types'
 import type { ClientReport } from '../types'
@@ -12,6 +13,26 @@ function daysAgoIso(days: number): string {
   const d = new Date()
   d.setDate(d.getDate() - days)
   return bangkokTodayIsoDate(d)
+}
+
+function calcTeamChecklistProgress(
+  checklist: { item_key: string; status: string }[] | null | undefined,
+): number {
+  const total = 8
+  let done = 0
+  for (const row of checklist ?? []) {
+    const key = row.item_key
+    const st = row.status
+    if (
+      (['shop_link', 'product_link', 'pricing', 'ad_budget', 'system_access'].includes(key) &&
+        st === 'done') ||
+      (key === 'clips_ready' && st === 'yes') ||
+      (['product_page', 'commission'].includes(key) && st === 'ready')
+    ) {
+      done += 1
+    }
+  }
+  return Math.round((done / total) * 100)
 }
 
 async function buildClientReport(customerId: string): Promise<ClientReport | null> {
@@ -31,21 +52,18 @@ async function buildClientReport(customerId: string): Promise<ClientReport | nul
     .select('status, item_key')
     .eq('customer_id', customerId)
 
-  const total = 8
-  let done = 0
-  for (const row of checklist ?? []) {
-    const key = row.item_key as string
-    const st = row.status as string
-    if (
-      (['shop_link', 'product_link', 'pricing', 'ad_budget', 'system_access'].includes(key) &&
-        st === 'done') ||
-      (key === 'clips_ready' && st === 'yes') ||
-      (['product_page', 'commission'].includes(key) && st === 'ready')
-    ) {
-      done += 1
-    }
-  }
-  const onboarding_progress = Math.round((done / total) * 100)
+  const team_checklist_progress = calcTeamChecklistProgress(checklist)
+
+  const { data: form } = await supabase
+    .from('onboarding_forms')
+    .select('*')
+    .eq('customer_id', customerId)
+    .maybeSingle()
+
+  const brief_submitted = Boolean(
+    (form as { client_submitted_at?: string | null } | null)?.client_submitted_at,
+  )
+  const brief_progress = brief_submitted ? 100 : calcBriefFormProgress(form)
 
   const since = daysAgoIso(6)
   const { data: campaigns } = await supabase
@@ -93,7 +111,9 @@ async function buildClientReport(customerId: string): Promise<ClientReport | nul
       contract_end: (customer.contract_end as string | null) ?? null,
       ready_for_ads: Boolean(customer.ready_for_ads),
     },
-    onboarding_progress,
+    brief_progress,
+    brief_submitted,
+    team_checklist_progress,
     ads_summary: {
       last_7_days_spend,
       last_7_days_gmv,

@@ -1,6 +1,6 @@
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import type { OnboardingForm, OnboardingFormInput } from '../../onboarding/types'
-import { saveOnboardingForm } from '../../onboarding/api/onboarding'
+import { markClientBriefSubmitted, saveOnboardingForm } from '../../onboarding/api/onboarding'
 
 export async function saveClientBrief(
   customerId: string,
@@ -8,7 +8,10 @@ export async function saveClientBrief(
   submit: boolean,
 ): Promise<OnboardingForm> {
   if (!isSupabaseConfigured || !supabase) {
-    return saveOnboardingForm(customerId, input)
+    const form = await saveOnboardingForm(customerId, input)
+    if (submit) await markClientBriefSubmitted(customerId)
+    const submittedAt = submit ? new Date().toISOString() : form.client_submitted_at
+    return { ...form, client_submitted_at: submittedAt }
   }
 
   const { data, error } = await supabase.rpc('save_client_onboarding_form', {

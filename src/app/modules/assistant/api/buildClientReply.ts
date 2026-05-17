@@ -8,7 +8,8 @@ function formatMoney(n: number) {
 
 export function buildClientReply(input: ClientReplyInput): string {
   const { report, questionKey } = input
-  const { customer, onboarding_progress, ads_summary, delivered_content } = report
+  const { customer, brief_progress, brief_submitted, team_checklist_progress, ads_summary, delivered_content } =
+    report
 
   switch (questionKey) {
     case 'ads_performance': {
@@ -31,12 +32,17 @@ ${
     }
 
     case 'onboarding_status':
-      return `ความคืบหน้า Onboarding ของ ${customer.brand_name} อยู่ที่ประมาณ ${onboarding_progress}%
+      if (brief_submitted) {
+        return `คุณส่งบรีฟของ ${customer.brand_name} แล้ว — ทีม Account กำลังตรวจความครบ (checklist ทีมประมาณ ${team_checklist_progress}%)
+
+เมื่อทีมตรวจครบจะแจ้งและเริ่มขั้นตอนถัดไป (เช่น ยิงแอด) ตามแพ็กเกจของคุณ`
+      }
+      return `ความคืบหน้าฟอร์มบรีฟของ ${customer.brand_name} อยู่ที่ประมาณ ${brief_progress}%
 
 ${
-  onboarding_progress >= 100
-    ? 'รายการหลักครบแล้ว — ทีมกำลังเตรียมขั้นตอนถัดไป (เช่น ยิงแอดหรือผลิตคอนเทนต์) ตามแพ็กเกจของคุณ'
-    : 'ยังมีรายการที่ต้องเติมข้อมูล — Account จะติดตามให้จนครบก่อนเริ่มยิงแอดเต็มรูปแบบ'
+  brief_progress >= 100
+    ? 'กรอกฟอร์มครบแล้ว — กรุณากด «ส่งบรีฟ» ในหน้าบรีฟงานเพื่อแจ้งทีม'
+    : 'ยังมีช่องที่ต้องกรอก — เปิดเมนูบรีฟงานเพื่อทำต่อ'
 }
 
 ดูรายละเอียดเพิ่มได้จากทีม Account หรือในส่วนรายงานด้านบนของหน้านี้`
