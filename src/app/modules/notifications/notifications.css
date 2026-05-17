@@ -85,3 +85,106 @@
   background: #f87171;
   color: #0f172a;
 }
+
+/* —— Lead toast (เรียลไทม์ จนกว่ารับทราบ) —— */
+.lead-toast-stack {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: min(22rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.lead-toast {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem 0.9rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.45);
+  background: rgba(15, 23, 42, 0.96);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  pointer-events: auto;
+  animation: lead-toast-in 0.35s ease-out;
+}
+
+.lead-toast--info {
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.lead-toast__pulse {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 12px 0 0 12px;
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  animation: lead-toast-pulse 1.6s ease-in-out infinite;
+}
+
+.lead-toast__body {
+  padding-left: 0.35rem;
+}
+
+.lead-toast__body strong {
+  display: block;
+  font-size: 0.92rem;
+  margin-bottom: 0.25rem;
+}
+
+.lead-toast__body p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--npc-text-muted);
+  line-height: 1.4;
+}
+
+.lead-toast__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-left: 0.35rem;
+}
+
+.lead-toast__btn {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+@keyframes lead-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes lead-toast-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 640px) {
+  .lead-toast-stack {
+    left: max(1rem, env(safe-area-inset-left));
+    right: max(1rem, env(safe-area-inset-right));
+    width: auto;
+  }
+}

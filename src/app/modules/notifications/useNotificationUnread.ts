@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { canAccessNotifications } from '../../../shared/auth/access'
+import { isSupabaseConfigured, supabase } from '../../../shared/supabase/client'
 import type { AppRole } from '../../../shared/types/roles'
 import { getUnreadNotificationCount } from './api/notifications'
+import { NOTIFICATION_PUSH_EVENT } from './leadNotification'
 import { playNotificationSound } from './notificationSound'
 
-const POLL_MS = 45_000
+const POLL_MS = 60_000
 
 function shouldPlaySound(prev: number | null, next: number): boolean {
   return prev !== null && next > prev && next > 0
@@ -46,9 +48,35 @@ export function useNotificationUnread(userId: string | undefined, roles: AppRole
       getUnreadNotificationCount(userId).then(applyCount).catch(() => {})
     }, POLL_MS)
 
+    const onPush = () => {
+      getUnreadNotificationCount(userId).then(applyCount).catch(() => {})
+    }
+    window.addEventListener(NOTIFICATION_PUSH_EVENT, onPush)
+
+    let channel: ReturnType<NonNullable<typeof supabase>['channel']> | null = null
+    if (isSupabaseConfigured && supabase) {
+      channel = supabase
+        .channel(`notif-unread:${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_notifications',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            getUnreadNotificationCount(userId).then(applyCount).catch(() => {})
+          },
+        )
+        .subscribe()
+    }
+
     return () => {
       cancelled = true
       window.clearInterval(interval)
+      window.removeEventListener(NOTIFICATION_PUSH_EVENT, onPush)
+      if (channel && supabase) void supabase.removeChannel(channel)
     }
   }, [userId, enabled])
 

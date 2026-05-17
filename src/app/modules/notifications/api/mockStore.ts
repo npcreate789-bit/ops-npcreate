@@ -1,3 +1,8 @@
+import {
+  NOTIFICATION_PUSH_EVENT,
+  buildLeadNotificationInput,
+  isLeadNotification,
+} from '../leadNotification'
 import type { UserNotification } from '../types'
 
 const KEY = 'npcreate_notifications_dev'
@@ -27,7 +32,7 @@ export const mockNotificationsApi = {
     const now = new Date().toISOString()
     const existing = load().filter((n) => n.user_id === userId)
     const keys = new Set(inputs.map((i) => i.dedupe_key))
-    const kept = existing.filter((n) => keys.has(n.dedupe_key))
+    const kept = existing.filter((n) => keys.has(n.dedupe_key) || isLeadNotification(n.dedupe_key))
     const keptKeys = new Set(kept.map((n) => n.dedupe_key))
 
     for (const input of inputs) {
@@ -68,6 +73,39 @@ export const mockNotificationsApi = {
 
   async unreadCount(userId: string): Promise<number> {
     return load().filter((n) => n.user_id === userId && !n.read_at).length
+  },
+
+  async listUnreadLeads(userId: string): Promise<UserNotification[]> {
+    return load()
+      .filter((n) => n.user_id === userId && !n.read_at && isLeadNotification(n.dedupe_key))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  },
+
+  async pushLead(
+    userId: string,
+    lead: { id: string; brand_name: string; contact_name?: string | null },
+  ) {
+    const input = buildLeadNotificationInput({ ...lead, owner_id: userId })
+    const now = new Date().toISOString()
+    const rows = load().filter(
+      (n) => !(n.user_id === userId && n.dedupe_key === input.dedupe_key),
+    )
+    rows.push({
+      id: `n-${input.dedupe_key}`,
+      user_id: userId,
+      dedupe_key: input.dedupe_key,
+      title: input.title,
+      body: input.body,
+      link: input.link,
+      severity: input.severity,
+      read_at: null,
+      created_at: now,
+      updated_at: now,
+    })
+    save(rows)
+    window.dispatchEvent(
+      new CustomEvent(NOTIFICATION_PUSH_EVENT, { detail: { userId } }),
+    )
   },
 
   seedUserId: DEV_USER,

@@ -9,6 +9,7 @@ import {
   markNotificationRead,
   syncNotifications,
 } from '../api/notifications'
+import { isLeadNotification } from '../leadNotification'
 import type { UserNotification } from '../types'
 import {
   isNotificationSoundEnabled,
@@ -223,7 +224,7 @@ export function NotificationsPage() {
                       className="crm-btn crm-btn--ghost"
                       onClick={() => void handleMarkRead(n.id)}
                     >
-                      ทำเครื่องหมายอ่านแล้ว
+                      {isLeadNotification(n.dedupe_key) ? 'รับทราบ' : 'ทำเครื่องหมายอ่านแล้ว'}
                     </button>
                   )}
                 </div>

@@ -6,6 +6,7 @@ import { CommandPalette } from '../components/CommandPalette'
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import { useKeyboardHelp } from '../hooks/useKeyboardHelp'
 import { PageHistoryTracker } from '../modules/quick-access/components/PageHistoryTracker'
+import { LeadNotificationToasts } from '../modules/notifications/components/LeadNotificationToasts'
 import { useNotificationSoundPrime } from '../modules/notifications/useNotificationSoundPrime'
 import { Sidebar } from './Sidebar'
 import './AppLayout.css'
@@ -34,6 +35,7 @@ export function AppLayout() {
           <Outlet />
         </main>
         <CommandPalette open={open} onClose={close} />
+        <LeadNotificationToasts userId={userId} roles={roles} />
       </div>
     </SidebarLayoutProvider>
   )

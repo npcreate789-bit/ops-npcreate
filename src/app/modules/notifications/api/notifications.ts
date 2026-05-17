@@ -5,6 +5,12 @@ import { buildSystemAlerts } from './buildSystemAlerts'
 import { mockNotificationsApi } from './mockStore'
 import type { UserNotification } from '../types'
 
+import {
+  buildLeadNotificationInput,
+  isLeadNotification,
+  mapNotificationRow,
+} from '../leadNotification'
+
 /** คีย์ที่ระบบสร้างจาก sync — ใช้ลบรายการที่หมดอายุโดยไม่ล้าง inbox ทั้งก้อน */
 const SYSTEM_DEDUPE_PREFIXES = [
   'finance-',
@@ -21,19 +27,12 @@ function isSystemDedupeKey(key: string): boolean {
   return SYSTEM_DEDUPE_PREFIXES.some((p) => key === p || key.startsWith(p))
 }
 
+function isPersistentNotificationKey(key: string): boolean {
+  return isLeadNotification(key)
+}
+
 function mapRow(row: Record<string, unknown>): UserNotification {
-  return {
-    id: row.id as string,
-    user_id: row.user_id as string,
-    dedupe_key: row.dedupe_key as string,
-    title: row.title as string,
-    body: row.body as string,
-    link: (row.link as string | null) ?? null,
-    severity: row.severity as UserNotification['severity'],
-    read_at: (row.read_at as string | null) ?? null,
-    created_at: row.created_at as string,
-    updated_at: row.updated_at as string,
-  }
+  return mapNotificationRow(row)
 }
 
 export async function syncNotifications(
@@ -77,6 +76,7 @@ export async function syncNotifications(
   const removeIds = (stale ?? [])
     .filter((r) => {
       const dk = r.dedupe_key as string
+      if (isPersistentNotificationKey(dk)) return false
       if (keys.includes(dk)) return false
       if (keys.length > 0) return true
       return isSystemDedupeKey(dk)
@@ -134,6 +134,49 @@ export async function markNotificationRead(userId: string, id: string): Promise<
     .eq('id', id)
     .eq('user_id', userId)
 
+  if (error) throw new Error(error.message)
+}
+
+/** แจ้งเตือน Lead ที่ยังไม่อ่าน — สำหรับ toast เรียลไทม์ */
+export async function listUnreadLeadNotifications(userId: string): Promise<UserNotification[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    return mockNotificationsApi.listUnreadLeads(userId)
+  }
+
+  const { data, error } = await supabase
+    .from('user_notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .is('read_at', null)
+    .like('dedupe_key', 'lead-new-%')
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(mapRow)
+}
+
+export async function pushLeadNotification(
+  userId: string,
+  lead: { id: string; brand_name: string; contact_name?: string | null },
+): Promise<void> {
+  const input = buildLeadNotificationInput({ ...lead, owner_id: userId })
+  if (!isSupabaseConfigured || !supabase) {
+    await mockNotificationsApi.pushLead(userId, lead)
+    return
+  }
+
+  const { error } = await supabase.from('user_notifications').upsert(
+    {
+      user_id: userId,
+      dedupe_key: input.dedupe_key,
+      title: input.title,
+      body: input.body,
+      link: input.link,
+      severity: input.severity,
+      read_at: null,
+    },
+    { onConflict: 'user_id,dedupe_key' },
+  )
   if (error) throw new Error(error.message)
 }
 
