@@ -8,6 +8,7 @@ import type { ContractRenewalStatus } from '../../renewals/types'
 import {
   canLinkCustomerAds,
   canLinkCustomerClient,
+  canLinkCustomerChat,
   canLinkCustomerCrm,
   canLinkCustomerFinance,
   canLinkCustomerOnboarding,
@@ -28,6 +29,13 @@ import { listProjectsForCustomer } from '../../projects/api/projects'
 import { projectStatusLabel } from '../../projects/constants'
 import type { Project } from '../../projects/types'
 import { customerStatusLabel } from '../constants'
+import {
+  clientWorkspaceUrl,
+  financeUrlForCustomer,
+  chatUrlForCustomer,
+  tasksUrlForCustomer,
+  primaryProjectForCustomer,
+} from '../customerLinks'
 import type { Customer360 } from '../types'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
@@ -55,6 +63,11 @@ export function Customer360Page() {
   const [customerProjects, setCustomerProjects] = useState<Project[]>([])
   const userId = profile?.id ?? ''
   const showProjects = canShowCustomer360Link(roles, '/app/projects') || !configured
+  const showChat = canLinkCustomerChat(roles) || !configured
+  const primaryProject = useMemo(
+    () => primaryProjectForCustomer(customerProjects),
+    [customerProjects],
+  )
 
   const timelineContext = useMemo(
     () =>
@@ -239,56 +252,101 @@ export function Customer360Page() {
               )}
               <span>พร้อมยิงแอด: {c.ready_for_ads ? 'ใช่' : 'ยังไม่พร้อม'}</span>
             </div>
-            <div className="customer-360-links">
-              {canLinkCustomerOnboarding(roles) && (
-                <Link to={`/app/onboarding/${c.id}`} className="crm-btn crm-btn--ghost">
-                  รับบรีฟ
-                </Link>
-              )}
-              {showProjects && (
-                <Link
-                  to={`/app/projects/new?customerId=${c.id}`}
-                  className="crm-btn crm-btn--ghost"
-                >
-                  + โปรเจกต์
-                </Link>
-              )}
-              {canLinkCustomerFinance(roles) && (
-                <Link to="/app/finance" className="crm-btn crm-btn--ghost">
-                  การเงิน
-                </Link>
-              )}
-              {canLinkCustomerAds(roles) && (
-                <Link to={`/app/ads/${c.id}`} className="crm-btn crm-btn--ghost">
-                  รายงานแอด
-                </Link>
-              )}
-              {canShowCustomer360Link(roles, '/app/tasks') && (
-                <Link to="/app/tasks" className="crm-btn crm-btn--ghost">
-                  งานภายใน
-                </Link>
-              )}
-              {canShowCustomer360ContentMetrics(roles) && (
-                <Link to="/app/content" className="crm-btn crm-btn--ghost">
-                  คอนเทนต์
-                </Link>
-              )}
-              {canLinkCustomerRenewals(roles) && (
-                <Link to="/app/renewals" className="crm-btn crm-btn--ghost">
-                  ต่อสัญญา
-                </Link>
-              )}
-              {canLinkCustomerCrm(roles) && c.lead_id && (
-                <Link to={`/app/crm/${c.lead_id}`} className="crm-btn crm-btn--ghost">
-                  Lead ต้นทาง
-                </Link>
-              )}
+            <p className="customer-360-flow-hint muted">
+              ลำดับงาน: การเงิน → รับบรีฟ → สร้างโปรเจกต์ → แชท/งาน — ลูกค้าใช้พื้นที่ลูกค้าแยกจากทีม
+            </p>
+
+            <div className="customer-360-link-groups">
+              <div className="customer-360-link-group">
+                <h3 className="customer-360-link-group__title">ทีมงาน</h3>
+                <div className="customer-360-links">
+                  {canLinkCustomerOnboarding(roles) && (
+                    <Link to={`/app/onboarding/${c.id}`} className="crm-btn crm-btn--ghost">
+                      รับบรีฟ
+                    </Link>
+                  )}
+                  {showProjects && (
+                    <Link
+                      to={`/app/projects/new?customerId=${c.id}`}
+                      className="crm-btn crm-btn--ghost"
+                    >
+                      + โปรเจกต์
+                    </Link>
+                  )}
+                  {canLinkCustomerFinance(roles) && (
+                    <Link to={financeUrlForCustomer(c.id)} className="crm-btn crm-btn--ghost">
+                      การเงิน
+                    </Link>
+                  )}
+                  {showChat && (
+                    <Link
+                      to={chatUrlForCustomer(primaryProject?.id)}
+                      className="crm-btn crm-btn--ghost"
+                    >
+                      แชทลูกค้า
+                    </Link>
+                  )}
+                  {canShowCustomer360Link(roles, '/app/tasks') && (
+                    <Link
+                      to={tasksUrlForCustomer(primaryProject?.id)}
+                      className="crm-btn crm-btn--ghost"
+                    >
+                      งานภายใน
+                    </Link>
+                  )}
+                  {canLinkCustomerAds(roles) && (
+                    <Link to={`/app/ads/${c.id}`} className="crm-btn crm-btn--ghost">
+                      รายงานแอด
+                    </Link>
+                  )}
+                  {canShowCustomer360ContentMetrics(roles) && (
+                    <Link to="/app/content" className="crm-btn crm-btn--ghost">
+                      คอนเทนต์
+                    </Link>
+                  )}
+                  {canLinkCustomerRenewals(roles) && (
+                    <Link to="/app/renewals" className="crm-btn crm-btn--ghost">
+                      ต่อสัญญา
+                    </Link>
+                  )}
+                  {canLinkCustomerCrm(roles) && c.lead_id && (
+                    <Link to={`/app/crm/${c.lead_id}`} className="crm-btn crm-btn--ghost">
+                      Lead ต้นทาง
+                    </Link>
+                  )}
+                </div>
+              </div>
+
               {canLinkCustomerClient(roles) && (
-                <Link to="/app/client" className="crm-btn crm-btn--ghost">
-                  รายงานลูกค้า
-                </Link>
+                <div className="customer-360-link-group">
+                  <h3 className="customer-360-link-group__title">พื้นที่ลูกค้า (ดูแทนลูกค้า)</h3>
+                  <div className="customer-360-links">
+                    <Link to={clientWorkspaceUrl(c.id)} className="crm-btn crm-btn--primary">
+                      ภาพรวม
+                    </Link>
+                    <Link to={clientWorkspaceUrl(c.id, 'brief')} className="crm-btn crm-btn--ghost">
+                      บรีฟ
+                    </Link>
+                    <Link to={clientWorkspaceUrl(c.id, 'chat')} className="crm-btn crm-btn--ghost">
+                      แชท
+                    </Link>
+                    <Link
+                      to={clientWorkspaceUrl(c.id, 'projects')}
+                      className="crm-btn crm-btn--ghost"
+                    >
+                      โปรเจกต์
+                    </Link>
+                    <Link
+                      to={clientWorkspaceUrl(c.id, 'payment')}
+                      className="crm-btn crm-btn--ghost"
+                    >
+                      ชำระเงิน
+                    </Link>
+                  </div>
+                </div>
               )}
             </div>
+
           </section>
 
           {showLeadAttachments && leadId && leadOwnerId && (

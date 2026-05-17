@@ -41,10 +41,11 @@ export function ClientPreviewBar({
         )}
         {canPreview && customers.length > 0 && (
           <section className="card card--wide">
-            <label className="task-field">
-              <span className="task-field__label">ดูตัวอย่าง (ทีมงาน)</span>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem' }}>
+              <span>ดูตัวอย่าง (ทีมงาน)</span>
               <select
-                className="task-select"
+                className="crm-select"
+                style={{ width: '100%', minWidth: 0 }}
                 value={previewId}
                 onChange={(e) => onPreviewChange(e.target.value)}
               >
@@ -79,10 +80,11 @@ export function ClientPreviewBar({
         <p className="phase2-scope-badge">โหมดตัวอย่าง (ทีมงาน)</p>
       )}
       {canPreview && (
-        <label className="task-field" style={{ minWidth: '12rem', marginBottom: '1rem' }}>
-          <span className="task-field__label">เปลี่ยนลูกค้า</span>
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.8rem', minWidth: '12rem', marginBottom: '1rem' }}>
+          <span>เปลี่ยนลูกค้า</span>
           <select
-            className="task-select"
+            className="crm-select"
+            style={{ width: '100%', minWidth: 0 }}
             value={previewId || data.customer.id}
             onChange={(e) => onPreviewChange(e.target.value)}
           >

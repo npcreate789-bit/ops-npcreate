@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { hasClientPortalStaffPreview } from '../../../../shared/auth/access'
 import { listCustomersForSelect } from '../../finance/api/payments'
@@ -9,6 +10,8 @@ import type { ClientReport } from '../types'
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function useClientWorkspace() {
+  const [searchParams] = useSearchParams()
+  const previewFromUrl = searchParams.get('preview') ?? ''
   const { profile, configured } = useAuth()
   const userId = profile?.id ?? DEV_OWNER
   const roles = profile?.roles ?? []
@@ -52,6 +55,12 @@ export function useClientWorkspace() {
       .then(setCustomers)
       .catch(() => setCustomers([]))
   }, [canPreview])
+
+  useEffect(() => {
+    if (previewFromUrl && canPreview) {
+      setPreviewId(previewFromUrl)
+    }
+  }, [previewFromUrl, canPreview])
 
   useEffect(() => {
     void load()

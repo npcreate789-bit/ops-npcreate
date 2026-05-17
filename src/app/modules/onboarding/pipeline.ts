@@ -55,8 +55,8 @@ export function buildOnboardingNextSteps(
     case 'awaiting_brief':
       steps.push({
         label: 'แจ้งลูกค้ากรอกบรีฟ',
-        path: '/app/client/brief',
-        detail: 'ลูกค้าใช้เมนูบรีฟงานใน Client Workspace',
+        path: `/app/client/brief?preview=${id}`,
+        detail: 'ลูกค้าใช้เมนูบรีฟงานในพื้นที่ลูกค้า',
         primary: true,
       })
       steps.push({
@@ -105,8 +105,8 @@ export function buildOnboardingNextSteps(
         detail: 'บันทึกผลรายวัน',
       })
       steps.push({
-        label: 'Client Workspace',
-        path: '/app/client',
+        label: 'พื้นที่ลูกค้า',
+        path: `/app/client?preview=${id}`,
         detail: 'ลูกค้าดูรายงานและแชท',
       })
       break

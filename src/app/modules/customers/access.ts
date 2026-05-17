@@ -78,6 +78,10 @@ export function canLinkCustomerClient(roles: AppRole[]): boolean {
   return canShowCustomer360Link(roles, '/app/client')
 }
 
+export function canLinkCustomerChat(roles: AppRole[]): boolean {
+  return canShowCustomer360Link(roles, '/app/chat')
+}
+
 export function canLinkCustomerCrm(roles: AppRole[]): boolean {
   return canShowCustomer360Link(roles, '/app/crm')
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canCreateSalesQuotation,
@@ -35,6 +35,8 @@ export function FinancePage() {
   const showSalesLink = canCreateSalesQuotation(roles) || !configured
   const showWorkLink = canViewWorkHub(roles) || !configured
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const customerFilter = searchParams.get('customerId') ?? undefined
   const [rows, setRows] = useState<Payment[]>([])
   const [documents, setDocuments] = useState<Payment[]>([])
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
@@ -81,10 +83,14 @@ export function FinancePage() {
   }, [rows])
 
   const displayedRows = useMemo(() => {
-    if (statusFilter === 'all') return rows
-    if (statusFilter === 'overdue') return rows.filter((r) => isPaymentOverdue(r))
-    return rows.filter((r) => r.status === statusFilter)
-  }, [rows, statusFilter])
+    let list = rows
+    if (customerFilter) {
+      list = list.filter((r) => r.customer_id === customerFilter)
+    }
+    if (statusFilter === 'all') return list
+    if (statusFilter === 'overdue') return list.filter((r) => isPaymentOverdue(r))
+    return list.filter((r) => r.status === statusFilter)
+  }, [rows, statusFilter, customerFilter])
 
   const overdueCount = pipelineCounts.overdue ?? 0
 
@@ -145,6 +151,20 @@ export function FinancePage() {
       {readOnly && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
           โหมดดูอย่างเดียว — บันทึกและยืนยันชำระเงินได้เฉพาะ Admin / CEO
+        </p>
+      )}
+
+      {customerFilter && (
+        <p className="crm-banner">
+          แสดงเฉพาะรายการของลูกค้านี้ —{' '}
+          <Link to="/app/finance">ดูการเงินทั้งหมด</Link>
+          {customerFilter && (
+            <>
+              {' '}
+              ·{' '}
+              <Link to={`/app/customers/${customerFilter}`}>ลูกค้า 360°</Link>
+            </>
+          )}
         </p>
       )}
 

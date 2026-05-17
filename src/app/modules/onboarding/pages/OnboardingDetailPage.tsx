@@ -15,6 +15,7 @@ import {
 import { OnboardingNextStepsPanel } from '../components/OnboardingNextStepsPanel'
 import type { ChecklistValue, OnboardingDetail, OnboardingFormInput } from '../types'
 import { CHECKLIST_ITEMS } from '../constants'
+import { clientWorkspaceUrl, financeUrlForCustomer } from '../../customers/customerLinks'
 import { customerStatusLabelTh } from '../pipeline'
 import '../../crm/crm.css'
 import '../../sales/sales.css'
@@ -196,9 +197,9 @@ export function OnboardingDetailPage() {
         <p className="onboarding-detail-links muted">
           <Link to={`/app/customers/${customerId}`}>ลูกค้า 360°</Link>
           {' · '}
-          <Link to="/app/finance">การเงิน</Link>
+          <Link to={financeUrlForCustomer(customerId!)}>การเงิน</Link>
           {' · '}
-          <Link to="/app/client/brief">บรีฟ (มุมลูกค้า)</Link>
+          <Link to={clientWorkspaceUrl(customerId!, 'brief')}>พื้นที่ลูกค้า · บรีฟ</Link>
           {showWorkLink && (
             <>
               {' · '}
@@ -206,8 +207,8 @@ export function OnboardingDetailPage() {
             </>
           )}
         </p>
-        <p>
-          ความครบ checklist {detail.customer.progress}% —{' '}
+        <p title="เปอร์เซ็นต์จาก checklist 8 ข้อของทีม Account — ไม่ใช่ความคืบหน้าฟอร์มบรีฟฝั่งลูกค้า">
+          Checklist ทีม {detail.customer.progress}% —{' '}
           <span
             className={
               detail.customer.ready_for_ads

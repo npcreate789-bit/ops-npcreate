@@ -138,7 +138,7 @@ export function OnboardingListPage() {
                 <tr>
                   <th>แบรนด์</th>
                   <th>ขั้นตอน</th>
-                  <th>ความครบ</th>
+                  <th title="ความครบ checklist ทีม Account">Checklist ทีม</th>
                   <th>พร้อมยิงแอด</th>
                   <th>สถานะลูกค้า</th>
                 </tr>

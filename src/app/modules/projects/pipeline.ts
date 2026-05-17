@@ -52,8 +52,8 @@ export function buildProjectNextSteps(project: Project): ProjectNextStep[] {
         primary: true,
       })
       steps.push({
-        label: 'มุมลูกค้า (บรีฟ)',
-        path: '/app/client/brief',
+        label: 'พื้นที่ลูกค้า (บรีฟ)',
+        path: `/app/client/brief?preview=${cid}`,
         detail: 'ลูกค้ากรอกและส่งบรีฟ',
       })
       break
@@ -100,8 +100,8 @@ export function buildProjectNextSteps(project: Project): ProjectNextStep[] {
       break
     case 'completed':
       steps.push({
-        label: 'Client Workspace',
-        path: '/app/client',
+        label: 'พื้นที่ลูกค้า',
+        path: `/app/client?preview=${cid}`,
         detail: 'ลูกค้าดูรายงานและผลงาน',
         primary: true,
       })
@@ -136,11 +136,16 @@ export function buildProjectNextSteps(project: Project): ProjectNextStep[] {
       break
   }
 
-  steps.push({
-    label: 'ลูกค้า 360°',
-    path: `/app/customers/${cid}`,
-    detail: 'ข้อมูลสัญญาและลิงก์อื่น',
-  })
+  const has360 = steps.some(
+    (s) => s.path === `/app/customers/${cid}` && s.primary,
+  )
+  if (!has360) {
+    steps.push({
+      label: 'ลูกค้า 360°',
+      path: `/app/customers/${cid}`,
+      detail: 'ข้อมูลสัญญาและลิงก์อื่น',
+    })
+  }
 
   return steps
 }
