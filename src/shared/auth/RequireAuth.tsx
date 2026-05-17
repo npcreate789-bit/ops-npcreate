@@ -1,9 +1,10 @@
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { AppRole } from '../types/roles'
 import { allowDevAuthBypass, requiresSupabaseInProduction } from '../supabase/runtime'
+import { AuthAccessBlocked } from './AuthAccessBlocked'
 import { useAuth } from './AuthProvider'
-import { defaultAppHome, loginPathForAudience, loginPathForReturnTo } from './postLoginPath'
+import { defaultAppHome, loginPathForReturnTo } from './postLoginPath'
 import { SupabaseRequiredGate } from './SupabaseRequiredGate'
 import './auth.css'
 
@@ -19,7 +20,7 @@ export function RequireAuth({
   roles,
   allowMustChangePassword = false,
 }: RequireAuthProps) {
-  const { session, profile, loading, configured, signOut, profileLoadError } = useAuth()
+  const { session, profile, loading, configured, profileLoadError } = useAuth()
   const location = useLocation()
   const awaitingProfile =
     Boolean(session?.user) && configured && profile === null && !profileLoadError
@@ -47,30 +48,7 @@ export function RequireAuth({
   }
 
   if (profile && profile.roles.length === 0) {
-    return (
-      <div className="auth-loading auth-loading--blocked">
-        <h2>ยังไม่ได้รับสิทธิ์ใช้งาน</h2>
-        <p className="muted">
-          บัญชี <strong>{profile.login_id || profile.email}</strong> ยังไม่ถูกเปิดใช้งาน
-          — ทีมจะมอบสิทธิ์หลังเริ่มสัญญาหรือสร้างบัญชีให้แล้ว
-        </p>
-        <div className="auth-blocked__actions">
-          <Link to="/contact" className="auth-blocked__btn auth-blocked__btn--primary">
-            ติดต่อทีมงาน
-          </Link>
-          <Link to={loginPathForAudience('client')} className="auth-blocked__btn">
-            กลับหน้าเข้าสู่ระบบ
-          </Link>
-          <button
-            type="button"
-            className="auth-blocked__btn auth-blocked__btn--ghost"
-            onClick={() => void signOut()}
-          >
-            ออกจากระบบ
-          </button>
-        </div>
-      </div>
-    )
+    return <AuthAccessBlocked />
   }
 
   if (roles?.length && profile && !roles.some((r) => profile.roles.includes(r))) {

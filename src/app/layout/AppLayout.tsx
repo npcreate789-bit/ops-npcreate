@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { isClientOnlyAccount } from '../../shared/auth/postLoginPath'
 import { ClientPortalHeader } from '../modules/client/layout/ClientPortalHeader'
@@ -21,13 +21,9 @@ import { SidebarLayoutProvider } from './SidebarLayoutContext'
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function AppLayout() {
-  const location = useLocation()
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
-  const clientPortalOnly =
-    configured &&
-    isClientOnlyAccount(roles) &&
-    location.pathname.startsWith('/app/client')
+  const clientPortalOnly = configured && isClientOnlyAccount(roles)
   const userId = profile?.id ?? DEV_OWNER
   const paletteEnabled = canUseGlobalSearch(roles) || !configured
   const trackHistory = canUseQuickAccess(roles) || !configured

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import './auth.css'
 
 /** บล็อกแอปเมื่อ production build ไม่มี VITE_SUPABASE_* */
@@ -11,6 +12,11 @@ export function SupabaseRequiredGate() {
         <code>.env.local</code> สำหรับ build)
       </p>
       <p className="muted">ดูตัวอย่างใน <code>.env.example</code> แล้ว deploy ใหม่</p>
+      <div className="auth-blocked__actions">
+        <Link to="/contact" className="auth-blocked__btn">
+          ติดต่อทีมพัฒนา
+        </Link>
+      </div>
     </div>
   )
 }

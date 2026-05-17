@@ -28,6 +28,7 @@ function ClientWorkspaceShell() {
   const isStaffPreview = ws.canPreview && !ws.isClientOnly
   const previewForNav =
     isStaffPreview && (ws.previewId || customer?.id) ? ws.previewId || customer?.id : undefined
+  const showWorkspaceNav = Boolean(customer) || (ws.canPreview && !ws.isClientOnly)
 
   return (
     <div className="client-workspace">
@@ -71,25 +72,29 @@ function ClientWorkspaceShell() {
         </>
       )}
 
-      <nav className="client-workspace__nav" aria-label="พื้นที่ลูกค้า">
-        {TABS.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={withClientPreview(tab.to, previewForNav)}
-            end={tab.end}
-            title={tab.hint}
-            className={({ isActive }) =>
-              `client-workspace__tab${isActive ? ' client-workspace__tab--active' : ''}`
-            }
-          >
-            {tab.label}
-          </NavLink>
-        ))}
-      </nav>
+      {showWorkspaceNav ? (
+        <>
+          <nav className="client-workspace__nav" aria-label="พื้นที่ลูกค้า">
+            {TABS.map((tab) => (
+              <NavLink
+                key={tab.to}
+                to={withClientPreview(tab.to, previewForNav)}
+                end={tab.end}
+                title={tab.hint}
+                className={({ isActive }) =>
+                  `client-workspace__tab${isActive ? ' client-workspace__tab--active' : ''}`
+                }
+              >
+                {tab.label}
+              </NavLink>
+            ))}
+          </nav>
 
-      <div className="client-workspace__body">
-        <Outlet />
-      </div>
+          <div className="client-workspace__body">
+            <Outlet />
+          </div>
+        </>
+      ) : null}
     </div>
   )
 }

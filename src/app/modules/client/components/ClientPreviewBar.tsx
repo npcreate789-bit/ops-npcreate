@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import '../../../../shared/auth/auth.css'
 import type { CustomerOption } from '../../finance/types'
 import type { ClientReport } from '../types'
 
@@ -33,6 +34,14 @@ export function ClientPreviewBar({
         <p className="muted">
           เมื่อทีมผูกบัญชีแล้ว คุณจะเห็นบรีฟ โปรเจกต์ รายงานแอด และการชำระเงินที่นี่
         </p>
+        <div className="auth-blocked__actions client-preview-bar__actions">
+          <Link to="/contact" className="auth-blocked__btn auth-blocked__btn--primary">
+            ติดต่อทีมงาน
+          </Link>
+          <Link to="/app/help" className="auth-blocked__btn">
+            วิธีใช้งาน
+          </Link>
+        </div>
       </section>
     )
   }

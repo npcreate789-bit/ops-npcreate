@@ -69,3 +69,18 @@
   background: transparent;
   color: var(--npc-text-muted);
 }
+
+.auth-blocked__hint,
+.auth-blocked__error-detail {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.auth-blocked__error-detail {
+  word-break: break-word;
+}
+
+.client-preview-bar__actions {
+  margin-top: 1rem;
+}

@@ -22,6 +22,9 @@ export function ClientPortalHeader() {
         </div>
       </div>
       <nav className="client-portal-header__actions" aria-label="บัญชีลูกค้า">
+        <Link to="/app/help" className="client-portal-header__link">
+          ช่วยเหลือ
+        </Link>
         <Link to="/app/settings" className="client-portal-header__link">
           ตั้งค่า
         </Link>

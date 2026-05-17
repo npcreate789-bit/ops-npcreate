@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { effectiveRolesForNav, sidebarNavItemsForRoles } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import {
@@ -20,7 +20,6 @@ import {
   isClientOnlyHome,
 } from './home/access'
 import { HOME_MODULE_HINTS } from './home/constants'
-import { HomeClientDashboard } from './home/HomeClientDashboard'
 import { HomeWorkPreview } from './home/HomeWorkPreview'
 import { useHomeDashboard } from './home/useHomeDashboard'
 import './pages.css'
@@ -38,9 +37,7 @@ export function HomePage() {
   const clientOnly = isClientOnlyHome(roles, configured)
 
   if (clientOnly) {
-    return (
-      <HomeClientDashboard displayName={displayName} profileLoadError={profileLoadError} />
-    )
+    return <Navigate to="/app/client" replace />
   }
 
   const showWork = canViewWorkHub(roles) || !configured
