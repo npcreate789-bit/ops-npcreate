@@ -11,7 +11,6 @@ import {
 import { ROLE_LABELS } from '../../shared/types/roles'
 import { QuickAccessPanel } from '../modules/quick-access/components/QuickAccessPanel'
 import { useNotificationUnread } from '../modules/notifications/useNotificationUnread'
-import { helpFlowStepsForRoles } from '../modules/help/access'
 import '../modules/crm/crm.css'
 import {
   bangkokGreeting,
@@ -21,6 +20,7 @@ import {
   isClientOnlyHome,
 } from './home/access'
 import { HOME_MODULE_HINTS } from './home/constants'
+import { HomeClientDashboard } from './home/HomeClientDashboard'
 import { HomeWorkPreview } from './home/HomeWorkPreview'
 import { useHomeDashboard } from './home/useHomeDashboard'
 import './pages.css'
@@ -36,6 +36,13 @@ export function HomePage() {
   const displayName = profile?.full_name?.trim() || profile?.email?.split('@')[0] || 'ผู้ใช้งาน'
 
   const clientOnly = isClientOnlyHome(roles, configured)
+
+  if (clientOnly) {
+    return (
+      <HomeClientDashboard displayName={displayName} profileLoadError={profileLoadError} />
+    )
+  }
+
   const showWork = canViewWorkHub(roles) || !configured
   const showQuickAccess = canUseQuickAccess(roles) || !configured
   const showPaletteHint = canUseGlobalSearch(roles) || !configured
@@ -55,16 +62,13 @@ export function HomePage() {
   const priorityActions = homePriorityActions(navRoles, clientOnly)
   const modules = homeModulesForRoles(roles, configured)
   const moduleTotal = homeAllModuleCount(roles, configured)
-  const flowSteps = helpFlowStepsForRoles(roles, configured)
   const navModuleCount = sidebarNavItemsForRoles(navRoles).filter((i) => i.path !== '/app').length
 
-  const primaryCta = clientOnly
-    ? { path: '/app/client', label: 'เปิดรายงานของฉัน' }
-    : showWork
-      ? { path: '/app/work', label: 'ดูงานทั้งหมด' }
-      : priorityActions[0]
-        ? { path: priorityActions[0].path, label: priorityActions[0].labelTh }
-        : null
+  const primaryCta = showWork
+    ? { path: '/app/work', label: 'ดูงานทั้งหมด' }
+    : priorityActions[0]
+      ? { path: priorityActions[0].path, label: priorityActions[0].labelTh }
+      : null
 
   return (
     <div className="page home-dashboard">
@@ -73,9 +77,7 @@ export function HomePage() {
           <p className="home-hero__eyebrow">{bangkokGreeting()}</p>
           <h1 id="home-greeting">{displayName}</h1>
           <p className="home-hero__sub">
-            {clientOnly
-              ? 'ศูนย์รวมรายงานและข้อมูลของคุณ — เปิดรายงานลูกค้าเพื่อดูผลงานและถามผู้ช่วยได้'
-              : 'ภาพรวมงานวันนี้ แจ้งเตือน และทางลัดไปโมดูลที่คุณใช้บ่อย'}
+            ภาพรวมงานวันนี้ แจ้งเตือน และทางลัดไปโมดูลที่คุณใช้บ่อย
           </p>
           {profile?.roles.length ? (
             <div className="home-hero__roles" aria-label="บทบาท">
@@ -117,7 +119,7 @@ export function HomePage() {
         <p className="crm-banner crm-banner--warn">กำลังโหลดบทบาท…</p>
       )}
 
-      {!clientOnly && workEnabled && (
+      {workEnabled && (
         <section className="home-kpi-grid" aria-label="สรุปงาน">
           <Link to="/app/work" className={`home-kpi${summary.overdue > 0 ? ' home-kpi--warn' : ''}`}>
             <span className="home-kpi__label">เกินกำหนด</span>
@@ -144,23 +146,8 @@ export function HomePage() {
         </section>
       )}
 
-      {clientOnly && (
-        <section className="home-kpi-grid" aria-label="ทางลัด">
-          <Link to="/app/client" className="home-kpi home-kpi--accent">
-            <span className="home-kpi__label">รายงาน</span>
-            <span className="home-kpi__value">→</span>
-            <span className="home-kpi__hint">ดูผลงานและ KPI</span>
-          </Link>
-          <Link to="/app/help" className="home-kpi">
-            <span className="home-kpi__label">ช่วยเหลือ</span>
-            <span className="home-kpi__value">?</span>
-            <span className="home-kpi__hint">คู่มือการใช้งาน</span>
-          </Link>
-        </section>
-      )}
-
       <div className="home-layout">
-        {!clientOnly && showWork && hasKinds && (
+        {showWork && hasKinds && (
           <section className="home-panel" aria-labelledby="home-work-heading">
             <header className="home-panel__head">
               <h2 id="home-work-heading">งานที่ต้องทำ</h2>
@@ -186,21 +173,10 @@ export function HomePage() {
           </section>
         )}
 
-        {!clientOnly && showWork && !hasKinds && configured && (
+        {showWork && !hasKinds && configured && (
           <section className="home-panel">
             <h2>งานของฉัน</h2>
             <p className="muted">ไม่มีประเภทงานที่แสดงได้สำหรับบทบาทนี้</p>
-          </section>
-        )}
-
-        {clientOnly && (
-          <section className="home-panel" aria-labelledby="home-client-flow">
-            <h2 id="home-client-flow">เริ่มต้น</h2>
-            <ol className="home-flow">
-              {flowSteps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
           </section>
         )}
 

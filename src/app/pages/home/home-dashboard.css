@@ -365,3 +365,82 @@ a.home-kpi:hover {
 .home-quick-access .quick-access {
   margin: 0;
 }
+
+/* —— Client-only home (/app) —— */
+.home-dashboard--client {
+  max-width: 52rem;
+}
+
+.home-hero--client {
+  margin-bottom: 0;
+}
+
+.home-client-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.65rem;
+}
+
+.home-client-action {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.home-client-action:hover {
+  border-color: rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.06);
+}
+
+.home-client-action__icon {
+  font-size: 1.15rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.home-client-action strong {
+  font-size: 0.9rem;
+}
+
+.home-client-action span.muted {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.home-client-todos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-client-todos li + li {
+  margin-top: 0.35rem;
+}
+
+.home-client-todos__link {
+  display: block;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.88rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.home-client-todos__link:hover {
+  border-color: rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.05);
+}
+
+.home-client-todos__link--urgent {
+  border-color: rgba(251, 191, 36, 0.4);
+  background: rgba(251, 191, 36, 0.06);
+}

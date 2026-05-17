@@ -16,6 +16,46 @@ export const HOME_PRIORITY_PATHS = [
 
 export const HOME_CLIENT_PRIORITY_PATHS = ['/app/client', '/app/help'] as const
 
+/** ทางลัดหลักบนหน้าหลักลูกค้า — สอดคล้องแท็บ Client Workspace */
+export const HOME_CLIENT_ACTIONS = [
+  {
+    path: '/app/client',
+    label: 'ภาพรวม',
+    icon: '◈',
+    hint: 'ความคืบหน้าและ KPI ล่าสุด',
+  },
+  {
+    path: '/app/client/chat',
+    label: 'แชท',
+    icon: '◎',
+    hint: 'คุยกับทีม NP Create',
+  },
+  {
+    path: '/app/client/brief',
+    label: 'บรีฟงาน',
+    icon: '✎',
+    hint: 'กรอกข้อมูลแบรนด์และสินค้า',
+  },
+  {
+    path: '/app/client/projects',
+    label: 'โปรเจกต์',
+    icon: '▣',
+    hint: 'ติดตามงานแยกตามบริการ',
+  },
+  {
+    path: '/app/client/reports',
+    label: 'รายงาน',
+    icon: '▦',
+    hint: 'ผลโฆษณาและรายงานรายเดือน',
+  },
+  {
+    path: '/app/client/payment',
+    label: 'การชำระเงิน',
+    icon: '◇',
+    hint: 'สัญญาและใบเสนอราคา',
+  },
+] as const
+
 /** คำอธิบายสั้นสำหรับการ์ดเมนู */
 export const HOME_MODULE_HINTS: Record<string, string> = {
   '/app/work': 'งานค้าง นัด Lead สัญญา และแจ้งเตือน',
@@ -27,7 +67,7 @@ export const HOME_MODULE_HINTS: Record<string, string> = {
   '/app/tasks': 'งานภายในทีม',
   '/app/dashboard': 'KPI และภาพรวมผู้บริหาร',
   '/app/content': 'งานคอนเทนต์และ UGC',
-  '/app/client': 'รายงานและผู้ช่วยสำหรับลูกค้า',
+  '/app/client': 'พื้นที่ลูกค้า — ภาพรวม แชท และรายงาน',
   '/app/creators': 'ฐานข้อมูลครีเอเตอร์',
   '/app/renewals': 'สัญญาใกล้หมดอายุ',
   '/app/reports': 'รายงานขั้นสูง',
@@ -35,8 +75,8 @@ export const HOME_MODULE_HINTS: Record<string, string> = {
   '/app/customers': 'ข้อมูลลูกค้า 360°',
   '/app/ops': 'เช็กลิสต์ Ops และ deploy',
   '/app/admin': 'ผู้ใช้และบทบาท',
-  '/app/help': 'เช็กลิสต์เริ่มต้น · คีย์ลัด · Flow',
-  '/app/settings': 'บัญชีและการจัดวางหน้าจอ',
+  '/app/help': 'คู่มือและคำถามที่พบบ่อย',
+  '/app/settings': 'บัญชีและรหัสผ่าน',
   '/app/status': 'เวอร์ชันแอปและการเชื่อมต่อ',
 }
 

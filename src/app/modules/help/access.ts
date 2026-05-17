@@ -105,8 +105,9 @@ const FLOW_STAFF = [
 ] as const
 
 const FLOW_CLIENT = [
-  'เปิดรายงานลูกค้าของคุณในเมนูรายงานลูกค้า',
-  'ใช้ผู้ช่วย AI ในหน้ารายงาน (ถามข้อมูลของคุณเท่านั้น)',
+  'กรอกบรีฟงานให้ครบ — เมนูบรีฟใน Client Workspace',
+  'แชทกับทีม NP Create เมื่อมีคำถามหรือไฟล์แนบ',
+  'ดูรายงานผลโฆษณาและสรุปรายเดือนในเมนูรายงาน',
 ] as const
 
 export function helpFlowStepsForRoles(roles: AppRole[], configured: boolean): string[] {
