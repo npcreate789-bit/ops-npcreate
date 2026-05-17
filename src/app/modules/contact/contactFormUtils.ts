@@ -10,6 +10,15 @@ export function friendlyContactSubmitError(message: string): string {
   if (m.includes('leads_owner_id_fkey') || m.includes('no lead owner')) {
     return 'ระบบยังไม่ได้ตั้งผู้รับ Lead — กรุณาติดต่อทีม NP Create ทาง LINE หรือโทรศัพท์'
   }
+  if (m.includes('rate_limit_duplicate')) {
+    return 'ส่งข้อมูลชุดเดิมไปแล้วเมื่อสักครู่ กรุณารอสักครู่ก่อนลองใหม่'
+  }
+  if (m.includes('rate_limit')) {
+    return 'ส่งข้อมูลบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่'
+  }
+  if (m.includes('too long') || m.includes('too many services')) {
+    return 'ข้อมูลยาวเกินไป กรุณาย่อรายละเอียดแล้วลองใหม่'
+  }
   return message
 }
 

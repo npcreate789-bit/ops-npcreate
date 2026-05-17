@@ -8,6 +8,13 @@ import {
   COMPANY_TAGLINE_EN,
 } from '../../../../shared/company/companyProfile'
 import { ContactInput, ContactSelect, ContactTextarea } from '../components/ContactField'
+import {
+  contactCooldownMessage,
+  contactFormTooFastMessage,
+  CONTACT_MIN_FORM_MS,
+  getContactCooldownRemainingMs,
+  markContactCooldown,
+} from '../contactRateLimit'
 import { friendlyContactSubmitError, validateContactForm } from '../contactFormUtils'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
@@ -28,8 +35,10 @@ const SUCCESS_STEPS = [
 export function ContactPage() {
   const formRef = useRef<HTMLFormElement>(null)
   const brandRef = useRef<HTMLInputElement>(null)
+  const formReadyAtRef = useRef(Date.now())
 
   const [brandName, setBrandName] = useState('')
+  const [companyWebsite, setCompanyWebsite] = useState('')
   const [contactName, setContactName] = useState('')
   const [phone, setPhone] = useState('')
   const [lineId, setLineId] = useState('')
@@ -53,6 +62,20 @@ export function ContactPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
+
+    const cooldownMs = getContactCooldownRemainingMs()
+    if (cooldownMs > 0) {
+      setFormError(contactCooldownMessage(cooldownMs))
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
+    if (Date.now() - formReadyAtRef.current < CONTACT_MIN_FORM_MS) {
+      setFormError(contactFormTooFastMessage())
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+
     const brandErr = validateContactForm(brandName)
     if (brandErr) {
       setFieldErrors({ brand: brandErr })
@@ -77,7 +100,9 @@ export function ContactPage() {
         ad_budget_monthly: budget ? Number(budget) : null,
         shop_links: shopLinks,
         notes,
+        company_website: companyWebsite,
       })
+      markContactCooldown()
       setDone(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
@@ -159,6 +184,18 @@ export function ContactPage() {
 
         <div className="contact-form-card">
           <form ref={formRef} className="contact-form" onSubmit={handleSubmit} noValidate>
+            <div className="contact-honeypot" aria-hidden="true">
+              <label htmlFor="contact-company-website">Company website</label>
+              <input
+                id="contact-company-website"
+                name="company_website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={companyWebsite}
+                onChange={(e) => setCompanyWebsite(e.target.value)}
+              />
+            </div>
             {formError && (
               <div className="contact-alert contact-alert--error" role="alert">
                 {formError}

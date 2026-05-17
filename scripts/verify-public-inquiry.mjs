@@ -43,7 +43,7 @@ if (fnErr) {
     console.error('❌ RPC submit_public_inquiry ยังไม่มี — รัน: npm run db:push (หลัง supabase login)')
     process.exit(1)
   }
-  if (msg.includes('brand_name is required')) {
+  if (msg.includes('brand_name is required') || msg.includes('rate_limit')) {
     if (!doSubmit) {
       console.log('✅ RPC submit_public_inquiry พร้อมใช้งาน')
       console.log('   ทดสอบส่งจริง: node scripts/verify-public-inquiry.mjs --submit')
