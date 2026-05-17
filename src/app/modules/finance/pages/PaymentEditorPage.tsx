@@ -14,6 +14,7 @@ import {
 import type { CustomerOption, Payment, PaymentInput } from '../types'
 import { PaymentForm } from '../components/PaymentForm'
 import { PaymentDocumentsSection } from '../components/PaymentDocumentsSection'
+import { PaymentNextStepsPanel } from '../components/PaymentNextStepsPanel'
 import { PaymentSlipPreview } from '../components/PaymentSlipPreview'
 import '../../crm/crm.css'
 import '../../sales/sales.css'
@@ -151,10 +152,15 @@ export function PaymentEditorPage() {
       {initial?.confirmed_at && (
         <p className="crm-banner no-print">
           ยืนยันชำระแล้ว — ลูกค้า Active แล้ว ไปที่{' '}
-          <Link to={`/app/onboarding/${initial.customer_id}`}>รับบรีฟลูกค้า</Link>{' '}
-          เพื่อกรอกข้อมูลก่อนยิงแอด
+          <Link to={`/app/onboarding/${initial.customer_id}`}>รับบรีฟลูกค้า</Link>
+          {' · '}
+          <Link to="/app/client">Client Workspace</Link>
+          {' · '}
+          <Link to={`/app/customers/${initial.customer_id}`}>ลูกค้า 360°</Link>
         </p>
       )}
+
+      {!isNew && initial && <PaymentNextStepsPanel payment={initial} />}
 
       <section className="card card--wide no-print">
         <PaymentForm

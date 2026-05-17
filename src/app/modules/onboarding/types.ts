@@ -3,6 +3,7 @@ export type ChecklistValue = 'pending' | 'done' | 'yes' | 'no' | 'ready' | 'need
 export interface OnboardingForm {
   id: string
   customer_id: string
+  client_submitted_at: string | null
   tiktok_shop_url: string | null
   product_links: string | null
   pricing_info: string | null
@@ -39,6 +40,7 @@ export interface OnboardingCustomer {
   contract_end: string | null
   progress: number
   has_form: boolean
+  client_submitted: boolean
 }
 
 export interface OnboardingDetail {
@@ -49,5 +51,5 @@ export interface OnboardingDetail {
 
 export type OnboardingFormInput = Omit<
   OnboardingForm,
-  'id' | 'customer_id' | 'created_at' | 'updated_at'
+  'id' | 'customer_id' | 'created_at' | 'updated_at' | 'client_submitted_at'
 >

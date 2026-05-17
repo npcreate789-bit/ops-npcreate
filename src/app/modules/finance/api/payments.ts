@@ -30,6 +30,30 @@ export async function listFinanceDocuments(): Promise<Payment[]> {
   return rows.filter((p) => Boolean(p.receipt_number || p.tax_invoice_number))
 }
 
+/** รายการชำระของลูกค้า — ใช้ใน Client Workspace (RLS จำกัดตาม customer) */
+export async function listPaymentsForCustomer(customerId: string): Promise<Payment[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    return mockFinanceApi.listPaymentsForCustomer(customerId)
+  }
+
+  const { data, error } = await supabase
+    .from('payments')
+    .select('*, customers(brand_name)')
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>
+    const cust = r.customers as { brand_name: string } | null
+    return {
+      ...(r as unknown as Payment),
+      customer_brand_name: cust?.brand_name ?? null,
+    }
+  })
+}
+
 export async function getPayment(id: string): Promise<Payment | null> {
   if (!isSupabaseConfigured || !supabase) return mockFinanceApi.getPayment(id)
 

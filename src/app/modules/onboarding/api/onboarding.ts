@@ -51,6 +51,8 @@ function applyMockReadyState(detail: OnboardingDetail): void {
     const row = detail.checklist.find((c) => c.item_key === def.key)
     return row ? isChecklistItemComplete(def.key, row.status) : false
   })
+  detail.customer.has_form = Boolean(detail.form)
+  detail.customer.client_submitted = Boolean(detail.form?.client_submitted_at)
 }
 
 function buildMockDetailFromCustomer(c: {
@@ -69,6 +71,7 @@ function buildMockDetailFromCustomer(c: {
       contract_end: null,
       progress: 0,
       has_form: false,
+      client_submitted: false,
     },
     form: null,
     checklist: defaultChecklist(c.id),
@@ -102,7 +105,7 @@ function loadMockStore(): Record<string, OnboardingDetail> {
 
 export async function listOnboardingCustomers(): Promise<OnboardingCustomer[]> {
   if (!isSupabaseConfigured || !supabase) {
-    return Object.values(loadMockStore()).map((d) => d.customer)
+    return Object.values(loadMockStore()).map((d) => mapMockCustomer(d))
   }
 
   const db = supabase
@@ -133,10 +136,11 @@ export async function listOnboardingCustomers(): Promise<OnboardingCustomer[]> {
         .select('item_key, status')
         .eq('customer_id', customerId)
 
-      const { count } = await db
+      const { data: formRow } = await db
         .from('onboarding_forms')
-        .select('*', { count: 'exact', head: true })
+        .select('client_submitted_at')
         .eq('customer_id', customerId)
+        .maybeSingle()
 
       const items = (checklist ?? []).map((i) => ({
         item_key: i.item_key as string,
@@ -152,12 +156,19 @@ export async function listOnboardingCustomers(): Promise<OnboardingCustomer[]> {
         ads_owner_id: c.ads_owner_id as string | null,
         contract_end: c.contract_end as string | null,
         progress: calcProgress(items),
-        has_form: (count ?? 0) > 0,
+        has_form: Boolean(formRow),
+        client_submitted: Boolean(formRow?.client_submitted_at),
       }
     }),
   )
 
   return rows
+}
+
+function mapMockCustomer(detail: OnboardingDetail): OnboardingCustomer {
+  detail.customer.has_form = Boolean(detail.form)
+  detail.customer.client_submitted = Boolean(detail.form?.client_submitted_at)
+  return detail.customer
 }
 
 export async function getOnboardingDetail(customerId: string): Promise<OnboardingDetail> {
@@ -231,6 +242,7 @@ export async function getOnboardingDetail(customerId: string): Promise<Onboardin
       contract_end: customer.contract_end as string | null,
       progress: calcProgress(checklistSummary),
       has_form: Boolean(form),
+      client_submitted: Boolean((form as { client_submitted_at?: string | null } | null)?.client_submitted_at),
     },
     form: (form as OnboardingForm) ?? null,
     checklist: items,
@@ -249,6 +261,7 @@ export async function saveOnboardingForm(
       id: detail.form?.id ?? crypto.randomUUID(),
       customer_id: customerId,
       ...input,
+      client_submitted_at: detail.form?.client_submitted_at ?? null,
       created_at: detail.form?.created_at ?? now,
       updated_at: now,
     }

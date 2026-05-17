@@ -169,6 +169,15 @@ export function ClientBriefPage() {
         <p className="muted">กรอกทีละขั้น — บันทึก Draft ได้ตลอด · กดส่งบรีฟเมื่อพร้อม</p>
       </header>
 
+      <div className="client-brief-intro" role="note">
+        <strong>หลังชำระเงินแล้ว</strong> กรุณากรอกบรีฟให้ครบ แล้วกดส่ง — ทีม Account จะตรวจและเตรียมยิงแอด
+        <ol>
+          <li>กรอก 4 ขั้นด้านล่าง (ร้าน → สินค้า → เป้าหมายแอด → ไฟล์แนบ)</li>
+          <li>กด «ส่งบรีฟ» — ไม่ต้องรอ checklist เอง (ทีมตรวจให้)</li>
+          <li>ติดตามความคืบหน้าได้ที่หน้าหลัก Client Workspace</li>
+        </ol>
+      </div>
+
       <div className="client-brief-steps" role="list">
         {STEPS.map((label, i) => (
           <button

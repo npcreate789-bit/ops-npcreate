@@ -51,6 +51,14 @@ export const mockFinanceApi = {
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
   },
 
+  async listPaymentsForCustomer(customerId: string): Promise<Payment[]> {
+    const names = loadCustomerNames()
+    return load()
+      .filter((p) => p.customer_id === customerId)
+      .map((p) => ({ ...p, customer_brand_name: names.get(p.customer_id) ?? 'ลูกค้า' }))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  },
+
   async getPayment(id: string): Promise<Payment | null> {
     const row = load().find((p) => p.id === id)
     if (!row) return null

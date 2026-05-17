@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { formatBangkokDate } from '../../../../shared/dates/bangkok'
+import { canViewWorkHub } from '../../../../shared/auth/access'
+import { formatBangkokDate, formatBangkokDateTime } from '../../../../shared/dates/bangkok'
 import { isSupabaseConfigured } from '../../../../shared/supabase/client'
 import { listAssignees } from '../../tasks/api/tasks'
 import type { AssigneeOption } from '../../tasks/types'
@@ -11,8 +12,10 @@ import {
   saveOnboardingForm,
   updateChecklistItem,
 } from '../api/onboarding'
+import { OnboardingNextStepsPanel } from '../components/OnboardingNextStepsPanel'
 import type { ChecklistValue, OnboardingDetail, OnboardingFormInput } from '../types'
 import { CHECKLIST_ITEMS } from '../constants'
+import { customerStatusLabelTh } from '../pipeline'
 import '../../crm/crm.css'
 import '../../sales/sales.css'
 import '../onboarding.css'
@@ -29,7 +32,8 @@ function ownerLabel(assignees: AssigneeOption[], selectedId: string): string {
 
 export function OnboardingDetailPage() {
   const { customerId } = useParams<{ customerId: string }>()
-  const { hasAnyRole } = useAuth()
+  const { hasAnyRole, profile, configured } = useAuth()
+  const showWorkLink = canViewWorkHub(profile?.roles ?? []) || !configured
   const canEditBrief =
     hasAnyRole(['ceo', 'account', 'admin', 'dev']) || !isSupabaseConfigured
   const canEditChecklist = canEditBrief
@@ -179,7 +183,7 @@ export function OnboardingDetailPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page onboarding-detail-page">
       <header className="page__header">
         <Link to="/app/onboarding" className="crm-back">
           ← กลับรายการ
@@ -187,10 +191,23 @@ export function OnboardingDetailPage() {
         <h1>{detail.customer.brand_name}</h1>
         <p className="onboarding-meta">
           สัญญาถึง: {formatBangkokDate(detail.customer.contract_end)} · สถานะลูกค้า:{' '}
-          {detail.customer.status}
+          {customerStatusLabelTh(detail.customer.status)}
+        </p>
+        <p className="onboarding-detail-links muted">
+          <Link to={`/app/customers/${customerId}`}>ลูกค้า 360°</Link>
+          {' · '}
+          <Link to="/app/finance">การเงิน</Link>
+          {' · '}
+          <Link to="/app/client/brief">บรีฟ (มุมลูกค้า)</Link>
+          {showWorkLink && (
+            <>
+              {' · '}
+              <Link to="/app/work">งานของฉัน</Link>
+            </>
+          )}
         </p>
         <p>
-          ความครบ {detail.customer.progress}% —{' '}
+          ความครบ checklist {detail.customer.progress}% —{' '}
           <span
             className={
               detail.customer.ready_for_ads
@@ -216,91 +233,35 @@ export function OnboardingDetailPage() {
         )}
       </header>
 
+      <OnboardingNextStepsPanel
+        detail={detail}
+        clientSubmitted={detail.customer.client_submitted}
+      />
+
+      {detail.form?.client_submitted_at && (
+        <p className="crm-banner">
+          ลูกค้าส่งบรีฟเมื่อ {formatBangkokDateTime(detail.form.client_submitted_at)} — ตรวจ checklist
+          ด้านล่างให้ครบ
+        </p>
+      )}
+
+      {!detail.customer.has_form && (
+        <p className="crm-banner crm-banner--warn">
+          ลูกค้ายังไม่กรอกบรีฟ — แจ้งให้เปิด Client Workspace → เมนูบรีฟงาน
+        </p>
+      )}
+
       {error && <p className="crm-error">{error}</p>}
 
       {!canEditBrief && (
         <p className="crm-banner">ดูอย่างเดียว — แก้บรีฟ/checklist ได้เฉพาะทีม Account</p>
       )}
 
-      <section className="card card--wide onboarding-owners-card">
-        <h2 className="crm-section-title">มอบหมายผู้ดูแล</h2>
-        <p className="onboarding-owners-hint muted">
-          ทีม Account ดูแลลูกค้า · ทีมยิงแอดจะเห็นแบรนด์ในเมนู «งานยิงแอด» หลังมอบหมาย (หรือรับงานเอง)
-        </p>
-
-        {ownersSuccess && (
-          <p className="crm-banner onboarding-owners-success">บันทึกผู้ดูแลแล้ว</p>
-        )}
-
-        {assigneesLoading && <p className="muted">กำลังโหลดรายชื่อพนักงาน...</p>}
-
-        {!assigneesLoading && assignees.length === 0 && canAssignOwners && (
-          <p className="crm-error">ไม่พบรายชื่อพนักงาน — ตรวจสอบการเชื่อมต่อหรือสิทธิ์อ่าน profiles</p>
-        )}
-
-        {!canAssignOwners ? (
-          <dl className="onboarding-owners-readonly">
-            <dt>ผู้ดูแล Account</dt>
-            <dd>{ownerLabel(accountOptions, accountOwnerId)}</dd>
-            <dt>ทีมยิงแอด</dt>
-            <dd>{ownerLabel(adsOptions, adsOwnerId)}</dd>
-          </dl>
-        ) : (
-          <div className="onboarding-owners-row">
-            <label>
-              ผู้ดูแล Account
-              <select
-                className="crm-select"
-                value={accountOwnerId}
-                disabled={assigneesLoading || savingOwners}
-                onChange={(e) => {
-                  setAccountOwnerId(e.target.value)
-                  setOwnersSuccess(false)
-                }}
-              >
-                <option value="">— ยังไม่ระบุ —</option>
-                {accountOptions.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              ทีมยิงแอด
-              <select
-                className="crm-select"
-                value={adsOwnerId}
-                disabled={assigneesLoading || savingOwners}
-                onChange={(e) => {
-                  setAdsOwnerId(e.target.value)
-                  setOwnersSuccess(false)
-                }}
-              >
-                <option value="">— ยังไม่ระบุ —</option>
-                {adsOptions.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="onboarding-owners-actions">
-              <button
-                type="button"
-                className="crm-btn crm-btn--primary"
-                disabled={assigneesLoading || savingOwners || assignees.length === 0}
-                onClick={() => void handleSaveOwners()}
-              >
-                {savingOwners ? 'กำลังบันทึก...' : 'บันทึกผู้ดูแล'}
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="card card--wide">
+      <section id="checklist" className="card card--wide">
         <h2 className="crm-section-title">Checklist ก่อนเริ่มยิงแอด</h2>
+        <p className="muted onboarding-section-hint">
+          ทีม Account ติ๊กรายการที่ได้รับจากลูกค้าแล้ว — ครบ 8 ข้อ = พร้อมยิงแอด
+        </p>
         <div className="crm-table-wrap">
           <table className="crm-table checklist-table">
             <thead>
@@ -372,8 +333,11 @@ export function OnboardingDetailPage() {
         </div>
       </section>
 
-      <section className="card card--wide">
+      <section id="brief" className="card card--wide">
         <h2 className="crm-section-title">ข้อมูลแบรนด์</h2>
+        <p className="muted onboarding-section-hint">
+          ข้อมูลจากลูกค้า (หรือ Account เติมให้) — บันทึกเมื่อแก้ไข
+        </p>
         <fieldset className="qt-form__grid onboarding-form-fieldset" disabled={!canEditBrief}>
           <label className="qt-form__full">
             ลิงก์ TikTok Shop
@@ -510,6 +474,83 @@ export function OnboardingDetailPage() {
             >
               {saving ? 'กำลังบันทึก...' : 'บันทึกข้อมูลบรีฟ'}
             </button>
+          </div>
+        )}
+      </section>
+
+      <section id="owners" className="card card--wide onboarding-owners-card">
+        <h2 className="crm-section-title">มอบหมายผู้ดูแล</h2>
+        <p className="onboarding-owners-hint muted">
+          ทำหลัง checklist ครบ — Account ดูแลลูกค้า · ทีมยิงแอดเห็นแบรนด์ในเมนูงานยิงแอด
+        </p>
+
+        {ownersSuccess && (
+          <p className="crm-banner onboarding-owners-success">บันทึกผู้ดูแลแล้ว</p>
+        )}
+
+        {assigneesLoading && <p className="muted">กำลังโหลดรายชื่อพนักงาน...</p>}
+
+        {!assigneesLoading && assignees.length === 0 && canAssignOwners && (
+          <p className="crm-error">ไม่พบรายชื่อพนักงาน — ตรวจสอบการเชื่อมต่อหรือสิทธิ์อ่าน profiles</p>
+        )}
+
+        {!canAssignOwners ? (
+          <dl className="onboarding-owners-readonly">
+            <dt>ผู้ดูแล Account</dt>
+            <dd>{ownerLabel(accountOptions, accountOwnerId)}</dd>
+            <dt>ทีมยิงแอด</dt>
+            <dd>{ownerLabel(adsOptions, adsOwnerId)}</dd>
+          </dl>
+        ) : (
+          <div className="onboarding-owners-row">
+            <label>
+              ผู้ดูแล Account
+              <select
+                className="crm-select"
+                value={accountOwnerId}
+                disabled={assigneesLoading || savingOwners}
+                onChange={(e) => {
+                  setAccountOwnerId(e.target.value)
+                  setOwnersSuccess(false)
+                }}
+              >
+                <option value="">— ยังไม่ระบุ —</option>
+                {accountOptions.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              ทีมยิงแอด
+              <select
+                className="crm-select"
+                value={adsOwnerId}
+                disabled={assigneesLoading || savingOwners}
+                onChange={(e) => {
+                  setAdsOwnerId(e.target.value)
+                  setOwnersSuccess(false)
+                }}
+              >
+                <option value="">— ยังไม่ระบุ —</option>
+                {adsOptions.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="onboarding-owners-actions">
+              <button
+                type="button"
+                className="crm-btn crm-btn--primary"
+                disabled={assigneesLoading || savingOwners || assignees.length === 0}
+                onClick={() => void handleSaveOwners()}
+              >
+                {savingOwners ? 'กำลังบันทึก...' : 'บันทึกผู้ดูแล'}
+              </button>
+            </div>
           </div>
         )}
       </section>

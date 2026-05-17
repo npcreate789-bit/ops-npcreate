@@ -1,20 +1,28 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
+  canCreateSalesQuotation,
   canManageFinance,
   canViewFinance,
   canViewFinanceDocuments,
+  canViewWorkHub,
+  hasCrmTeamView,
   isFinanceReadOnly,
 } from '../../../../shared/auth/access'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
 import { getFinanceSummary, listFinanceDocuments, listPayments } from '../api/payments'
-import type { FinanceSummary, Payment } from '../types'
-import { serviceTypeLabel } from '../constants'
+import { FinancePipelineBar } from '../components/FinancePipelineBar'
+import { FinanceRoleGuide } from '../components/FinanceRoleGuide'
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge'
+import { serviceTypeLabel } from '../constants'
+import { isPaymentOverdue } from '../pipeline'
+import type { FinanceSummary, Payment, PaymentStatus } from '../types'
 import '../../crm/crm.css'
 import '../../sales/sales.css'
 import '../finance.css'
+
+type FinanceFilter = PaymentStatus | 'all' | 'overdue'
 
 export function FinancePage() {
   const { configured, profile } = useAuth()
@@ -23,12 +31,16 @@ export function FinancePage() {
   const canManage = canManageFinance(roles) || !configured
   const readOnly = isFinanceReadOnly(roles) && configured
   const canViewDocs = canViewFinanceDocuments(roles) || !configured
+  const showCrmLink = hasCrmTeamView(roles) || !configured
+  const showSalesLink = canCreateSalesQuotation(roles) || !configured
+  const showWorkLink = canViewWorkHub(roles) || !configured
   const navigate = useNavigate()
   const [rows, setRows] = useState<Payment[]>([])
   const [documents, setDocuments] = useState<Payment[]>([])
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<FinanceFilter>('all')
 
   useEffect(() => {
     if (!canView) {
@@ -59,6 +71,23 @@ export function FinancePage() {
     }
   }, [canView, canViewDocs])
 
+  const pipelineCounts = useMemo(() => {
+    const counts: Partial<Record<PaymentStatus | 'overdue', number>> = {}
+    for (const row of rows) {
+      counts[row.status] = (counts[row.status] ?? 0) + 1
+      if (isPaymentOverdue(row)) counts.overdue = (counts.overdue ?? 0) + 1
+    }
+    return counts
+  }, [rows])
+
+  const displayedRows = useMemo(() => {
+    if (statusFilter === 'all') return rows
+    if (statusFilter === 'overdue') return rows.filter((r) => isPaymentOverdue(r))
+    return rows.filter((r) => r.status === statusFilter)
+  }, [rows, statusFilter])
+
+  const overdueCount = pipelineCounts.overdue ?? 0
+
   if (!canView) {
     return (
       <div className="page">
@@ -73,14 +102,39 @@ export function FinancePage() {
       <header className="page__header finance-page__header">
         <div>
           <h1>การเงิน</h1>
-          <p>บันทึกชำระเงิน ใบเสร็จ ใบกำกับภาษี และติดตามลูกหนี้</p>
+          <p className="muted">
+            Sales ใบเสนอราคารอชำระ → ลูกค้าแจ้งสลิปใน Client Workspace → ยืนยันที่นี่ →
+            Account รับบรีฟ
+          </p>
         </div>
-        {canManage && (
-          <Link to="/app/finance/payments/new" className="crm-btn crm-btn--primary">
-            + บันทึกการชำระ
+        <div className="finance-page__header-actions">
+          {showWorkLink && (
+            <Link to="/app/work" className="crm-btn crm-btn--ghost">
+              งานของฉัน
+            </Link>
+          )}
+          {showCrmLink && (
+            <Link to="/app/crm" className="crm-btn crm-btn--ghost">
+              CRM
+            </Link>
+          )}
+          {showSalesLink && (
+            <Link to="/app/sales" className="crm-btn crm-btn--ghost">
+              Sales
+            </Link>
+          )}
+          <Link to="/app/client/payment" className="crm-btn crm-btn--ghost">
+            มุมลูกค้า
           </Link>
-        )}
+          {canManage && (
+            <Link to="/app/finance/payments/new" className="crm-btn crm-btn--primary">
+              + บันทึกการชำระ
+            </Link>
+          )}
+        </div>
       </header>
+
+      <FinanceRoleGuide />
 
       {!configured && (
         <p className="crm-banner crm-banner--warn">
@@ -94,8 +148,23 @@ export function FinancePage() {
         </p>
       )}
 
+      {overdueCount > 0 && statusFilter !== 'overdue' && (
+        <div className="finance-overdue-banner" role="status">
+          <p>
+            มีรายการเกินกำหนดชำระ <strong>{overdueCount}</strong> รายการ — ติดตามลูกค้าหรือยืนยันหลังได้รับสลิป
+          </p>
+          <button
+            type="button"
+            className="crm-btn crm-btn--ghost crm-btn--sm"
+            onClick={() => setStatusFilter('overdue')}
+          >
+            ดูรายการเกินกำหนด
+          </button>
+        </div>
+      )}
+
       {summary && (
-        <section className="card-grid">
+        <section className="card-grid finance-kpi-grid">
           <article className="card card--accent">
             <h2>รายรับเดือนนี้</h2>
             <p className="stat">{summary.revenue_this_month.toLocaleString('th-TH')}</p>
@@ -106,7 +175,7 @@ export function FinancePage() {
             <p className="stat">{summary.pending_total.toLocaleString('th-TH')}</p>
             <span className="muted">บาท</span>
           </article>
-          <article className="card">
+          <article className="card finance-kpi--warn">
             <h2>เกินกำหนด</h2>
             <p className="stat">{summary.overdue_count}</p>
             <span className="muted">รายการ</span>
@@ -114,18 +183,28 @@ export function FinancePage() {
         </section>
       )}
 
+      <FinancePipelineBar
+        activeStatus={statusFilter}
+        onSelectStatus={setStatusFilter}
+        counts={pipelineCounts}
+      />
+
       <section className="card card--wide">
         <h2 className="crm-section-title">รายการชำระเงิน</h2>
         {error && <p className="crm-error">{error}</p>}
         {loading && <p className="muted">กำลังโหลด...</p>}
 
-        {!loading && rows.length === 0 && (
-          <p className="muted">ยังไม่มีรายการชำระเงิน</p>
+        {!loading && displayedRows.length === 0 && (
+          <p className="muted">
+            {statusFilter === 'all'
+              ? 'ยังไม่มีรายการ — สร้างจาก Sales (ใบเสนอราคารอชำระ) หรือบันทึกชำระใหม่'
+              : 'ไม่มีรายการในสถานะนี้'}
+          </p>
         )}
 
-        {!loading && rows.length > 0 && (
+        {!loading && displayedRows.length > 0 && (
           <div className="crm-table-wrap">
-            <table className="crm-table crm-table--clickable">
+            <table className="crm-table crm-table--clickable finance-table">
               <thead>
                 <tr>
                   <th>ลูกค้า</th>
@@ -137,18 +216,46 @@ export function FinancePage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id} onClick={() => navigate(`/app/finance/payments/${row.id}`)}>
-                    <td>{row.customer_brand_name ?? '—'}</td>
-                    <td>{serviceTypeLabel(row.service_type)}</td>
-                    <td>{row.total_amount.toLocaleString('th-TH')} บาท</td>
-                    <td>
-                      <PaymentStatusBadge status={row.status} />
-                    </td>
-                    <td>{row.receipt_number ?? '—'}</td>
-                    <td>{formatBangkokDate(row.due_date)}</td>
-                  </tr>
-                ))}
+                {displayedRows.map((row) => {
+                  const overdue = isPaymentOverdue(row)
+                  return (
+                    <tr
+                      key={row.id}
+                      className={overdue ? 'finance-table__row--overdue' : undefined}
+                      onClick={() => navigate(`/app/finance/payments/${row.id}`)}
+                    >
+                      <td>
+                        <Link
+                          to={`/app/customers/${row.customer_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {row.customer_brand_name ?? '—'}
+                        </Link>
+                        {row.quotation_id && (
+                          <div className="finance-table__sub">
+                            <Link
+                              to={`/app/sales/quotations/${row.quotation_id}`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              ใบเสนอราคา
+                            </Link>
+                          </div>
+                        )}
+                      </td>
+                      <td>{serviceTypeLabel(row.service_type)}</td>
+                      <td>{row.total_amount.toLocaleString('th-TH')} บาท</td>
+                      <td>
+                        {overdue && row.status === 'pending' ? (
+                          <span className="pay-badge pay-badge--red">เกินกำหนด</span>
+                        ) : (
+                          <PaymentStatusBadge status={row.status} />
+                        )}
+                      </td>
+                      <td>{row.receipt_number ?? '—'}</td>
+                      <td>{formatBangkokDate(row.due_date)}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
