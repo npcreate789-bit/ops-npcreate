@@ -1,8 +1,10 @@
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { AppRole } from '../types/roles'
+import { allowDevAuthBypass, requiresSupabaseInProduction } from '../supabase/runtime'
 import { useAuth } from './AuthProvider'
 import { defaultAppHome, loginPathForAudience } from './postLoginPath'
+import { SupabaseRequiredGate } from './SupabaseRequiredGate'
 import './auth.css'
 
 interface RequireAuthProps {
@@ -20,7 +22,11 @@ export function RequireAuth({
   const { session, profile, loading, configured, signOut } = useAuth()
   const location = useLocation()
 
-  if (!configured) {
+  if (requiresSupabaseInProduction()) {
+    return <SupabaseRequiredGate />
+  }
+
+  if (!configured && allowDevAuthBypass) {
     return <>{children}</>
   }
 

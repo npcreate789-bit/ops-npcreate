@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
+import { SupabaseRequiredGate } from '../../shared/auth/SupabaseRequiredGate'
+import { allowDevAuthBypass, requiresSupabaseInProduction } from '../../shared/supabase/runtime'
 import { appHostLabel } from '../../shared/config/appUrl'
 import { COMPANY_ICON_SRC } from '../../shared/company/companyProfile'
 import { normalizeLoginId } from '../../shared/auth/loginId'
@@ -77,7 +79,11 @@ export function LoginPage() {
     }
   }, [from, mode, setSearchParams])
 
-  if (!configured) {
+  if (requiresSupabaseInProduction()) {
+    return <SupabaseRequiredGate />
+  }
+
+  if (!configured && allowDevAuthBypass) {
     return <Navigate to="/app" replace />
   }
 

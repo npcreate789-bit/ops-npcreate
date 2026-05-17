@@ -82,7 +82,8 @@ Deno.serve(async (req) => {
       .eq('user_id', caller.id)
 
     if (rolesReadErr) {
-      return json({ error: rolesReadErr.message }, 500)
+      console.error('create-client-user rolesReadErr', rolesReadErr)
+      return json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' }, 500)
     }
 
     const creatorRoles = (callerRoles ?? []).map((r) => r.role as string)
@@ -225,8 +226,7 @@ Deno.serve(async (req) => {
       brand_name: customer.brand_name,
       temporary_password: password,
     })
-  } catch (e) {
-    const message = e instanceof Error ? e.message : 'เกิดข้อผิดพลาด'
-    return json({ error: message }, 500)
+  } catch {
+    return json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' }, 500)
   }
 })

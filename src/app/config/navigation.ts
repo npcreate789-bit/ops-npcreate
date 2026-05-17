@@ -13,6 +13,7 @@ import {
   WEEKLY_REPORT_VIEW_ROLES,
 } from '../../shared/auth/access'
 import type { AppRole } from '../../shared/types/roles'
+import { allowDevAuthBypass } from '../../shared/supabase/runtime'
 
 export interface NavItem {
   path: string
@@ -450,7 +451,7 @@ const NAV_ROLE_STRICT_PATHS = new Set<string>(['/app/ops'])
 /** โหมด dev — จำลอง ceo เมื่อยังไม่มีบทบาทจาก backend */
 export function effectiveRolesForNav(roles: AppRole[], configured: boolean): AppRole[] {
   if (roles.length > 0) return roles
-  if (!configured) return ['ceo']
+  if (!configured && allowDevAuthBypass) return ['ceo']
   return []
 }
 

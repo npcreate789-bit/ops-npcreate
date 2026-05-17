@@ -1,4 +1,5 @@
 import type { HealthCheckResult } from './health'
+import { requiresSupabaseInProduction } from '../../../../shared/supabase/runtime'
 
 export function authHealthChecks(
   configured: boolean,
@@ -13,8 +14,10 @@ export function authHealthChecks(
     rows.push({
       id: 'auth-config',
       label: 'การยืนยันตัวตน',
-      status: 'warn',
-      detail: 'โหมดพัฒนา — ไม่ใช้ Supabase Auth',
+      status: requiresSupabaseInProduction() ? 'error' : 'warn',
+      detail: requiresSupabaseInProduction()
+        ? 'Production ต้องตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY'
+        : 'โหมดพัฒนา — ไม่ใช้ Supabase Auth',
     })
     return rows
   }

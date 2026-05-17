@@ -10,6 +10,7 @@ import {
 import type { Session, User } from '@supabase/supabase-js'
 import type { AppRole } from '../types/roles'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
+import { allowDevAuthBypass } from '../supabase/runtime'
 import { normalizeLoginId, validateLoginId } from './loginId'
 
 export interface UserProfile {
@@ -123,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) {
+    if (allowDevAuthBypass) {
       setProfile({
         id: '00000000-0000-4000-8000-000000000001',
         login_id: 'dev',
@@ -132,6 +133,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         must_change_password: false,
         roles: ['ceo', 'dev'],
       })
+      setProfileLoadError(null)
+      setLoading(false)
+      return
+    }
+
+    if (!isSupabaseConfigured || !supabase) {
+      setProfile(null)
       setProfileLoadError(null)
       setLoading(false)
       return

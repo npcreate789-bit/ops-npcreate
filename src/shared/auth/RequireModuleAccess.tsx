@@ -1,8 +1,10 @@
 import { Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { canAccessNavPath } from '../../app/config/navigation'
+import { allowDevAuthBypass, requiresSupabaseInProduction } from '../supabase/runtime'
 import { useAuth } from './AuthProvider'
 import { defaultAppHome } from './postLoginPath'
+import { SupabaseRequiredGate } from './SupabaseRequiredGate'
 import './auth.css'
 
 interface RequireModuleAccessProps {
@@ -14,7 +16,11 @@ interface RequireModuleAccessProps {
 export function RequireModuleAccess({ navPath, children }: RequireModuleAccessProps) {
   const { profile, loading, configured } = useAuth()
 
-  if (!configured) {
+  if (requiresSupabaseInProduction()) {
+    return <SupabaseRequiredGate />
+  }
+
+  if (!configured && allowDevAuthBypass) {
     return <>{children}</>
   }
 
