@@ -133,6 +133,15 @@
   gap: 1rem;
 }
 
+.client-dashboard__staff-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+}
+
+.client-dashboard__staff-hint a {
+  color: var(--npc-accent);
+}
+
 .client-reports__staff-hint {
   margin: 0.35rem 0 0;
   font-size: 0.82rem;

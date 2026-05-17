@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
+import { contentFormatLabel } from '../../content/constants'
+import type { ContentFormat } from '../../content/types'
 import { ClientAiPanel } from '../components/ClientAiPanel'
 import { useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
 import '../../crm/crm.css'
@@ -117,6 +119,12 @@ export function ClientDashboardPage() {
 
       <section className="card card--wide">
         <h2>คอนเทนต์ที่ส่งมอบแล้ว</h2>
+        {!ws.isClientOnly && (
+          <p className="muted client-dashboard__staff-hint">
+            ทีมจัดการงานที่ <Link to="/app/content">งานคอนเทนต์</Link> — ตั้งสถานะ「ส่งมอบแล้ว」และลิงก์ไฟล์
+            ลูกค้าจึงเห็นที่นี่
+          </p>
+        )}
         {delivered_content.length === 0 && (
           <p className="muted">ยังไม่มีไฟล์ส่งมอบ — ทีมจะอัปโหลดเมื่องานเสร็จ</p>
         )}
@@ -124,7 +132,10 @@ export function ClientDashboardPage() {
           {delivered_content.map((item) => (
             <li key={item.id}>
               <strong>{item.title}</strong>
-              <span className="muted"> · {item.format}</span>
+              <span className="muted">
+                {' '}
+                · {contentFormatLabel(item.format as ContentFormat)}
+              </span>
               <br />
               <small className="muted">{formatBangkokDateTime(item.delivered_at)}</small>
               {item.deliverable_url ? (

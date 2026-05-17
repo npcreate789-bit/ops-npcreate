@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
+  canLinkCustomerClient,
+  canLinkCustomerOnboarding,
+  canViewCustomer360,
+} from '../../customers/access'
+import { clientWorkspaceUrl } from '../../customers/customerLinks'
+import {
   canDeleteContentJob,
   canEditContentJob,
   canManageContentJobs,
@@ -31,13 +37,17 @@ export function ContentJobEditorPage() {
   const { id } = useParams<{ id: string }>()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { profile, configured } = useAuth()
   const ownerId = profile?.id ?? DEV_OWNER
   const roles = profile?.roles ?? []
+  const showOnboarding = canLinkCustomerOnboarding(roles) || !configured
+  const showClient = canLinkCustomerClient(roles) || !configured
+  const show360 = canViewCustomer360(roles) || !configured
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [initial, setInitial] = useState<ContentJob | null>(null)
+  const customerId = initial?.customer_id
   const [assignees, setAssignees] = useState<{ id: string; label: string }[]>([])
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [saved, setSaved] = useState(false)
@@ -141,8 +151,42 @@ export function ContentJobEditorPage() {
             ← กลับรายการ
           </Link>
           <h1>{isNew ? 'งานคอนเทนต์ใหม่' : initial?.title ?? 'แก้ไขงาน'}</h1>
+          {!isNew && initial && (
+            <p className="muted">
+              {initial.customer_brand_name ?? 'ลูกค้า'} — ส่งมอบแล้ว + ลิงก์ไฟล์ → ลูกค้าเห็นในพื้นที่ลูกค้า
+            </p>
+          )}
         </div>
       </header>
+
+      {customerId && !isNew && (show360 || showOnboarding || showClient) && (
+        <nav className="content-related-links" aria-label="ลิงก์ที่เกี่ยวข้อง">
+          {show360 && (
+            <Link
+              to={`/app/customers/${customerId}`}
+              className="crm-btn crm-btn--ghost crm-btn--sm"
+            >
+              ลูกค้า 360°
+            </Link>
+          )}
+          {showOnboarding && (
+            <Link
+              to={`/app/onboarding/${customerId}`}
+              className="crm-btn crm-btn--ghost crm-btn--sm"
+            >
+              รับบรีฟ
+            </Link>
+          )}
+          {showClient && (
+            <Link
+              to={clientWorkspaceUrl(customerId)}
+              className="crm-btn crm-btn--ghost crm-btn--sm"
+            >
+              พื้นที่ลูกค้า
+            </Link>
+          )}
+        </nav>
+      )}
 
       {readOnly && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
