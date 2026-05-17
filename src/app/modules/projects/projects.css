@@ -194,6 +194,11 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  min-width: 0;
+}
+
+.project-form fieldset {
+  min-width: 0;
 }
 
 .project-form--create {
@@ -202,12 +207,21 @@
   margin-right: auto;
 }
 
+.project-form--create.card {
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
 .project-form--create .project-form__panel {
   margin: 0 0 1rem;
   padding: 1rem 1.1rem;
   border-radius: 10px;
   border: 1px solid var(--npc-glass-border);
   background: rgba(0, 0, 0, 0.18);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .project-form--create .project-form__panel:last-of-type {
@@ -350,6 +364,8 @@
   border-radius: 10px;
   border: 1px dashed var(--npc-glass-border);
   background: rgba(0, 0, 0, 0.1);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .project-form__optional-summary {
@@ -376,6 +392,11 @@
 
 .project-form__optional-body {
   padding: 0 1rem 1rem;
+  min-width: 0;
+}
+
+.project-form--create .crm-form__grid {
+  min-width: 0;
 }
 
 .project-form__actions--create {
@@ -388,6 +409,7 @@
   padding: 0 0 1.25rem;
   border-bottom: 1px solid var(--npc-glass-border);
   min-width: 0;
+  max-width: 100%;
 }
 
 .project-form__section--last {
@@ -404,9 +426,23 @@
   color: var(--npc-text);
 }
 
-.project-form .crm-select.project-form__select {
+.project-form .crm-select.project-form__select,
+.project-form .crm-input {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.project-form input[type='date'] {
+  color-scheme: dark;
+  accent-color: var(--npc-accent, #6ee7ff);
+}
+
+.project-form input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  opacity: 0.9;
+  cursor: pointer;
 }
 
 .project-form__readonly {
@@ -475,4 +511,20 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .project-form__service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-form__customer-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .project-form__customer-link {
+    width: 100%;
+    justify-content: center;
+  }
 }

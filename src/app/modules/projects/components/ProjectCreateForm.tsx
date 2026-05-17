@@ -40,7 +40,8 @@ export function ProjectCreateForm({
   onNotesChange,
   saving,
 }: ProjectCreateFormProps) {
-  const lockedCustomer = Boolean(presetCustomerId && presetCustomer)
+  const lockedCustomer = Boolean(presetCustomerId)
+  const canSubmit = Boolean(customerId && projectName.trim())
 
   return (
     <>
@@ -53,7 +54,9 @@ export function ProjectCreateForm({
           <div className="project-form__customer-card">
             <div className="project-form__customer-card-body">
               <span className="project-form__customer-label">ลูกค้าที่เลือก</span>
-              <strong>{presetCustomer!.brand_name}</strong>
+              <strong>
+                {presetCustomer?.brand_name ?? 'กำลังโหลดชื่อลูกค้า…'}
+              </strong>
               <span className="muted project-form__customer-meta">จากลิงก์ Customer 360°</span>
             </div>
             <Link
@@ -101,11 +104,13 @@ export function ProjectCreateForm({
             />
           </label>
 
-          <div className="project-form__field">
-            <span>
-              ประเภทบริการ <span className="req">*</span>
-            </span>
-            <div className="project-form__service-grid" role="radiogroup" aria-label="ประเภทบริการ">
+          <label className="project-form__field">
+            ประเภทบริการ <span className="req">*</span>
+            <div
+              className="project-form__service-grid"
+              role="radiogroup"
+              aria-label="ประเภทบริการ"
+            >
               {PROJECT_SERVICE_OPTIONS.map((o) => (
                 <button
                   key={o.value}
@@ -120,7 +125,7 @@ export function ProjectCreateForm({
                 </button>
               ))}
             </div>
-          </div>
+          </label>
         </div>
       </fieldset>
 
@@ -164,7 +169,11 @@ export function ProjectCreateForm({
         <Link to="/app/projects" className="crm-btn crm-btn--ghost">
           ยกเลิก
         </Link>
-        <button type="submit" className="crm-btn crm-btn--primary" disabled={saving}>
+        <button
+          type="submit"
+          className="crm-btn crm-btn--primary"
+          disabled={saving || !canSubmit}
+        >
           {saving ? 'กำลังสร้าง...' : 'สร้างโปรเจกต์'}
         </button>
       </div>

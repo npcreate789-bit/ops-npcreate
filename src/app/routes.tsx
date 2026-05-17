@@ -134,6 +134,10 @@ export function AppRoutes() {
         </Route>
         <Route path="projects" element={<Module path="/app/projects" element={<ProjectsListPage />} />} />
         <Route
+          path="projects/new"
+          element={<Module path="/app/projects" element={<ProjectDetailPage />} />}
+        />
+        <Route
           path="projects/:id"
           element={<Module path="/app/projects" element={<ProjectDetailPage />} />}
         />
