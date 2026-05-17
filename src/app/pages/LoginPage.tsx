@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useLayoutEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { SupabaseRequiredGate } from '../../shared/auth/SupabaseRequiredGate'
@@ -9,6 +9,7 @@ import { normalizeLoginId } from '../../shared/auth/loginId'
 import { primeNotificationSound } from '../modules/notifications/notificationSound'
 import {
   loginPathForAudience,
+  isClientAppPath,
   parseLoginAudience,
   resolvePostLoginPath,
   type LoginAudience,
@@ -57,10 +58,12 @@ export function LoginPage() {
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const mode = parseLoginAudience(searchParams.toString())
-  const copy = COPY[mode]
   const from =
     (location.state as { from?: { pathname: string } })?.from?.pathname ?? null
+  const modeFromUrl = parseLoginAudience(searchParams.toString())
+  const mode: LoginAudience =
+    from && isClientAppPath(from) ? 'client' : modeFromUrl
+  const copy = COPY[mode]
 
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
@@ -73,11 +76,11 @@ export function LoginPage() {
     setError(null)
   }
 
-  useEffect(() => {
-    if (from?.startsWith('/app/client') && mode !== 'client') {
+  useLayoutEffect(() => {
+    if (from && isClientAppPath(from) && searchParams.get('mode') !== 'client') {
       setSearchParams({ mode: 'client' }, { replace: true })
     }
-  }, [from, mode, setSearchParams])
+  }, [from, searchParams, setSearchParams])
 
   if (requiresSupabaseInProduction()) {
     return <SupabaseRequiredGate />

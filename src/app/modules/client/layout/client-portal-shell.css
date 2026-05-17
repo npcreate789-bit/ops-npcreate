@@ -1,0 +1,99 @@
+.client-portal-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--npc-bg-deep);
+}
+
+.client-portal-shell__main {
+  flex: 1;
+  overflow: auto;
+  padding: 1.25rem 1.5rem 2rem;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -15%, rgba(230, 57, 70, 0.1), transparent),
+    var(--npc-bg-mid);
+}
+
+.client-portal-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--npc-glass-border);
+  background: rgba(12, 18, 36, 0.92);
+}
+
+.client-portal-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.client-portal-header__logo {
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: contain;
+  background: #fff;
+}
+
+.client-portal-header__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.client-portal-header__titles strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.client-portal-header__titles span {
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.client-portal-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.client-portal-header__link,
+.client-portal-header__logout {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.client-portal-header__link {
+  color: var(--npc-text-muted);
+  border: 1px solid transparent;
+}
+
+.client-portal-header__link:hover {
+  color: var(--npc-text);
+  border-color: var(--npc-glass-border);
+}
+
+.client-portal-header__logout {
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--npc-text);
+  cursor: pointer;
+}
+
+.client-portal-header__logout:hover {
+  border-color: rgba(230, 57, 70, 0.45);
+  color: #ffc9cd;
+}

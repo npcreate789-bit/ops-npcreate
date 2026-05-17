@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { AppRole } from '../types/roles'
 import { allowDevAuthBypass, requiresSupabaseInProduction } from '../supabase/runtime'
 import { useAuth } from './AuthProvider'
-import { defaultAppHome, loginPathForAudience } from './postLoginPath'
+import { defaultAppHome, loginPathForAudience, loginPathForReturnTo } from './postLoginPath'
 import { SupabaseRequiredGate } from './SupabaseRequiredGate'
 import './auth.css'
 
@@ -19,8 +19,10 @@ export function RequireAuth({
   roles,
   allowMustChangePassword = false,
 }: RequireAuthProps) {
-  const { session, profile, loading, configured, signOut } = useAuth()
+  const { session, profile, loading, configured, signOut, profileLoadError } = useAuth()
   const location = useLocation()
+  const awaitingProfile =
+    Boolean(session?.user) && configured && profile === null && !profileLoadError
 
   if (requiresSupabaseInProduction()) {
     return <SupabaseRequiredGate />
@@ -30,7 +32,7 @@ export function RequireAuth({
     return <>{children}</>
   }
 
-  if (loading) {
+  if (loading || awaitingProfile) {
     return (
       <div className="auth-loading">
         <div className="auth-loading__spinner" aria-hidden />
@@ -40,9 +42,7 @@ export function RequireAuth({
   }
 
   if (!session) {
-    const loginPath = location.pathname.startsWith('/app/client')
-      ? loginPathForAudience('client')
-      : '/login'
+    const loginPath = loginPathForReturnTo(location.pathname)
     return <Navigate to={loginPath} state={{ from: location }} replace />
   }
 

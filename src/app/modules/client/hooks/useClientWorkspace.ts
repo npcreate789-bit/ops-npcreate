@@ -13,7 +13,7 @@ export function useClientWorkspace() {
   const [searchParams, setSearchParams] = useSearchParams()
   const previewFromUrl = searchParams.get('preview') ?? ''
   const { profile, configured } = useAuth()
-  const userId = profile?.id ?? DEV_OWNER
+  const userId = profile?.id ?? (!configured ? DEV_OWNER : '')
   const roles = profile?.roles ?? []
   const isClientOnly =
     roles.includes('client') && !hasClientPortalStaffPreview(roles) && configured
@@ -27,6 +27,12 @@ export function useClientWorkspace() {
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    if (configured && !userId) {
+      setData(null)
+      setCustomerId(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {

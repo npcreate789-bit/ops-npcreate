@@ -44,8 +44,22 @@ export function resolvePostLoginPath(roles: AppRole[], requested?: string | null
   return home
 }
 
+export function isClientAppPath(pathname: string): boolean {
+  const normalized =
+    pathname.length > 1 && pathname.endsWith('/')
+      ? pathname.slice(0, -1)
+      : pathname
+  return normalized === '/app/client' || normalized.startsWith('/app/client/')
+}
+
 export function loginPathForAudience(audience: LoginAudience): string {
   return audience === 'client' ? '/login?mode=client' : '/login?mode=staff'
+}
+
+export function loginPathForReturnTo(pathname: string): string {
+  return isClientAppPath(pathname)
+    ? loginPathForAudience('client')
+    : loginPathForAudience('staff')
 }
 
 export function parseLoginAudience(search: string): LoginAudience {

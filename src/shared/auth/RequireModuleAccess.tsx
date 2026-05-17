@@ -14,7 +14,9 @@ interface RequireModuleAccessProps {
 }
 
 export function RequireModuleAccess({ navPath, children }: RequireModuleAccessProps) {
-  const { profile, loading, configured } = useAuth()
+  const { profile, loading, configured, session, profileLoadError } = useAuth()
+  const awaitingProfile =
+    Boolean(session?.user) && configured && profile === null && !profileLoadError
 
   if (requiresSupabaseInProduction()) {
     return <SupabaseRequiredGate />
@@ -24,7 +26,7 @@ export function RequireModuleAccess({ navPath, children }: RequireModuleAccessPr
     return <>{children}</>
   }
 
-  if (loading) {
+  if (loading || awaitingProfile) {
     return (
       <div className="auth-loading">
         <div className="auth-loading__spinner" aria-hidden />

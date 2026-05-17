@@ -161,10 +161,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(nextSession)
       if (!nextSession?.user) {
         setProfile(null)
+        setProfileLoadError(null)
         setLoading(false)
         return
       }
-      void loadProfile(nextSession)
+      setLoading(true)
+      void loadProfile(nextSession).finally(() => setLoading(false))
     })
 
     return () => {
