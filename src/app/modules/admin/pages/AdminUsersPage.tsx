@@ -12,6 +12,7 @@ import { listCustomersForSelect } from '../../finance/api/payments'
 import type { CustomerOption } from '../../finance/types'
 import { CreateClientAccountWizard } from '../components/CreateClientAccountWizard'
 import { CreateEmployeeForm } from '../components/CreateEmployeeForm'
+import { ChatTemplatesAdmin } from '../components/ChatTemplatesAdmin'
 import { DefaultLeadOwnerSettingCard } from '../components/DefaultLeadOwnerSetting'
 import {
   listAdminUsers,
@@ -159,6 +160,8 @@ export function AdminUsersPage() {
       </header>
 
       <DefaultLeadOwnerSettingCard actorId={profile?.id ?? DEV_OWNER} disabled={!canManage} />
+
+      <ChatTemplatesAdmin disabled={!canManage} />
 
       <section className="card card--wide admin-create-card">
         <CreateClientAccountWizard

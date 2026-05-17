@@ -33,7 +33,7 @@ Sales / Account / Ads / Content / Admin / CEO
 | 5 | Project Workspace | **เพิ่มแล้ว** | `/app/projects` | `projects` (1 ลูกค้าหลายโปรเจกต์) |
 | 6 | Brief Form | **MVP** | `/app/onboarding`, `/app/client/brief` | บรีฟ + อัปโหลดไฟล์ + แจ้ง Account |
 | 7 | Task Management | พร้อมใช้ | `/app/tasks` | `tasks` + `project_id` |
-| 8 | Group Chat | **ขยายแล้ว** | `/app/chat`, `/app/client/chat`, แชทในโปรเจกต์ | inbox, อ่านแล้ว, แนบไฟล์, ข้อความระบบ (`00054`–`00055`) |
+| 8 | Group Chat | **ขยายแล้ว** | `/app/chat`, `/app/client/chat`, แชทในโปรเจกต์ | inbox, แนบไฟล์, @mention, อ่านแล้ว, ปักหมุด, reaction, เทมเพลต (`00054`–`00056`) |
 | 9 | Ads Management | พร้อมใช้ | `/app/ads` | `campaigns`, `daily_metrics` |
 | 10 | Content Management | พร้อมใช้ | `/app/content` | `content_jobs` |
 | 11 | Creator / TikTok One | พร้อมใช้ | `/app/creators` | `creators`, `creator_campaigns` |

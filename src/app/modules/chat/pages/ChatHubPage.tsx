@@ -1,11 +1,8 @@
 import { useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import {
-  canViewChatHub,
-  hasTasksTeamView,
-} from '../../../../shared/auth/access'
-import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
+import { canViewChatHub, hasTasksTeamView } from '../../../../shared/auth/access'
+import { ChatInboxList } from '../components/ChatInboxList'
 import { ProjectChatPanel } from '../components/ProjectChatPanel'
 import { useChatInbox } from '../hooks/useChatInbox'
 import '../../crm/crm.css'
@@ -40,89 +37,65 @@ export function ChatHubPage() {
 
   return (
     <div className="page chat-hub-page">
-      <header className="page__header chat-hub-page__header">
+      <header className="chat-hub-page__top">
         <div>
           <h1>แชท</h1>
           <p className="muted">
-            กล่องข้อความต่อโปรเจกต์ — {totalUnread > 0 ? `${totalUnread} ยังไม่อ่าน` : 'ทันกับลูกค้า'}
+            สนทนาต่อโปรเจกต์กับลูกค้าแบบเรียลไทม์
+            {totalUnread > 0 ? ` · ${totalUnread} ยังไม่อ่าน` : ''}
           </p>
         </div>
-        <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void reload()}>
-          รีเฟรช
-        </button>
+        <div className="chat-hub-page__top-actions">
+          <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void reload()}>
+            รีเฟรช
+          </button>
+          <Link to="/app/projects" className="crm-btn crm-btn--ghost">
+            โปรเจกต์
+          </Link>
+        </div>
       </header>
 
       {error && <p className="crm-error">{error}</p>}
 
-      <div className="chat-hub-layout">
-        <aside className="card chat-hub-inbox">
-          <h2 className="crm-section-title">ห้องสนทนา</h2>
-          {loading && <p className="muted">กำลังโหลด...</p>}
-          {!loading && items.length === 0 && (
-            <p className="muted">ยังไม่มีแชท — เปิดแชทจากหน้าโปรเจกต์</p>
-          )}
-          <ul className="chat-hub-inbox__list">
-            {items.map((row) => {
-              const active = row.project_id === selectedProjectId
-              return (
-                <li key={row.room_id}>
-                  <button
-                    type="button"
-                    className={`chat-hub-inbox__item${active ? ' chat-hub-inbox__item--active' : ''}`}
-                    onClick={() => navigate(`/app/chat?project=${row.project_id}`)}
-                  >
-                    <span className="chat-hub-inbox__title">
-                      {row.project_name}
-                      {row.unread_count > 0 && (
-                        <span className="chat-hub-inbox__badge">{row.unread_count}</span>
-                      )}
-                    </span>
-                    <span className="chat-hub-inbox__brand muted">{row.brand_name}</span>
-                    {row.last_message_body && (
-                      <span className="chat-hub-inbox__preview">{row.last_message_body}</span>
-                    )}
-                    {row.last_message_at && (
-                      <time className="chat-hub-inbox__time" dateTime={row.last_message_at}>
-                        {formatBangkokDateTime(row.last_message_at)}
-                      </time>
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </aside>
+      <div className="chat-hub-shell">
+        <ChatInboxList
+          items={items}
+          loading={loading}
+          selectedProjectId={selectedProjectId}
+          onSelect={(projectId) => navigate(`/app/chat?project=${projectId}`)}
+        />
 
-        <div className="chat-hub-main">
+        <div className="chat-hub-shell__main">
           {!selectedProjectId && (
-            <section className="card card--wide chat-hub-placeholder">
-              <p className="muted">เลือกห้องแชทจากรายการ หรือไปที่</p>
-              <Link to="/app/projects" className="crm-btn">
-                รายการโปรเจกต์
+            <section className="chat-hub-welcome">
+              <div className="chat-hub-welcome__icon" aria-hidden>
+                ✦
+              </div>
+              <h2>เลือกห้องสนทนา</h2>
+              <p className="muted">
+                แชทแยกตามโปรเจกต์ — ค้นหาห้องได้จากแถบซ้าย หรือเปิดจากหน้าโปรเจกต์
+              </p>
+              <Link to="/app/projects" className="crm-btn crm-btn--primary">
+                ไปรายการโปรเจกต์
               </Link>
             </section>
           )}
 
           {selected && (
-            <>
-              <p className="muted chat-hub-main__meta">
-                <Link to={`/app/projects/${selected.project_id}`}>เปิดโปรเจกต์</Link>
-                {' · '}
-                <Link to={`/app/customers/${selected.customer_id}`}>{selected.brand_name}</Link>
-              </p>
-              <ProjectChatPanel
-                projectId={selected.project_id}
-                projectName={selected.project_name}
-                customerId={selected.customer_id}
-                userId={userId}
-                canCreateTask={canCreateTask}
-              />
-            </>
+            <ProjectChatPanel
+              projectId={selected.project_id}
+              projectName={selected.project_name}
+              customerId={selected.customer_id}
+              brandName={selected.brand_name}
+              userId={userId}
+              canCreateTask={canCreateTask}
+            />
           )}
 
           {selectedProjectId && !selected && !loading && (
-            <section className="card card--wide">
-              <p className="muted">ไม่พบห้องแชทของโปรเจกต์นี้</p>
+            <section className="chat-hub-welcome">
+              <h2>ไม่พบห้องแชท</h2>
+              <p className="muted">โปรเจกต์นี้อาจยังไม่มีห้องแชท</p>
               <Link to={`/app/projects/${selectedProjectId}`} className="crm-btn">
                 ไปหน้าโปรเจกต์
               </Link>

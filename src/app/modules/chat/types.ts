@@ -1,5 +1,9 @@
 export type ChatMessageType = 'text' | 'system' | 'file'
 
+export type ChatReactionEmoji = '👍' | '✅' | '❤️' | '😂' | '🙏'
+
+export const CHAT_REACTION_EMOJIS: ChatReactionEmoji[] = ['👍', '✅', '❤️', '😂', '🙏']
+
 export interface ChatMessage {
   id: string
   room_id: string
@@ -13,6 +17,7 @@ export interface ChatMessage {
   created_task_id: string | null
   created_at: string
   sender_name?: string | null
+  sender_login?: string | null
 }
 
 export interface ChatMessageInput {
@@ -31,4 +36,50 @@ export interface ChatInboxItem {
   last_message_at: string | null
   last_sender_id: string | null
   unread_count: number
+}
+
+export interface ChatMentionCandidate {
+  user_id: string
+  login_id: string
+  full_name: string
+  role_hint: string
+}
+
+export interface ChatReadReceipt {
+  user_id: string
+  login_id: string | null
+  full_name: string
+  last_read_at: string
+}
+
+export interface ChatPinnedMessage {
+  pin_id: string
+  message_id: string
+  body: string
+  message_type: ChatMessageType
+  pinned_at: string
+  pinned_by_name: string | null
+}
+
+export interface ChatReactionEntry {
+  emoji: ChatReactionEmoji
+  user_id: string
+  login_id: string | null
+  full_name: string
+}
+
+export type ChatReactionsMap = Record<string, ChatReactionEntry[]>
+
+export interface ChatMessageTemplate {
+  id: string
+  label: string
+  body: string
+  sort_order: number
+  is_active: boolean
+}
+
+export interface ChatRoomSocialState {
+  readReceipts: ChatReadReceipt[]
+  pinned: ChatPinnedMessage[]
+  reactions: ChatReactionsMap
 }

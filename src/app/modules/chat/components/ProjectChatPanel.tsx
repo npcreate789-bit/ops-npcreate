@@ -1,10 +1,25 @@
-import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { useAuth } from '../../../../shared/auth/AuthProvider'
+import { hasTasksTeamView } from '../../../../shared/auth/access'
 import { createTask } from '../../tasks/api/tasks'
 import { insertChatSystemMessage, linkChatMessageToTask } from '../api/chat'
 import { validateChatFile } from '../api/chatFiles'
-import { ChatMessageBubble } from './ChatMessageBubble'
+import {
+  fetchChatRoomSocial,
+  listChatMentionCandidates,
+  listChatMessageTemplates,
+  pinChatMessage,
+  toggleChatReaction,
+  unpinChatMessage,
+} from '../api/chatSocial'
+import { messageMatchesSearch } from '../utils/chatDisplay'
+import type { ChatMessage, ChatMessageTemplate, ChatMentionCandidate, ChatReactionEmoji } from '../types'
+import { ChatComposer } from './ChatComposer'
+import { ChatMessageList } from './ChatMessageList'
+import { ChatPinnedBar } from './ChatPinnedBar'
+import { ChatRoomHeader } from './ChatRoomHeader'
+import { useChatRoomSocial } from '../hooks/useChatRoomSocial'
 import { useProjectChat } from '../hooks/useProjectChat'
-import type { ChatMessage } from '../types'
 import '../chat.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
@@ -13,40 +28,71 @@ interface ProjectChatPanelProps {
   projectId: string
   projectName: string
   customerId: string
+  brandName?: string
   userId?: string
   canCreateTask?: boolean
+  variant?: 'card' | 'shell'
 }
 
 export function ProjectChatPanel({
   projectId,
   projectName,
   customerId,
+  brandName,
   userId = DEV_OWNER,
-  canCreateTask = true,
+  canCreateTask: canCreateTaskProp,
+  variant = 'shell',
 }: ProjectChatPanelProps) {
+  const { profile, configured } = useAuth()
+  const roles = profile?.roles ?? []
+  const canCreateTask = canCreateTaskProp ?? (hasTasksTeamView(roles) || !configured)
+  const isClientOnly = roles.length > 0 && roles.every((r) => r === 'client')
+
   const [draft, setDraft] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [creatingFromId, setCreatingFromId] = useState<string | null>(null)
+  const [templates, setTemplates] = useState<ChatMessageTemplate[]>([])
+  const [mentionCandidates, setMentionCandidates] = useState<ChatMentionCandidate[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
   const { messages, loading, sending, error, bottomRef, send, sendFile, reload, roomId } =
     useProjectChat(projectId, userId)
+
+  const { social, reload: reloadSocial, setSocial } = useChatRoomSocial(roomId, messages.length)
+
+  useEffect(() => {
+    if (isClientOnly) {
+      setTemplates([])
+      setMentionCandidates([])
+      return
+    }
+    listChatMessageTemplates()
+      .then(setTemplates)
+      .catch(() => setTemplates([]))
+    listChatMentionCandidates(projectId)
+      .then(setMentionCandidates)
+      .catch(() => setMentionCandidates([]))
+  }, [projectId, isClientOnly])
+
+  const visibleMessages = useMemo(
+    () => messages.filter((m) => messageMatchesSearch(m, searchQuery)),
+    [messages, searchQuery],
+  )
+
+  const pinnedIds = useMemo(
+    () => new Set(social.pinned.map((p) => p.message_id)),
+    [social.pinned],
+  )
+
+  const showTemplateSuggestions =
+    !loading && messages.length === 0 && !searchQuery.trim() && !isClientOnly
 
   async function submitMessage() {
     const text = draft.trim()
     if (!text || sending) return
     setDraft('')
     await send(text)
-  }
-
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    void submitMessage()
-  }
-
-  function handleComposerKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      void submitMessage()
-    }
+    await reloadSocial()
   }
 
   function handlePickFile() {
@@ -65,6 +111,7 @@ export function ProjectChatPanel({
     const caption = draft.trim() || undefined
     if (caption) setDraft('')
     await sendFile(file, caption)
+    await reloadSocial()
   }
 
   async function handleCreateTask(message: ChatMessage) {
@@ -90,78 +137,99 @@ export function ProjectChatPanel({
         task.id,
       )
       await reload()
+      await reloadSocial()
     } catch {
-      /* error surfaced on next reload */
+      /* surfaced on reload */
     } finally {
       setCreatingFromId(null)
     }
   }
 
+  async function handlePin(messageId: string) {
+    if (!roomId) return
+    await pinChatMessage(roomId, messageId)
+    await reloadSocial()
+  }
+
+  async function handleUnpin(messageId: string) {
+    if (!roomId) return
+    await unpinChatMessage(roomId, messageId)
+    await reloadSocial()
+  }
+
+  async function handleToggleReaction(messageId: string, emoji: ChatReactionEmoji) {
+    await toggleChatReaction(messageId, emoji)
+    if (!roomId) return
+    setSocial(await fetchChatRoomSocial(roomId))
+  }
+
+  function jumpToMessage(messageId: string) {
+    document.getElementById(`chat-msg-${messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   return (
-    <section className="card card--wide project-chat">
-      <header className="project-chat__head">
-        <h2>แชทโปรเจกต์</h2>
-        <p className="muted">
-          {projectName} — Enter ส่ง · แนบรูป/PDF ได้
-        </p>
-      </header>
+    <section
+      className={`chat-shell${variant === 'card' ? ' chat-shell--card card card--wide' : ''}`}
+    >
+      <ChatRoomHeader
+        title={projectName}
+        subtitle={brandName ? `แบรนด์ ${brandName}` : 'แชทโปรเจกต์'}
+        projectId={projectId}
+        customerId={customerId}
+        brandName={brandName}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onRefresh={() => {
+          void reload()
+          void reloadSocial()
+        }}
+        refreshing={loading}
+      />
 
-      {loading && <p className="muted">กำลังโหลดข้อความ...</p>}
-      {error && <p className="crm-error">{error}</p>}
+      {error && <p className="crm-error chat-shell__error">{error}</p>}
 
-      <div className="project-chat__feed" role="log" aria-live="polite">
-        {!loading && messages.length === 0 && (
-          <p className="muted project-chat__empty">ยังไม่มีข้อความ — ส่งข้อความแรกได้เลย</p>
-        )}
-        {messages.map((m) => (
-          <ChatMessageBubble
-            key={m.id}
-            message={m}
-            mine={m.sender_id === userId}
-            canCreateTask={canCreateTask}
-            creatingTask={creatingFromId === m.id}
-            onCreateTask={() => void handleCreateTask(m)}
-          />
-        ))}
-        <div ref={bottomRef} />
-      </div>
+      <ChatPinnedBar
+        pinned={social.pinned}
+        onJump={jumpToMessage}
+        onUnpin={(id) => void handleUnpin(id)}
+      />
 
-      <form className="project-chat__composer" onSubmit={handleSubmit}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-          className="project-chat__file-input"
-          hidden
-          onChange={(e) => void handleFileChange(e)}
-        />
-        <textarea
-          className="crm-input project-chat__input"
-          rows={2}
-          placeholder="พิมพ์ข้อความ..."
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleComposerKeyDown}
-          disabled={loading || sending}
-        />
-        <div className="project-chat__composer-actions">
-          <button
-            type="button"
-            className="crm-btn crm-btn--ghost"
-            disabled={loading || sending}
-            onClick={handlePickFile}
-          >
-            แนบไฟล์
-          </button>
-          <button
-            type="submit"
-            className="crm-btn crm-btn--primary"
-            disabled={loading || sending || !draft.trim()}
-          >
-            {sending ? 'กำลังส่ง...' : 'ส่ง'}
-          </button>
-        </div>
-      </form>
+      <ChatMessageList
+        messages={visibleMessages}
+        userId={userId}
+        loading={loading}
+        canCreateTask={canCreateTask}
+        creatingFromId={creatingFromId}
+        onCreateTask={handleCreateTask}
+        bottomRef={bottomRef}
+        searchQuery={searchQuery}
+        pinnedIds={pinnedIds}
+        readReceipts={social.readReceipts}
+        reactions={social.reactions}
+        onPin={(id) => void handlePin(id)}
+        onUnpin={(id) => void handleUnpin(id)}
+        onToggleReaction={(id, emoji) => void handleToggleReaction(id, emoji)}
+      />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+        className="visually-hidden"
+        onChange={(e) => void handleFileChange(e)}
+      />
+
+      <ChatComposer
+        draft={draft}
+        onDraftChange={setDraft}
+        onSubmit={submitMessage}
+        onPickFile={handlePickFile}
+        sending={sending}
+        disabled={loading}
+        templates={templates}
+        mentionCandidates={mentionCandidates}
+        showTemplateSuggestions={showTemplateSuggestions}
+      />
     </section>
   )
 }

@@ -247,6 +247,7 @@ export function ProjectDetailPage() {
               customerId={project.customer_id}
               userId={userId}
               canCreateTask={canCreateTask}
+              variant="card"
             />
           </div>
           <section className="card card--wide">
