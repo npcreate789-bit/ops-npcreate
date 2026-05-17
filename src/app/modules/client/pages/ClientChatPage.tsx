@@ -112,7 +112,8 @@ export function ClientChatPage() {
       )}
 
       {customerId && (
-        <div className="chat-hub-shell client-chat-shell">
+        <div className="client-chat-page__stage">
+          <div className="chat-hub-shell client-chat-shell">
           <ChatInboxList
             items={clientInboxItems}
             loading={loadingProjects}
@@ -140,6 +141,7 @@ export function ClientChatPage() {
                 lockedChannel="client"
               />
             )}
+          </div>
           </div>
         </div>
       )}

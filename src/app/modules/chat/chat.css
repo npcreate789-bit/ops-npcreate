@@ -80,6 +80,7 @@
 
 .chat-hub-shell {
   display: grid;
+  grid-template-rows: minmax(0, 1fr);
   gap: 0;
   flex: 1;
   min-height: 0;
@@ -152,14 +153,49 @@
   cursor: not-allowed;
 }
 
+/* Client chat — จำกัดความสูงทั้งหน้า ให้ feed เลื่อนและเห็น composer */
+.client-chat-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100dvh - var(--npc-taskbar-h, 52px) - 5.5rem);
+  max-height: calc(100dvh - var(--npc-taskbar-h, 52px) - 5.5rem);
+}
+
+.client-chat-page .page__header {
+  flex-shrink: 0;
+  margin-bottom: 0.65rem;
+}
+
+.client-chat-page .phase2-scope-badge,
+.client-chat-page > .task-field,
+.client-chat-page > .card {
+  flex-shrink: 0;
+}
+
+.client-chat-page__stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .client-chat-page .chat-hub-shell {
-  min-height: min(640px, 70vh);
-  max-height: min(720px, calc(100dvh - var(--npc-taskbar-h, 52px) - 10rem));
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow: hidden;
 }
 
 .client-chat-page .chat-hub-shell__main {
+  min-height: 0;
   overflow: hidden;
+}
+
+/* Grid ลูกต้องย่อได้ — ไม่งั้น feed/composer ถูก clip */
+.chat-hub-shell > .chat-inbox,
+.chat-hub-shell > .chat-hub-shell__main {
+  min-height: 0;
 }
 
 .chat-hub-welcome {
@@ -354,6 +390,7 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .chat-shell--card {
