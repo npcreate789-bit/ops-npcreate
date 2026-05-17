@@ -4,7 +4,7 @@ import { isSupabaseConfigured, supabase } from '../../../shared/supabase/client'
 import type { AppRole } from '../../../shared/types/roles'
 import { getUnreadNotificationCount } from './api/notifications'
 import { NOTIFICATION_PUSH_EVENT } from './leadNotification'
-import { playNotificationSound } from './notificationSound'
+import { playNotificationAlert } from './notificationSound'
 
 const POLL_MS = 60_000
 
@@ -26,10 +26,10 @@ export function useNotificationUnread(userId: string | undefined, roles: AppRole
 
     let cancelled = false
 
-    const applyCount = (n: number) => {
+    const applyCount = (n: number, opts?: { silent?: boolean }) => {
       if (cancelled) return
-      if (shouldPlaySound(prevCountRef.current, n)) {
-        playNotificationSound()
+      if (!opts?.silent && shouldPlaySound(prevCountRef.current, n)) {
+        playNotificationAlert()
       }
       prevCountRef.current = n
       setCount(n)
@@ -66,7 +66,9 @@ export function useNotificationUnread(userId: string | undefined, roles: AppRole
             filter: `user_id=eq.${userId}`,
           },
           () => {
-            getUnreadNotificationCount(userId).then(applyCount).catch(() => {})
+            getUnreadNotificationCount(userId)
+              .then((n) => applyCount(n, { silent: true }))
+              .catch(() => {})
           },
         )
         .subscribe()

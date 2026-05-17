@@ -4,6 +4,7 @@ import { useAuth } from '../../shared/auth/AuthProvider'
 import { appHostLabel } from '../../shared/config/appUrl'
 import { COMPANY_ICON_SRC } from '../../shared/company/companyProfile'
 import { normalizeLoginId } from '../../shared/auth/loginId'
+import { primeNotificationSound } from '../modules/notifications/notificationSound'
 import {
   loginPathForAudience,
   parseLoginAudience,
@@ -107,6 +108,7 @@ export function LoginPage() {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
+    primeNotificationSound()
     const result = await signIn(loginId, password)
     setSubmitting(false)
     if (result.error) {

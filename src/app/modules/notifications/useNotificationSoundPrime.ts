@@ -8,9 +8,11 @@ export function useNotificationSoundPrime() {
       primeNotificationSound()
     }
     window.addEventListener('pointerdown', prime, { once: true, passive: true })
+    window.addEventListener('touchstart', prime, { once: true, passive: true })
     window.addEventListener('keydown', prime, { once: true })
     return () => {
       window.removeEventListener('pointerdown', prime)
+      window.removeEventListener('touchstart', prime)
       window.removeEventListener('keydown', prime)
     }
   }, [])

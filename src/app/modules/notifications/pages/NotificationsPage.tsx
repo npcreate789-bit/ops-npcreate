@@ -13,6 +13,7 @@ import { isLeadNotification } from '../leadNotification'
 import type { UserNotification } from '../types'
 import {
   isNotificationSoundEnabled,
+  playLeadNotificationSound,
   playNotificationSound,
   setNotificationSoundEnabled,
 } from '../notificationSound'
@@ -57,13 +58,17 @@ export function NotificationsPage() {
   async function handleRefresh() {
     setSyncing(true)
     setError(null)
-    const beforeUnread = rows.filter((n) => !n.read_at).length
+    const beforeLeadKeys = new Set(
+      rows.filter((n) => !n.read_at && isLeadNotification(n.dedupe_key)).map((n) => n.dedupe_key),
+    )
     try {
       await syncNotifications(userId, roles)
       const next = await listNotifications(userId)
-      const afterUnread = next.filter((n) => !n.read_at).length
-      if (soundEnabled && afterUnread > beforeUnread) {
-        playNotificationSound()
+      const newLeadAlerts = next.filter(
+        (n) => !n.read_at && isLeadNotification(n.dedupe_key) && !beforeLeadKeys.has(n.dedupe_key),
+      )
+      if (soundEnabled && newLeadAlerts.length > 0) {
+        playLeadNotificationSound()
       }
       setRows(next)
     } catch (e) {

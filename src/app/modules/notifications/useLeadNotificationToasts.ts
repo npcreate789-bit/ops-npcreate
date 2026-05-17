@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../../../shared/supabase/client'
 import {
   listUnreadLeadNotifications,
@@ -9,7 +9,7 @@ import {
   isLeadNotification,
   mapNotificationRow,
 } from './leadNotification'
-import { playNotificationSound } from './notificationSound'
+import { playLeadNotificationSound } from './notificationSound'
 import type { UserNotification } from './types'
 
 function upsertToast(prev: UserNotification[], row: UserNotification): UserNotification[] {
@@ -19,18 +19,33 @@ function upsertToast(prev: UserNotification[], row: UserNotification): UserNotif
 
 export function useLeadNotificationToasts(userId: string | undefined, enabled: boolean) {
   const [toasts, setToasts] = useState<UserNotification[]>([])
+  const knownKeysRef = useRef<Set<string>>(new Set())
+  const initialLoadRef = useRef(true)
+
+  const applyToasts = useCallback((next: UserNotification[], playSoundForNew: boolean) => {
+    if (playSoundForNew && !initialLoadRef.current) {
+      const hasNew = next.some((n) => !knownKeysRef.current.has(n.dedupe_key))
+      if (hasNew) playLeadNotificationSound()
+    }
+    knownKeysRef.current = new Set(next.map((n) => n.dedupe_key))
+    initialLoadRef.current = false
+    setToasts(next)
+  }, [])
 
   const load = useCallback(async () => {
     if (!userId || !enabled) {
+      knownKeysRef.current = new Set()
+      initialLoadRef.current = true
       setToasts([])
       return
     }
     try {
-      setToasts(await listUnreadLeadNotifications(userId))
+      applyToasts(await listUnreadLeadNotifications(userId), true)
     } catch {
+      knownKeysRef.current = new Set()
       setToasts([])
     }
-  }, [userId, enabled])
+  }, [userId, enabled, applyToasts])
 
   useEffect(() => {
     void load()
@@ -66,7 +81,8 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
           if (!isLeadNotification(row.dedupe_key) || row.read_at) return
           setToasts((prev) => {
             const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
-            if (!had) playNotificationSound()
+            if (!had) playLeadNotificationSound()
+            knownKeysRef.current.add(row.dedupe_key)
             return upsertToast(prev, row)
           })
         },
@@ -86,7 +102,12 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
             setToasts((prev) => prev.filter((t) => t.id !== row.id))
             return
           }
-          setToasts((prev) => upsertToast(prev, row))
+          setToasts((prev) => {
+            const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
+            if (!had && !row.read_at) playLeadNotificationSound()
+            knownKeysRef.current.add(row.dedupe_key)
+            return upsertToast(prev, row)
+          })
         },
       )
       .subscribe()
