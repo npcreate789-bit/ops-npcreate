@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { scrollChatFeedToBottom } from '../utils/chatScroll'
 import { groupMessagesByDay } from '../utils/chatDisplay'
 import type {
   ChatMessage,
@@ -68,7 +69,7 @@ export function ChatMessageList({
   }, [])
 
   function scrollToLatest() {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    scrollChatFeedToBottom(feedRef.current, 'smooth')
     setShowJump(false)
   }
 

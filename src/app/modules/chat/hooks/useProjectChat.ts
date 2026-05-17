@@ -8,7 +8,8 @@ import {
   sendChatMessage,
 } from '../api/chat'
 import { uploadChatFile } from '../api/chatFiles'
-import { setActiveChatFocus } from '../activeChatFocus'
+import { clearActiveChatFocus, setActiveChatFocus } from '../activeChatFocus'
+import { findChatFeedFromAnchor, scrollChatFeedToBottom } from '../utils/chatScroll'
 import type { ChatMessage } from '../types'
 
 export function useProjectChat(
@@ -24,8 +25,13 @@ export function useProjectChat(
   const [error, setError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const scrollToBottom = useCallback(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const feed = findChatFeedFromAnchor(bottomRef.current)
+    if (feed) {
+      scrollChatFeedToBottom(feed, behavior)
+      return
+    }
+    bottomRef.current?.scrollIntoView({ behavior, block: 'end' })
   }, [])
 
   const load = useCallback(async () => {
@@ -57,7 +63,7 @@ export function useProjectChat(
     if (roomId && projectId) {
       setActiveChatFocus(roomId, projectId, activeChannel)
     }
-    return () => setActiveChatFocus(null)
+    return () => clearActiveChatFocus()
   }, [roomId, projectId, activeChannel])
 
   useEffect(() => {

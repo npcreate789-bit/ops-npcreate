@@ -15,6 +15,12 @@ export function setActiveChatFocus(
   activeChannel = channel != null ? parseChatChannel(channel) : null
 }
 
+export function clearActiveChatFocus() {
+  activeRoomId = null
+  activeProjectId = null
+  activeChannel = null
+}
+
 export function getActiveChatRoomId(): string | null {
   return activeRoomId
 }

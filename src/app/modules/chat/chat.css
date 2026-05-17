@@ -358,8 +358,8 @@
 
 .chat-shell--card {
   margin-top: 0;
-  height: min(520px, calc(100dvh - var(--npc-taskbar-h, 52px) - 12rem));
-  max-height: min(520px, calc(100dvh - var(--npc-taskbar-h, 52px) - 12rem));
+  min-height: min(380px, 52vh);
+  max-height: min(560px, calc(100dvh - var(--npc-taskbar-h, 52px) - 11rem));
   overflow: hidden;
 }
 
@@ -768,7 +768,6 @@
   display: flex;
   align-items: flex-end;
   gap: 0.45rem;
-  max-height: 8.5rem;
 }
 
 .chat-composer__icon-btn {
@@ -790,6 +789,8 @@
 }
 
 .chat-composer__input {
+  --chat-composer-min-h: 2.5rem;
+  --chat-composer-max-h: 6.5rem;
   flex: 1;
   min-width: 0;
   resize: none;
@@ -801,8 +802,8 @@
   font: inherit;
   font-size: 0.92rem;
   line-height: 1.35;
-  min-height: 2.5rem;
-  max-height: 6.5rem;
+  min-height: var(--chat-composer-min-h);
+  max-height: var(--chat-composer-max-h);
   overflow-x: hidden;
   overflow-y: hidden;
   box-sizing: border-box;

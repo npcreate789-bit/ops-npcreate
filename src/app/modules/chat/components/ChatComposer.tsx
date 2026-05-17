@@ -1,4 +1,13 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CompositionEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react'
 import type { ChatMentionCandidate, ChatMessageTemplate } from '../types'
 import { getActiveMentionQuery, insertMention } from '../utils/chatBody'
 import { resizeChatComposerTextarea, resetChatComposerTextarea } from '../utils/composerResize'
@@ -34,20 +43,33 @@ export function ChatComposer({
   templates = [],
   mentionCandidates = [],
   showTemplateSuggestions = false,
-  placeholder = 'พิมพ์ข้อความ… (@ชื่อผู้ใช้ · Enter ส่ง)',
+  placeholder = 'พิมพ์ข้อความ… (Enter ส่ง · Shift+Enter ขึ้นบรรทัด)',
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const composingRef = useRef(false)
   const [mentionIndex, setMentionIndex] = useState(0)
   const [cursor, setCursor] = useState(0)
 
-  useEffect(() => {
+  const syncComposerSize = (stickFeedToBottom = true) => {
     const el = textareaRef.current
-    if (!el) return
+    if (!el || composingRef.current) return
     if (!draft) {
       resetChatComposerTextarea(el)
       return
     }
-    resizeChatComposerTextarea(el)
+    resizeChatComposerTextarea(el, { stickFeedToBottom })
+  }
+
+  useLayoutEffect(() => {
+    syncComposerSize()
+  }, [draft])
+
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => syncComposerSize(false))
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [draft])
 
   const mentionCtx = getActiveMentionQuery(draft, cursor)
@@ -85,7 +107,24 @@ export function ChatComposer({
       if (!el) return
       el.focus()
       el.setSelectionRange(nextCursor, nextCursor)
+      resizeChatComposerTextarea(el)
     })
+  }
+
+  function handleCompositionStart() {
+    composingRef.current = true
+  }
+
+  function handleCompositionEnd(e: CompositionEvent<HTMLTextAreaElement>) {
+    composingRef.current = false
+    setCursor(e.currentTarget.selectionStart ?? 0)
+    syncComposerSize()
+  }
+
+  function handleInput(e: ChangeEvent<HTMLTextAreaElement>) {
+    onDraftChange(e.target.value)
+    setCursor(e.target.selectionStart ?? e.target.value.length)
+    syncComposerSize()
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
@@ -130,7 +169,13 @@ export function ChatComposer({
               className="chat-composer__chip"
               disabled={disabled || sending}
               title={tpl.body}
-              onClick={() => onDraftChange(tpl.body)}
+              onClick={() => {
+                onDraftChange(tpl.body)
+                window.requestAnimationFrame(() => {
+                  const el = textareaRef.current
+                  if (el) resizeChatComposerTextarea(el)
+                })
+              }}
             >
               {tpl.label}
             </button>
@@ -224,10 +269,9 @@ export function ChatComposer({
             rows={1}
             placeholder={placeholder}
             value={draft}
-            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
-              onDraftChange(e.target.value)
-              setCursor(e.target.selectionStart ?? e.target.value.length)
-            }}
+            onChange={handleInput}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
             onClick={(e) => setCursor(e.currentTarget.selectionStart ?? 0)}
             onKeyUp={(e) => setCursor(e.currentTarget.selectionStart ?? 0)}
             onKeyDown={handleKeyDown}
