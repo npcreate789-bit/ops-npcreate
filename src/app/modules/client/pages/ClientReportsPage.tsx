@@ -8,8 +8,7 @@ import {
   type ClientMonthlyAdsReport,
 } from '../api/clientAdsReport'
 import { ClientMonthlyAdsPrintDocument } from '../components/ClientMonthlyAdsPrintDocument'
-import { ClientPreviewBar } from '../components/ClientPreviewBar'
-import { useClientWorkspace } from '../hooks/useClientWorkspace'
+import { useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../client.css'
@@ -19,7 +18,7 @@ function formatMoney(n: number) {
 }
 
 export function ClientReportsPage() {
-  const ws = useClientWorkspace()
+  const ws = useClientWorkspaceContext()
   const customerId = ws.customerId
 
   const [month, setMonth] = useState(() => bangkokYearMonthPrefix())
@@ -48,22 +47,13 @@ export function ClientReportsPage() {
     void loadMonthly()
   }, [loadMonthly])
 
-  if (ws.loading) return <p className="muted">กำลังโหลดรายงาน...</p>
+  if (ws.loading) return null
 
   if (!ws.data) {
     return (
-      <div className="page">
-        <h1>รายงาน</h1>
-        <ClientPreviewBar
-          configured={ws.configured}
-          canPreview={ws.canPreview}
-          customers={ws.customers}
-          previewId={ws.previewId}
-          onPreviewChange={ws.setPreviewId}
-          data={null}
-          error={ws.error}
-          isClientOnly={ws.isClientOnly}
-        />
+      <div className="page client-page">
+        <h2>รายงานผล</h2>
+        <p className="muted">ยังไม่มีข้อมูลรายงานสำหรับบัญชีนี้</p>
       </div>
     )
   }
@@ -71,10 +61,10 @@ export function ClientReportsPage() {
   const { ads_summary } = ws.data
 
   return (
-    <div className="page client-reports-page">
+    <div className="page client-page client-reports-page">
       <header className="page__header client-reports__header">
         <div>
-          <h1>รายงานผล</h1>
+          <h2>รายงานผล</h2>
           <p className="muted">สรุปแอดรายเดือนและภาพรวม 7 วันล่าสุด</p>
         </div>
         <label className="task-field">
@@ -87,17 +77,6 @@ export function ClientReportsPage() {
           />
         </label>
       </header>
-
-      <ClientPreviewBar
-        configured={ws.configured}
-        canPreview={ws.canPreview}
-        customers={ws.customers}
-        previewId={ws.previewId}
-        onPreviewChange={ws.setPreviewId}
-        data={ws.data}
-        error={ws.error}
-        isClientOnly={ws.isClientOnly}
-      />
 
       <section className="card card--wide">
         <h2>ภาพรวม 7 วันล่าสุด</h2>

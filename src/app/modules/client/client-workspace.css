@@ -1,3 +1,47 @@
+.client-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.client-workspace__loading {
+  margin: 0 0 1rem;
+}
+
+.client-workspace__header {
+  margin-bottom: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.client-workspace__eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.78rem;
+  color: var(--npc-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.client-workspace__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.client-workspace__meta {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.client-workspace__body {
+  min-width: 0;
+}
+
+.client-page .page__header h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
 .client-workspace__nav {
   display: flex;
   flex-wrap: wrap;

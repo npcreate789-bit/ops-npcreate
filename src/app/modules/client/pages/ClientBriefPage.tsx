@@ -11,8 +11,7 @@ import {
 } from '../api/briefFiles'
 import { saveClientBrief } from '../api/clientBrief'
 import { saveOnboardingForm } from '../../onboarding/api/onboarding'
-import { ClientPreviewBar } from '../components/ClientPreviewBar'
-import { useClientWorkspace } from '../hooks/useClientWorkspace'
+import { useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
 import '../../crm/crm.css'
 import '../../onboarding/onboarding.css'
 import '../client-workspace.css'
@@ -42,7 +41,7 @@ function formatFileSize(bytes: number | null): string {
 }
 
 export function ClientBriefPage() {
-  const ws = useClientWorkspace()
+  const ws = useClientWorkspaceContext()
   const fileRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<OnboardingFormInput>(emptyForm())
@@ -151,44 +150,24 @@ export function ClientBriefPage() {
   }
 
   if (ws.loading) {
-    return <p className="muted">กำลังโหลดบรีฟ...</p>
+    return null
   }
 
   if (!ws.customerId) {
     return (
-      <div className="page">
-        <h1>บรีฟงาน</h1>
-        <ClientPreviewBar
-          configured={ws.configured}
-          canPreview={ws.canPreview}
-          customers={ws.customers}
-          previewId={ws.previewId}
-          onPreviewChange={ws.setPreviewId}
-          data={null}
-          error={ws.error}
-          isClientOnly={ws.isClientOnly}
-        />
+      <div className="page client-page">
+        <h2>บรีฟงาน</h2>
+        <p className="muted">ยังไม่พบข้อมูลลูกค้าที่เชื่อมกับบัญชีนี้</p>
       </div>
     )
   }
 
   return (
-    <div className="page">
+    <div className="page client-page">
       <header className="page__header">
-        <h1>บรีฟงาน</h1>
+        <h2>บรีฟงาน</h2>
         <p className="muted">กรอกทีละขั้น — บันทึก Draft ได้ตลอด · กดส่งบรีฟเมื่อพร้อม</p>
       </header>
-
-      <ClientPreviewBar
-        configured={ws.configured}
-        canPreview={ws.canPreview}
-        customers={ws.customers}
-        previewId={ws.previewId}
-        onPreviewChange={ws.setPreviewId}
-        data={ws.data}
-        error={ws.error}
-        isClientOnly={ws.isClientOnly}
-      />
 
       <div className="client-brief-steps" role="list">
         {STEPS.map((label, i) => (

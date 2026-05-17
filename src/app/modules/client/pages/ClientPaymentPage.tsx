@@ -1,33 +1,26 @@
 import { Link } from 'react-router-dom'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
-import { ClientPreviewBar } from '../components/ClientPreviewBar'
-import { useClientWorkspace } from '../hooks/useClientWorkspace'
+import { useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
+import '../../crm/crm.css'
 import '../client-workspace.css'
 
 export function ClientPaymentPage() {
-  const ws = useClientWorkspace()
+  const ws = useClientWorkspaceContext()
+
+  if (ws.loading) {
+    return null
+  }
 
   return (
-    <div className="page">
+    <div className="page client-page">
       <header className="page__header">
-        <h1>การชำระเงิน</h1>
-        <p className="muted">สถานะสัญญาและใบเสนอราคา</p>
+        <h2>การชำระเงิน</h2>
+        <p className="muted">สถานะสัญญาและเอกสารที่เกี่ยวข้อง</p>
       </header>
-
-      <ClientPreviewBar
-        configured={ws.configured}
-        canPreview={ws.canPreview}
-        customers={ws.customers}
-        previewId={ws.previewId}
-        onPreviewChange={ws.setPreviewId}
-        data={ws.data}
-        error={ws.error}
-        isClientOnly={ws.isClientOnly}
-      />
 
       {ws.data ? (
         <section className="card card--wide">
-          <h2>สัญญาปัจจุบัน</h2>
+          <h3>สัญญาปัจจุบัน</h3>
           <p>
             แบรนด์ <strong>{ws.data.customer.brand_name}</strong>
           </p>
@@ -36,10 +29,15 @@ export function ClientPaymentPage() {
             {formatBangkokDate(ws.data.customer.contract_end)}
           </p>
           <p className="muted" style={{ marginTop: '1rem' }}>
-            ใบเสนอราคาและสลิปชำระเงิน — ทีม Finance จัดการในระบบภายใน
+            ใบเสนอราคาและสลิปชำระเงินจัดการโดยทีม Finance — หากต้องการสำเนาเอกสารหรือยืนยันการชำระ
+            กรุณาแจ้งผ่านแชท
           </p>
-          <p className="muted">
-            ต่อสัญญา: <Link to="/app/renewals">แจ้งทีม Account</Link>
+          <p style={{ marginTop: '0.75rem' }}>
+            <Link to="/app/client/chat" className="crm-btn crm-btn--ghost">
+              แจ้งทีมผ่านแชท
+            </Link>
+            {' · '}
+            <Link to="/app/help">ดูคู่มือช่วยเหลือ</Link>
           </p>
         </section>
       ) : (
