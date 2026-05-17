@@ -1,6 +1,6 @@
 import { isActiveChatNotificationLink } from '../chat/activeChatFocus'
 import { isChatNotification } from './chatNotification'
-import { isLeadNotification } from './leadNotification'
+import { isStaffAlertNotification } from './staffAlertNotification'
 import type { UserNotification } from './types'
 
 const STORAGE_KEY = 'npc-notification-sound-enabled'
@@ -147,7 +147,7 @@ export function playChatNotificationSound() {
 
 /** เลือกเสียงตามประเภทแจ้งเตือน — ครั้งเดียว */
 export function playNotificationAlert(dedupeKey?: string) {
-  if (dedupeKey && isLeadNotification(dedupeKey)) {
+  if (dedupeKey && isStaffAlertNotification(dedupeKey)) {
     playLeadNotificationSound()
     return
   }
@@ -161,7 +161,7 @@ export function playNotificationAlert(dedupeKey?: string) {
 /** เล่นเสียงเมื่อมีแจ้งเตือนเข้า (Realtime) — ข้าม Lead loop และห้องที่เปิดอยู่ */
 export function tryPlayIncomingNotificationSound(row: UserNotification) {
   if (!isNotificationSoundEnabled() || row.read_at) return
-  if (isLeadNotification(row.dedupe_key)) return
+  if (isStaffAlertNotification(row.dedupe_key)) return
   if (isChatNotification(row.dedupe_key) && isActiveChatNotificationLink(row.link)) return
   playNotificationAlert(row.dedupe_key)
 }

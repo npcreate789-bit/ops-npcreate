@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
+import { mockLeadsApi } from '../../crm/api/mockStore'
 
 export interface PublicInquiryInput {
   brand_name: string
@@ -16,10 +17,38 @@ export interface PublicInquiryInput {
   company_website?: string
 }
 
+const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
+
+async function submitPublicInquiryDevMock(input: PublicInquiryInput): Promise<string> {
+  await new Promise((r) => setTimeout(r, 400))
+
+  const lead = await mockLeadsApi.create({
+    owner_id: DEV_OWNER,
+    brand_name: input.brand_name.trim(),
+    contact_name: input.contact_name?.trim() || null,
+    phone: input.phone?.trim() || null,
+    line_id: input.line_id?.trim() || null,
+    facebook: input.facebook?.trim() || null,
+    business_type: input.business_type || null,
+    ad_budget_daily: null,
+    ad_budget_monthly: input.ad_budget_monthly ?? null,
+    reminder_at: null,
+    pain_points: input.pain_points?.trim() || null,
+    services_interested: input.services_interested ?? [],
+    status: 'interested',
+    channel: 'website',
+    notes:
+      [input.notes?.trim(), input.shop_links?.trim() ? `ลิงก์ร้าน:\n${input.shop_links.trim()}` : '']
+        .filter(Boolean)
+        .join('\n\n') || null,
+  })
+
+  return lead.id
+}
+
 export async function submitPublicInquiry(input: PublicInquiryInput): Promise<string> {
   if (!isSupabaseConfigured || !supabase) {
-    await new Promise((r) => setTimeout(r, 400))
-    return crypto.randomUUID()
+    return submitPublicInquiryDevMock(input)
   }
 
   const { data, error } = await supabase.rpc('submit_public_inquiry', {

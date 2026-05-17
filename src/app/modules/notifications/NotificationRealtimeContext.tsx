@@ -11,13 +11,17 @@ import type { AppRole } from '../../../shared/types/roles'
 import type { UserNotification } from './types'
 import { useAppNotificationRealtime } from './useAppNotificationRealtime'
 
-type LeadListener = (row: UserNotification) => void
+type StaffAlertListener = (row: UserNotification) => void
 type VoidListener = () => void
 
 interface NotificationRealtimeContextValue {
   subscribeUnread: (listener: VoidListener) => () => void
-  subscribeLeadInsert: (listener: LeadListener) => () => void
-  subscribeLeadUpdate: (listener: LeadListener) => () => void
+  subscribeStaffAlertInsert: (listener: StaffAlertListener) => () => void
+  subscribeStaffAlertUpdate: (listener: StaffAlertListener) => () => void
+  /** @deprecated ใช้ subscribeStaffAlertInsert */
+  subscribeLeadInsert: (listener: StaffAlertListener) => () => void
+  /** @deprecated ใช้ subscribeStaffAlertUpdate */
+  subscribeLeadUpdate: (listener: StaffAlertListener) => () => void
 }
 
 const NotificationRealtimeContext = createContext<NotificationRealtimeContextValue | null>(
@@ -35,22 +39,28 @@ export function NotificationRealtimeProvider({
 }) {
   const enabled = canAccessNotifications(roles)
   const unreadListenersRef = useRef(new Set<VoidListener>())
-  const leadInsertListenersRef = useRef(new Set<LeadListener>())
-  const leadUpdateListenersRef = useRef(new Set<LeadListener>())
+  const staffAlertInsertListenersRef = useRef(new Set<StaffAlertListener>())
+  const staffAlertUpdateListenersRef = useRef(new Set<StaffAlertListener>())
 
   const notifyUnread = useCallback(() => {
     for (const fn of unreadListenersRef.current) fn()
   }, [])
 
-  const notifyLeadInsert = useCallback((row: UserNotification) => {
-    for (const fn of leadInsertListenersRef.current) fn(row)
+  const notifyStaffAlertInsert = useCallback((row: UserNotification) => {
+    for (const fn of staffAlertInsertListenersRef.current) fn(row)
   }, [])
 
-  const notifyLeadUpdate = useCallback((row: UserNotification) => {
-    for (const fn of leadUpdateListenersRef.current) fn(row)
+  const notifyStaffAlertUpdate = useCallback((row: UserNotification) => {
+    for (const fn of staffAlertUpdateListenersRef.current) fn(row)
   }, [])
 
-  useAppNotificationRealtime(userId, enabled, notifyUnread, notifyLeadInsert, notifyLeadUpdate)
+  useAppNotificationRealtime(
+    userId,
+    enabled,
+    notifyUnread,
+    notifyStaffAlertInsert,
+    notifyStaffAlertUpdate,
+  )
 
   const value = useMemo<NotificationRealtimeContextValue>(
     () => ({
@@ -58,13 +68,21 @@ export function NotificationRealtimeProvider({
         unreadListenersRef.current.add(listener)
         return () => unreadListenersRef.current.delete(listener)
       },
+      subscribeStaffAlertInsert: (listener) => {
+        staffAlertInsertListenersRef.current.add(listener)
+        return () => staffAlertInsertListenersRef.current.delete(listener)
+      },
+      subscribeStaffAlertUpdate: (listener) => {
+        staffAlertUpdateListenersRef.current.add(listener)
+        return () => staffAlertUpdateListenersRef.current.delete(listener)
+      },
       subscribeLeadInsert: (listener) => {
-        leadInsertListenersRef.current.add(listener)
-        return () => leadInsertListenersRef.current.delete(listener)
+        staffAlertInsertListenersRef.current.add(listener)
+        return () => staffAlertInsertListenersRef.current.delete(listener)
       },
       subscribeLeadUpdate: (listener) => {
-        leadUpdateListenersRef.current.add(listener)
-        return () => leadUpdateListenersRef.current.delete(listener)
+        staffAlertUpdateListenersRef.current.add(listener)
+        return () => staffAlertUpdateListenersRef.current.delete(listener)
       },
     }),
     [],
@@ -82,8 +100,10 @@ export function useNotificationRealtime() {
   if (!ctx) {
     return {
       subscribeUnread: (_listener: VoidListener) => () => {},
-      subscribeLeadInsert: (_listener: LeadListener) => () => {},
-      subscribeLeadUpdate: (_listener: LeadListener) => () => {},
+      subscribeStaffAlertInsert: (_listener: StaffAlertListener) => () => {},
+      subscribeStaffAlertUpdate: (_listener: StaffAlertListener) => () => {},
+      subscribeLeadInsert: (_listener: StaffAlertListener) => () => {},
+      subscribeLeadUpdate: (_listener: StaffAlertListener) => () => {},
     }
   }
   return ctx

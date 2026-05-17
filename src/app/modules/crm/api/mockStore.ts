@@ -1,4 +1,4 @@
-import { pushLeadNotification } from '../../notifications/api/notifications'
+import { pushInquiryNotification, pushLeadNotification } from '../../notifications/api/notifications'
 import type { Lead, LeadFilters, LeadInsert, LeadUpdate, SalesSummaryRow } from '../types'
 import { ACTIVE_STATUSES } from '../constants'
 
@@ -99,7 +99,11 @@ export const mockLeadsApi = {
     const leads = load()
     leads.unshift(lead)
     save(leads)
-    void pushLeadNotification(lead.owner_id, lead).catch(() => {})
+    if (lead.channel === 'website') {
+      void pushInquiryNotification(lead.owner_id, lead).catch(() => {})
+    } else {
+      void pushLeadNotification(lead.owner_id, lead).catch(() => {})
+    }
     return lead
   },
 

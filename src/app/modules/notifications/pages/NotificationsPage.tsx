@@ -9,7 +9,7 @@ import {
   markNotificationRead,
   syncNotifications,
 } from '../api/notifications'
-import { isLeadNotification } from '../leadNotification'
+import { isStaffAlertNotification } from '../staffAlertNotification'
 import type { UserNotification } from '../types'
 import {
   isNotificationSoundEnabled,
@@ -60,13 +60,13 @@ export function NotificationsPage() {
     setSyncing(true)
     setError(null)
     const beforeLeadKeys = new Set(
-      rows.filter((n) => !n.read_at && isLeadNotification(n.dedupe_key)).map((n) => n.dedupe_key),
+      rows.filter((n) => !n.read_at && isStaffAlertNotification(n.dedupe_key)).map((n) => n.dedupe_key),
     )
     try {
       await syncNotifications(userId, roles)
       const next = await listNotifications(userId)
       const newLeadAlerts = next.filter(
-        (n) => !n.read_at && isLeadNotification(n.dedupe_key) && !beforeLeadKeys.has(n.dedupe_key),
+        (n) => !n.read_at && isStaffAlertNotification(n.dedupe_key) && !beforeLeadKeys.has(n.dedupe_key),
       )
       if (soundEnabled && newLeadAlerts.length > 0) {
         playLeadNotificationSound()
@@ -238,7 +238,7 @@ export function NotificationsPage() {
                       className="crm-btn crm-btn--ghost"
                       onClick={() => void handleMarkRead(n.id)}
                     >
-                      {isLeadNotification(n.dedupe_key) ? 'รับทราบ' : 'ทำเครื่องหมายอ่านแล้ว'}
+                      {isStaffAlertNotification(n.dedupe_key) ? 'รับทราบ' : 'ทำเครื่องหมายอ่านแล้ว'}
                     </button>
                   )}
                 </div>

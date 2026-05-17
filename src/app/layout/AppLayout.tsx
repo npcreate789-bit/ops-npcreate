@@ -9,7 +9,7 @@ import { CommandPalette } from '../components/CommandPalette'
 import { useCommandPalette } from '../hooks/useCommandPalette'
 import { useKeyboardHelp } from '../hooks/useKeyboardHelp'
 import { PageHistoryTracker } from '../modules/quick-access/components/PageHistoryTracker'
-import { LeadNotificationToasts } from '../modules/notifications/components/LeadNotificationToasts'
+import { StaffAlertToasts } from '../modules/notifications/components/StaffAlertToasts'
 import { NotificationRealtimeProvider } from '../modules/notifications/NotificationRealtimeContext'
 import { useChatMessageNotificationSound } from '../modules/chat/hooks/useChatMessageNotificationSound'
 import { useNotificationSoundPrime } from '../modules/notifications/useNotificationSoundPrime'
@@ -54,7 +54,7 @@ export function AppLayout() {
           <Outlet />
         </main>
         <CommandPalette open={open} onClose={close} />
-        <LeadNotificationToasts userId={userId} roles={roles} />
+        <StaffAlertToasts userId={userId} roles={roles} />
       </div>
     </SidebarLayoutProvider>
     </NotificationRealtimeProvider>

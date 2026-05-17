@@ -6,12 +6,16 @@ import { mockNotificationsApi } from './mockStore'
 import type { UserNotification } from '../types'
 
 import {
+  buildInquiryNotificationInput,
+  inquiryNotificationDedupeKey,
+} from '../inquiryNotification'
+import {
   buildLeadNotificationInput,
   emitNotificationChange,
-  isLeadNotification,
   leadNotificationDedupeKey,
   mapNotificationRow,
 } from '../leadNotification'
+import { isStaffAlertNotification } from '../staffAlertNotification'
 
 /** คีย์ที่ระบบสร้างจาก sync — ใช้ลบรายการที่หมดอายุโดยไม่ล้าง inbox ทั้งก้อน */
 const SYSTEM_DEDUPE_PREFIXES = [
@@ -30,7 +34,7 @@ function isSystemDedupeKey(key: string): boolean {
 }
 
 function isPersistentNotificationKey(key: string): boolean {
-  return isLeadNotification(key)
+  return isStaffAlertNotification(key)
 }
 
 function mapRow(row: Record<string, unknown>): UserNotification {
@@ -170,10 +174,31 @@ export async function markLeadNotificationReadByLeadId(
   await markNotificationReadByDedupeKey(userId, leadNotificationDedupeKey(leadId))
 }
 
-/** แจ้งเตือน Lead ที่ยังไม่อ่าน — สำหรับ toast เรียลไทม์ */
-export async function listUnreadLeadNotifications(userId: string): Promise<UserNotification[]> {
+/** รับทราบคำขอติดต่อเมื่อเปิดดู Lead จากฟอร์มสาธารณะ */
+export async function markInquiryNotificationReadByLeadId(
+  userId: string,
+  leadId: string,
+): Promise<void> {
+  await markNotificationReadByDedupeKey(userId, inquiryNotificationDedupeKey(leadId))
+}
+
+/** รับทราบ Lead + คำขอติดต่อเมื่อเปิดหน้า CRM */
+export async function markStaffAlertReadByLeadId(
+  userId: string,
+  leadId: string,
+): Promise<void> {
+  await Promise.all([
+    markLeadNotificationReadByLeadId(userId, leadId),
+    markInquiryNotificationReadByLeadId(userId, leadId),
+  ])
+}
+
+/** แจ้งเตือน Lead / คำขอติดต่อที่ยังไม่อ่าน — สำหรับ toast เรียลไทม์ */
+export async function listUnreadStaffAlertNotifications(
+  userId: string,
+): Promise<UserNotification[]> {
   if (!isSupabaseConfigured || !supabase) {
-    return mockNotificationsApi.listUnreadLeads(userId)
+    return mockNotificationsApi.listUnreadStaffAlerts(userId)
   }
 
   const { data, error } = await supabase
@@ -181,20 +206,23 @@ export async function listUnreadLeadNotifications(userId: string): Promise<UserN
     .select('*')
     .eq('user_id', userId)
     .is('read_at', null)
-    .like('dedupe_key', 'lead-new-%')
+    .or('dedupe_key.like.lead-new-%,dedupe_key.like.inquiry-new-%')
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)
   return (data ?? []).map(mapRow)
 }
 
-export async function pushLeadNotification(
+/** @deprecated ใช้ listUnreadStaffAlertNotifications */
+export async function listUnreadLeadNotifications(userId: string): Promise<UserNotification[]> {
+  return listUnreadStaffAlertNotifications(userId)
+}
+
+async function upsertStaffNotification(
   userId: string,
-  lead: { id: string; brand_name: string; contact_name?: string | null },
+  input: ReturnType<typeof buildLeadNotificationInput>,
 ): Promise<void> {
-  const input = buildLeadNotificationInput({ ...lead, owner_id: userId })
   if (!isSupabaseConfigured || !supabase) {
-    await mockNotificationsApi.pushLead(userId, lead)
     return
   }
 
@@ -211,6 +239,43 @@ export async function pushLeadNotification(
     { onConflict: 'user_id,dedupe_key' },
   )
   if (error) throw new Error(error.message)
+  emitNotificationChange(userId)
+}
+
+export async function pushLeadNotification(
+  userId: string,
+  lead: { id: string; brand_name: string; contact_name?: string | null },
+): Promise<void> {
+  const input = buildLeadNotificationInput({ ...lead, owner_id: userId })
+  if (!isSupabaseConfigured || !supabase) {
+    await mockNotificationsApi.pushLead(userId, lead)
+    return
+  }
+  await upsertStaffNotification(userId, input)
+}
+
+/** แจ้งเตือนคำขอติดต่อ (โหมด dev / ทดสอบ) */
+export async function pushInquiryNotification(
+  userId: string,
+  inquiry: { id: string; brand_name: string; contact_name?: string | null },
+): Promise<void> {
+  const input = buildInquiryNotificationInput({ ...inquiry, owner_id: userId })
+  if (!isSupabaseConfigured || !supabase) {
+    await mockNotificationsApi.pushInquiry(userId, inquiry)
+    return
+  }
+  await upsertStaffNotification(userId, input)
+}
+
+/** แจ้งทีมขาย/ปฏิบัติการในโหมดพัฒนา — ตรงกับ trigger ฝั่ง DB */
+export async function pushInquiryNotificationsForStaff(
+  inquiry: { id: string; brand_name: string; contact_name?: string | null; owner_id: string },
+  staffUserIds: string[],
+): Promise<void> {
+  const recipients = new Set([inquiry.owner_id, ...staffUserIds])
+  await Promise.all(
+    [...recipients].map((uid) => pushInquiryNotification(uid, inquiry)),
+  )
 }
 
 export async function markAllNotificationsRead(userId: string): Promise<void> {

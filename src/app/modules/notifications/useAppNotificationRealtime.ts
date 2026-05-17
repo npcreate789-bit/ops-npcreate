@@ -1,27 +1,27 @@
 import { useEffect, useRef } from 'react'
 import { isSupabaseConfigured, supabase } from '../../../shared/supabase/client'
-import { isLeadNotification, mapNotificationRow } from './leadNotification'
+import { mapNotificationRow } from './leadNotification'
+import { isStaffAlertNotification } from './staffAlertNotification'
 import { tryPlayIncomingNotificationSound } from './notificationSound'
 import type { UserNotification } from './types'
 
-type LeadInsertHandler = (row: UserNotification) => void
-type LeadUpdateHandler = (row: UserNotification) => void
+type StaffAlertHandler = (row: UserNotification) => void
 
 /** สมัคร Realtime ครั้งเดียวต่อแอป — กัน crash จาก channel ซ้ำ */
 export function useAppNotificationRealtime(
   userId: string | undefined,
   enabled: boolean,
   onUnreadChange: () => void,
-  onLeadInsert: LeadInsertHandler,
-  onLeadUpdate: LeadUpdateHandler,
+  onStaffAlertInsert: StaffAlertHandler,
+  onStaffAlertUpdate: StaffAlertHandler,
 ) {
   const onUnreadRef = useRef(onUnreadChange)
-  const onLeadInsertRef = useRef(onLeadInsert)
-  const onLeadUpdateRef = useRef(onLeadUpdate)
+  const onStaffAlertInsertRef = useRef(onStaffAlertInsert)
+  const onStaffAlertUpdateRef = useRef(onStaffAlertUpdate)
 
   onUnreadRef.current = onUnreadChange
-  onLeadInsertRef.current = onLeadInsert
-  onLeadUpdateRef.current = onLeadUpdate
+  onStaffAlertInsertRef.current = onStaffAlertInsert
+  onStaffAlertUpdateRef.current = onStaffAlertUpdate
 
   useEffect(() => {
     if (!userId || !enabled || !isSupabaseConfigured || !supabase) return
@@ -43,8 +43,8 @@ export function useAppNotificationRealtime(
           const row = mapNotificationRow(payload.new as Record<string, unknown>)
           onUnreadRef.current()
           tryPlayIncomingNotificationSound(row)
-          if (isLeadNotification(row.dedupe_key) && !row.read_at) {
-            onLeadInsertRef.current(row)
+          if (isStaffAlertNotification(row.dedupe_key) && !row.read_at) {
+            onStaffAlertInsertRef.current(row)
           }
         },
       )
@@ -59,8 +59,8 @@ export function useAppNotificationRealtime(
         (payload) => {
           const row = mapNotificationRow(payload.new as Record<string, unknown>)
           onUnreadRef.current()
-          if (isLeadNotification(row.dedupe_key)) {
-            onLeadUpdateRef.current(row)
+          if (isStaffAlertNotification(row.dedupe_key)) {
+            onStaffAlertUpdateRef.current(row)
           }
         },
       )

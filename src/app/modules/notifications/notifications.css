@@ -119,6 +119,20 @@
   border-color: rgba(96, 165, 250, 0.5);
 }
 
+.lead-toast--inquiry {
+  border-color: rgba(52, 211, 153, 0.55);
+}
+
+.lead-toast--inquiry .lead-toast__pulse {
+  background: linear-gradient(180deg, #34d399, #10b981);
+}
+
+.lead-toast__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(52, 211, 153, 0.95);
+}
+
 .lead-toast--ringing {
   animation:
     lead-toast-in 0.35s ease-out,
