@@ -97,6 +97,18 @@ export interface ChatReactionEntry {
 
 export type ChatReactionsMap = Record<string, ChatReactionEntry[]>
 
+export interface ChatMessageNote {
+  id: string
+  message_id: string
+  author_id: string
+  author_name: string | null
+  body: string
+  created_at: string
+  updated_at: string
+}
+
+export type ChatNotesMap = Record<string, ChatMessageNote[]>
+
 export interface ChatMessageTemplate {
   id: string
   label: string
@@ -109,4 +121,5 @@ export interface ChatRoomSocialState {
   readReceipts: ChatReadReceipt[]
   pinned: ChatPinnedMessage[]
   reactions: ChatReactionsMap
+  notes: ChatNotesMap
 }

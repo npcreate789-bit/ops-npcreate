@@ -6,6 +6,7 @@ const EMPTY: ChatRoomSocialState = {
   readReceipts: [],
   pinned: [],
   reactions: {},
+  notes: {},
 }
 
 export function useChatRoomSocial(roomId: string | null, refreshKey = 0) {

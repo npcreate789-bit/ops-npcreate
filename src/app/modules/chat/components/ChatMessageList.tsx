@@ -6,6 +6,7 @@ import type {
   ChatReactionEmoji,
   ChatReadReceipt,
   ChatReactionsMap,
+  ChatNotesMap,
 } from '../types'
 import { ChatDayDivider } from './ChatDayDivider'
 import { ChatMessageBubble } from './ChatMessageBubble'
@@ -28,6 +29,13 @@ interface ChatMessageListProps {
   onToggleReaction?: (messageId: string, emoji: ChatReactionEmoji) => void
   onReply?: (message: ChatMessage) => void
   onJumpToMessage?: (messageId: string) => void
+  canViewNotes?: boolean
+  notes?: ChatNotesMap
+  openNotesMessageId?: string | null
+  notesSaving?: boolean
+  onToggleNotes?: (messageId: string) => void
+  onSaveNote?: (messageId: string, body: string) => void | Promise<void>
+  onDeleteNote?: (messageId: string, noteId: string) => void | Promise<void>
 }
 
 export function ChatMessageList({
@@ -47,6 +55,13 @@ export function ChatMessageList({
   onToggleReaction,
   onReply,
   onJumpToMessage,
+  canViewNotes = false,
+  notes = {},
+  openNotesMessageId = null,
+  notesSaving = false,
+  onToggleNotes,
+  onSaveNote,
+  onDeleteNote,
 }: ChatMessageListProps) {
   const feedRef = useRef<HTMLDivElement>(null)
   const [showJump, setShowJump] = useState(false)
@@ -143,6 +158,21 @@ export function ChatMessageList({
                     onJumpToReply={
                       onJumpToMessage && message.reply_to_id
                         ? () => onJumpToMessage(message.reply_to_id!)
+                        : undefined
+                    }
+                    canViewNotes={canViewNotes}
+                    notes={notes[message.id] ?? []}
+                    notesOpen={openNotesMessageId === message.id}
+                    notesSaving={notesSaving}
+                    onToggleNotes={
+                      onToggleNotes ? () => onToggleNotes(message.id) : undefined
+                    }
+                    onSaveNote={
+                      onSaveNote ? (body) => onSaveNote(message.id, body) : undefined
+                    }
+                    onDeleteNote={
+                      onDeleteNote
+                        ? (noteId) => onDeleteNote(message.id, noteId)
                         : undefined
                     }
                   />

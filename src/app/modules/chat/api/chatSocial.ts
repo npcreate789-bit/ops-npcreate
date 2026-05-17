@@ -1,7 +1,9 @@
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import type {
   ChatMentionCandidate,
+  ChatMessageNote,
   ChatMessageTemplate,
+  ChatNotesMap,
   ChatPinnedMessage,
   ChatReactionEmoji,
   ChatReadReceipt,
@@ -13,6 +15,7 @@ import { CHAT_REACTION_EMOJIS } from '../types'
 const MOCK_TEMPLATES_KEY = 'npcreate_chat_templates_dev'
 const MOCK_PINS_KEY = 'npcreate_chat_pins_dev'
 const MOCK_REACTIONS_KEY = 'npcreate_chat_reactions_dev'
+const MOCK_NOTES_KEY = 'npcreate_chat_notes_dev'
 
 const DEFAULT_TEMPLATES: ChatMessageTemplate[] = [
   {
@@ -41,6 +44,20 @@ function parseReactionsMap(data: unknown): ChatReactionsMap {
     return data as ChatReactionsMap
   }
   return {}
+}
+
+function parseNotesMap(data: unknown): ChatNotesMap {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return {}
+  }
+  const raw = data as Record<string, unknown>
+  const out: ChatNotesMap = {}
+  for (const [messageId, value] of Object.entries(raw)) {
+    if (Array.isArray(value)) {
+      out[messageId] = value as ChatMessageNote[]
+    }
+  }
+  return out
 }
 
 export async function listChatMentionCandidates(
@@ -75,21 +92,68 @@ export async function fetchChatRoomSocial(roomId: string): Promise<ChatRoomSocia
     return loadMockSocial(roomId)
   }
 
-  const [reads, pinned, reactions] = await Promise.all([
+  const [reads, pinned, reactions, notes] = await Promise.all([
     supabase.rpc('get_chat_read_receipts', { p_room_id: roomId }),
     supabase.rpc('list_chat_pinned_messages', { p_room_id: roomId }),
     supabase.rpc('list_chat_room_reactions', { p_room_id: roomId }),
+    supabase.rpc('list_chat_room_notes', { p_room_id: roomId }),
   ])
 
   if (reads.error) throw new Error(reads.error.message)
   if (pinned.error) throw new Error(pinned.error.message)
   if (reactions.error) throw new Error(reactions.error.message)
+  if (notes.error) throw new Error(notes.error.message)
 
   return {
     readReceipts: parseJsonArray<ChatReadReceipt>(reads.data),
     pinned: parseJsonArray<ChatPinnedMessage>(pinned.data),
     reactions: parseReactionsMap(reactions.data),
+    notes: parseNotesMap(notes.data),
   }
+}
+
+export async function saveChatMessageNote(
+  messageId: string,
+  body: string,
+): Promise<ChatMessageNote> {
+  const trimmed = body.trim()
+  if (!trimmed) throw new Error('โน้ตว่าง')
+
+  if (!isSupabaseConfigured || !supabase) {
+    const store = loadMockNotes()
+    const row: ChatMessageNote = {
+      id: crypto.randomUUID(),
+      message_id: messageId,
+      author_id: 'dev-me',
+      author_name: 'คุณ (Dev)',
+      body: trimmed,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    const list = store[messageId] ?? []
+    store[messageId] = [...list, row]
+    saveMockNotes(store)
+    return row
+  }
+
+  const { data, error } = await supabase.rpc('save_chat_message_note', {
+    p_message_id: messageId,
+    p_body: trimmed,
+  })
+  if (error) throw new Error(error.message)
+  return data as ChatMessageNote
+}
+
+export async function deleteChatMessageNote(noteId: string, messageId: string): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    const store = loadMockNotes()
+    store[messageId] = (store[messageId] ?? []).filter((n) => n.id !== noteId)
+    saveMockNotes(store)
+    return
+  }
+
+  const { error } = await supabase.rpc('delete_chat_message_note', { p_note_id: noteId })
+  if (error) throw new Error(error.message)
 }
 
 export async function pinChatMessage(roomId: string, messageId: string): Promise<void> {
@@ -303,10 +367,24 @@ function saveMockReactions(store: ChatReactionsMap) {
   localStorage.setItem(MOCK_REACTIONS_KEY, JSON.stringify(store))
 }
 
+function loadMockNotes(): ChatNotesMap {
+  try {
+    const raw = localStorage.getItem(MOCK_NOTES_KEY)
+    return raw ? (JSON.parse(raw) as ChatNotesMap) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveMockNotes(store: ChatNotesMap) {
+  localStorage.setItem(MOCK_NOTES_KEY, JSON.stringify(store))
+}
+
 function loadMockSocial(roomId: string): ChatRoomSocialState {
   return {
     readReceipts: [],
     pinned: loadMockPins()[roomId] ?? [],
     reactions: loadMockReactions(),
+    notes: loadMockNotes(),
   }
 }

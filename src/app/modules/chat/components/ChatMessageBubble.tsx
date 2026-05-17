@@ -5,8 +5,15 @@ import { ChatMediaAttachment } from './ChatMediaAttachment'
 import { formatChatBubbleTime, formatFullTimestamp } from '../utils/chatDisplay'
 import { renderChatBody } from '../utils/chatBody'
 import { formatReadReceiptLabel, readersForMessage } from '../utils/readReceipts'
-import type { ChatMessage, ChatReactionEmoji, ChatReactionEntry, ChatReadReceipt } from '../types'
+import type {
+  ChatMessage,
+  ChatMessageNote,
+  ChatReactionEmoji,
+  ChatReactionEntry,
+  ChatReadReceipt,
+} from '../types'
 import { ChatAvatar } from './ChatAvatar'
+import { ChatMessageNotes } from './ChatMessageNotes'
 import { ChatReactionRow } from './ChatReactionRow'
 import { ChatReplyQuote } from './ChatReplyQuote'
 import '../chat.css'
@@ -28,6 +35,13 @@ interface ChatMessageBubbleProps {
   onToggleReaction?: (emoji: ChatReactionEmoji) => void
   onReply?: () => void
   onJumpToReply?: () => void
+  canViewNotes?: boolean
+  notes?: ChatMessageNote[]
+  notesOpen?: boolean
+  notesSaving?: boolean
+  onToggleNotes?: () => void
+  onSaveNote?: (body: string) => void | Promise<void>
+  onDeleteNote?: (noteId: string) => void | Promise<void>
 }
 
 export function ChatMessageBubble({
@@ -47,6 +61,13 @@ export function ChatMessageBubble({
   onToggleReaction,
   onReply,
   onJumpToReply,
+  canViewNotes = false,
+  notes = [],
+  notesOpen = false,
+  notesSaving = false,
+  onToggleNotes,
+  onSaveNote,
+  onDeleteNote,
 }: ChatMessageBubbleProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -131,6 +152,11 @@ export function ChatMessageBubble({
           <header className="chat-bubble__head">
             <strong className="chat-bubble__sender">{senderLabel}</strong>
             {isPinned && <span className="chat-bubble__pin-badge">ปักหมุด</span>}
+            {canViewNotes && notes.length > 0 && (
+              <span className="chat-bubble__note-badge" title={`${notes.length} โน้ตภายใน`}>
+                📝 {notes.length}
+              </span>
+            )}
             <time
               className="chat-bubble__time"
               dateTime={message.created_at}
@@ -192,6 +218,15 @@ export function ChatMessageBubble({
                 ตอบกลับ
               </button>
             )}
+            {canViewNotes && onToggleNotes && message.message_type !== 'system' && (
+              <button
+                type="button"
+                className={`chat-bubble__tool${notesOpen ? ' chat-bubble__tool--active' : ''}`}
+                onClick={onToggleNotes}
+              >
+                โน้ต{notes.length > 0 ? ` (${notes.length})` : ''}
+              </button>
+            )}
             {onPin && !isPinned && (
               <button type="button" className="chat-bubble__tool" onClick={onPin}>
                 ปักหมุด
@@ -204,6 +239,17 @@ export function ChatMessageBubble({
             )}
           </div>
         </div>
+
+        {canViewNotes && notesOpen && onSaveNote && onDeleteNote && onToggleNotes && (
+          <ChatMessageNotes
+            notes={notes}
+            userId={userId}
+            saving={notesSaving}
+            onSave={onSaveNote}
+            onDelete={(noteId) => onDeleteNote(noteId)}
+            onClose={onToggleNotes}
+          />
+        )}
 
         {onToggleReaction && (
           <ChatReactionRow

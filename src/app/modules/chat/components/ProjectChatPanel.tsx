@@ -9,7 +9,9 @@ import {
   fetchChatRoomSocial,
   listChatMentionCandidates,
   listChatMessageTemplates,
+  deleteChatMessageNote,
   pinChatMessage,
+  saveChatMessageNote,
   toggleChatReaction,
   unpinChatMessage,
 } from '../api/chatSocial'
@@ -69,6 +71,8 @@ export function ProjectChatPanel({
   const [channelTabs, setChannelTabs] = useState<{ channel: ChatChannelKey; label: string }[]>([])
   const [draft, setDraft] = useState('')
   const [replyTarget, setReplyTarget] = useState<ChatReplyTarget | null>(null)
+  const [openNotesMessageId, setOpenNotesMessageId] = useState<string | null>(null)
+  const [notesSaving, setNotesSaving] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [creatingFromId, setCreatingFromId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<ChatMessageTemplate[]>([])
@@ -109,7 +113,10 @@ export function ProjectChatPanel({
 
   useEffect(() => {
     setReplyTarget(null)
+    setOpenNotesMessageId(null)
   }, [projectId, activeChannel])
+
+  const canViewNotes = !isClientOnly
 
   const visibleMessages = useMemo(
     () => messages.filter((m) => messageMatchesSearch(m, searchQuery)),
@@ -138,6 +145,49 @@ export function ProjectChatPanel({
     if (message.message_type === 'system') return
     setReplyTarget(messageToReplyTarget(message))
     document.querySelector<HTMLTextAreaElement>('.chat-composer__input')?.focus()
+  }
+
+  function toggleNotes(messageId: string) {
+    setOpenNotesMessageId((prev) => (prev === messageId ? null : messageId))
+  }
+
+  async function handleSaveNote(messageId: string, body: string) {
+    setNotesSaving(true)
+    try {
+      const row = await saveChatMessageNote(messageId, body)
+      setSocial((prev) => {
+        const list = prev.notes[messageId] ?? []
+        return {
+          ...prev,
+          notes: {
+            ...prev.notes,
+            [messageId]: [...list, row],
+          },
+        }
+      })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'บันทึกโน้ตไม่สำเร็จ')
+    } finally {
+      setNotesSaving(false)
+    }
+  }
+
+  async function handleDeleteNote(messageId: string, noteId: string) {
+    setNotesSaving(true)
+    try {
+      await deleteChatMessageNote(noteId, messageId)
+      setSocial((prev) => ({
+        ...prev,
+        notes: {
+          ...prev.notes,
+          [messageId]: (prev.notes[messageId] ?? []).filter((n) => n.id !== noteId),
+        },
+      }))
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'ลบโน้ตไม่สำเร็จ')
+    } finally {
+      setNotesSaving(false)
+    }
   }
 
   function scrollToMessage(messageId: string) {
@@ -296,6 +346,13 @@ export function ProjectChatPanel({
         onToggleReaction={(id, emoji) => void handleToggleReaction(id, emoji)}
         onReply={startReply}
         onJumpToMessage={scrollToMessage}
+        canViewNotes={canViewNotes}
+        notes={social.notes}
+        openNotesMessageId={openNotesMessageId}
+        notesSaving={notesSaving}
+        onToggleNotes={toggleNotes}
+        onSaveNote={handleSaveNote}
+        onDeleteNote={handleDeleteNote}
       />
 
       {replyTarget && (
