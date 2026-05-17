@@ -25,7 +25,7 @@ import type {
 } from '../types'
 import { messageToReplyTarget } from '../utils/replyPreview'
 import { scrollChatFeedToBottom } from '../utils/chatScroll'
-import { ChatChannelTabs } from './ChatChannelTabs'
+import { ChatRoomTopBar } from './ChatRoomTopBar'
 import { ChatComposer } from './ChatComposer'
 import { ChatReplyBar } from './ChatReplyBar'
 import { ChatMessageList } from './ChatMessageList'
@@ -74,6 +74,7 @@ export function ProjectChatPanel({
   const [replyTarget, setReplyTarget] = useState<ChatReplyTarget | null>(null)
   const [openNotesMessageId, setOpenNotesMessageId] = useState<string | null>(null)
   const [openNotesAnchor, setOpenNotesAnchor] = useState<HTMLElement | null>(null)
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false)
   const [notesSaving, setNotesSaving] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [creatingFromId, setCreatingFromId] = useState<string | null>(null)
@@ -117,6 +118,7 @@ export function ProjectChatPanel({
     setReplyTarget(null)
     setOpenNotesMessageId(null)
     setOpenNotesAnchor(null)
+    setNotesPanelOpen(false)
   }, [projectId, activeChannel])
 
   const notesTarget = useMemo(
@@ -168,6 +170,14 @@ export function ProjectChatPanel({
     }
     setOpenNotesMessageId(messageId)
     setOpenNotesAnchor(anchor)
+    setNotesPanelOpen(true)
+  }
+
+  function openNotedFromTopBar(messageId: string, anchor: HTMLElement) {
+    setOpenNotesMessageId(messageId)
+    setOpenNotesAnchor(anchor)
+    setNotesPanelOpen(true)
+    scrollToMessage(messageId)
   }
 
   function closeNotes() {
@@ -313,15 +323,6 @@ export function ProjectChatPanel({
     <section
       className={`chat-shell${variant === 'card' ? ' chat-shell--card card card--wide' : ''}`}
     >
-      {!lockedChannel && (
-        <ChatChannelTabs
-          channels={channelTabs}
-          active={activeChannel}
-          disabled={loading}
-          onChange={(ch) => onChannelChange?.(ch)}
-        />
-      )}
-
       <ChatRoomHeader
         title={projectName}
         subtitle={
@@ -343,6 +344,27 @@ export function ProjectChatPanel({
           void reloadSocial()
         }}
         refreshing={loading}
+      />
+
+      <ChatRoomTopBar
+        channels={
+          lockedChannel
+            ? [{ channel: lockedChannel, label: CHAT_CHANNEL_HINTS[lockedChannel] }]
+            : channelTabs.length > 0
+              ? channelTabs
+              : [{ channel: activeChannel, label: CHAT_CHANNEL_HINTS[activeChannel] }]
+        }
+        activeChannel={activeChannel}
+        onChannelChange={(ch) => onChannelChange?.(ch)}
+        channelTabsDisabled={loading}
+        showChannelTabs
+        messages={messages}
+        notesMap={social.notes}
+        userId={userId}
+        notesPanelOpen={notesPanelOpen}
+        onToggleNotesPanel={() => setNotesPanelOpen((v) => !v)}
+        onOpenNotedMessage={openNotedFromTopBar}
+        activeNotedMessageId={openNotesMessageId}
       />
 
       {openNotesMessageId && notesTarget && openNotesAnchor && (

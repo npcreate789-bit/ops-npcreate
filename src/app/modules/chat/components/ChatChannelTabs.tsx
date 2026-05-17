@@ -12,6 +12,7 @@ interface ChatChannelTabsProps {
   active: ChatChannelKey
   onChange: (channel: ChatChannelKey) => void
   disabled?: boolean
+  embedded?: boolean
 }
 
 export function ChatChannelTabs({
@@ -19,11 +20,15 @@ export function ChatChannelTabs({
   active,
   onChange,
   disabled = false,
+  embedded = false,
 }: ChatChannelTabsProps) {
-  if (channels.length <= 1) return null
+  if (!embedded && channels.length <= 1) return null
 
   return (
-    <nav className="chat-channel-tabs" aria-label="ห้องทีม">
+    <nav
+      className={`chat-channel-tabs${embedded ? ' chat-channel-tabs--embedded' : ''}`}
+      aria-label="ห้องทีม"
+    >
       {channels.map((tab) => {
         const isActive = tab.channel === active
         return (
