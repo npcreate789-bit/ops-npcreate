@@ -10,7 +10,9 @@ import {
 import { APP_ROLES, ROLE_LABELS, type AppRole } from '../../../../shared/types/roles'
 import { listCustomersForSelect } from '../../finance/api/payments'
 import type { CustomerOption } from '../../finance/types'
+import { CreateClientAccountWizard } from '../components/CreateClientAccountWizard'
 import { CreateEmployeeForm } from '../components/CreateEmployeeForm'
+import { DefaultLeadOwnerSettingCard } from '../components/DefaultLeadOwnerSetting'
 import {
   listAdminUsers,
   setClientCustomerAccess,
@@ -23,6 +25,7 @@ import '../../tasks/tasks.css'
 import '../../phase2/phase2.css'
 import '../admin.css'
 
+const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 const MANAGEABLE_ROLES = APP_ROLES.filter((r) => r !== 'dev')
 
 export function AdminUsersPage() {
@@ -154,6 +157,16 @@ export function AdminUsersPage() {
           </p>
         </div>
       </header>
+
+      <DefaultLeadOwnerSettingCard actorId={profile?.id ?? DEV_OWNER} disabled={!canManage} />
+
+      <section className="card card--wide admin-create-card">
+        <CreateClientAccountWizard
+          creatorRoles={roles}
+          configured={configured}
+          onCreated={() => void load()}
+        />
+      </section>
 
       <section className="card card--wide admin-create-card">
         <CreateEmployeeForm

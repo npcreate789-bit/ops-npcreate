@@ -2,7 +2,18 @@ import { staffAuthEmail } from '../../../../shared/auth/staffAuth'
 import { generateTempPassword } from '../../../../shared/auth/tempPassword'
 import { normalizeLoginId } from '../../../../shared/auth/loginId'
 import type { AppRole } from '../../../../shared/types/roles'
-import type { AdminUserRow, CreateEmployeeInput, CreateEmployeeResult } from '../types'
+import type {
+  AdminUserRow,
+  ClientWizardCustomer,
+  CreateClientInput,
+  CreateClientResult,
+  CreateEmployeeInput,
+  CreateEmployeeResult,
+  DefaultLeadOwnerSetting,
+  LeadOwnerOption,
+} from '../types'
+
+let mockDefaultLeadOwnerId: string | null = '00000000-0000-4000-8000-000000000002'
 
 const MOCK_USERS: AdminUserRow[] = [
   {
@@ -96,6 +107,86 @@ export const mockAdminApi = {
       full_name: row.full_name ?? '',
       roles: row.roles,
       temporary_password: tempPassword,
+    }
+  },
+
+  async listCustomersForClientWizard(): Promise<ClientWizardCustomer[]> {
+    return [
+      {
+        id: 'cust-demo-1',
+        brand_name: 'แบรนด์ Demo',
+        contact_name: 'คุณลูกค้า',
+        status: 'active',
+        has_portal: false,
+      },
+    ]
+  },
+
+  async listSalesLeadOwnerOptions(): Promise<LeadOwnerOption[]> {
+    return clone()
+      .filter((u) => u.is_active && u.roles.includes('sales'))
+      .map((u) => ({
+        id: u.id,
+        login_id: u.login_id,
+        email: u.email,
+        full_name: u.full_name,
+      }))
+  },
+
+  async getDefaultLeadOwnerSetting(): Promise<DefaultLeadOwnerSetting> {
+    if (!mockDefaultLeadOwnerId) {
+      return { ownerId: null, ownerLabel: null, usesAutoFallback: true }
+    }
+    const user = MOCK_USERS.find((u) => u.id === mockDefaultLeadOwnerId)
+    if (!user || !user.is_active || !user.roles.includes('sales')) {
+      return {
+        ownerId: mockDefaultLeadOwnerId,
+        ownerLabel: null,
+        usesAutoFallback: true,
+        invalidOwnerId: true,
+      }
+    }
+    return {
+      ownerId: user.id,
+      ownerLabel: user.full_name ?? user.login_id,
+      usesAutoFallback: false,
+    }
+  },
+
+  async setDefaultLeadOwnerSetting(
+    ownerId: string | null,
+  ): Promise<DefaultLeadOwnerSetting> {
+    if (ownerId) {
+      const user = MOCK_USERS.find((u) => u.id === ownerId)
+      if (!user?.is_active || !user.roles.includes('sales')) {
+        throw new Error('ผู้ใช้ที่เลือกต้องเป็น Sales ที่ active')
+      }
+      mockDefaultLeadOwnerId = ownerId
+    } else {
+      mockDefaultLeadOwnerId = null
+    }
+    return mockAdminApi.getDefaultLeadOwnerSetting()
+  },
+
+  async createClientPortalUser(input: CreateClientInput): Promise<CreateClientResult> {
+    const result = await mockAdminApi.createEmployee({
+      login_id: input.login_id,
+      full_name: input.full_name,
+      roles: ['client'],
+    })
+    const row = MOCK_USERS.find((u) => u.id === result.id)
+    if (row) row.client_customer_id = input.customer_id
+    const customer = (await mockAdminApi.listCustomersForClientWizard()).find(
+      (c) => c.id === input.customer_id,
+    )
+    return {
+      id: result.id,
+      login_id: result.login_id,
+      email: result.email,
+      full_name: result.full_name,
+      customer_id: input.customer_id,
+      brand_name: customer?.brand_name ?? 'ลูกค้า',
+      temporary_password: result.temporary_password,
     }
   },
 }

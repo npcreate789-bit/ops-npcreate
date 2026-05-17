@@ -28,16 +28,16 @@ Sales / Account / Ads / Content / Admin / CEO
 |---|-------------|--------|----------------|------------------|
 | 1 | Client Contact / Inquiry | **ใหม่** | `/contact` (สาธารณะ) | `leads` + RPC `submit_public_inquiry` |
 | 2 | Sales CRM / Pipeline | พร้อมใช้ | `/app/crm` | `leads`, `lead_status` |
-| 3 | Quotation / Payment | พร้อมใช้ | `/app/sales`, `/app/finance` | `quotations`, `payments` |
+| 3 | Quotation / Payment | **ขยายแล้ว** | `/app/sales`, `/q/:token`, `/app/finance` | `quotations` + RPC สาธารณะ, `payments` |
 | 4 | Customer / Brand | พร้อมใช้ | `/app/customers/:id` | `customers` = Customer 360 |
 | 5 | Project Workspace | **เพิ่มแล้ว** | `/app/projects` | `projects` (1 ลูกค้าหลายโปรเจกต์) |
-| 6 | Brief Form | บางส่วน | `/app/onboarding`, `/app/client/brief` | `onboarding_forms`, `onboarding_checklist` |
+| 6 | Brief Form | **MVP** | `/app/onboarding`, `/app/client/brief` | บรีฟ + อัปโหลดไฟล์ + แจ้ง Account |
 | 7 | Task Management | พร้อมใช้ | `/app/tasks` | `tasks` + `project_id` |
-| 8 | Group Chat | **MVP** | `/app/client/chat`, แชทใน `/app/projects/:id` | `chat_rooms`, `chat_messages` |
+| 8 | Group Chat | **ขยายแล้ว** | `/app/chat`, `/app/client/chat`, แชทในโปรเจกต์ | inbox, อ่านแล้ว, แนบไฟล์, ข้อความระบบ (`00054`–`00055`) |
 | 9 | Ads Management | พร้อมใช้ | `/app/ads` | `campaigns`, `daily_metrics` |
 | 10 | Content Management | พร้อมใช้ | `/app/content` | `content_jobs` |
 | 11 | Creator / TikTok One | พร้อมใช้ | `/app/creators` | `creators`, `creator_campaigns` |
-| 12 | Report Management | พร้อมใช้ | `/app/client`, `/app/reports` | รวม ads + content ใน client report |
+| 12 | Report Management | **ขยายแล้ว** | `/app/client/reports`, `/app/reports` | รายงานแอดรายเดือน + พิมพ์ PDF (client), รายงานทีมขั้นสูง |
 | 13 | Finance Management | พร้อมใช้ | `/app/finance`, `/app/renewals` | `payments`, `contract_renewals` |
 | 14 | Notification Center | พร้อมใช้ | `/app/notifications` | `notifications` |
 
@@ -49,7 +49,7 @@ Sales / Account / Ads / Content / Admin / CEO
 | Work Hub | `/app/work` | งานของฉันรวมศูนย์ |
 | Ops Center | `/app/ops` | งานค้าง / เคสเร่ง |
 | AI Assistant | `/app/assistant` | Phase 5 สเปก |
-| User Admin | `/app/admin` | บทบาท + สร้างพนักงาน |
+| User Admin | `/app/admin` | บทบาท + สร้างพนักงาน + ตั้ง Sales รับ Lead (`/contact`) |
 | Activity / Weekly | `/app/activity`, `/app/weekly` | บันทึก + สรุปสัปดาห์ |
 | Global Search | `/app/search` (⌘K) | ค้นหาข้ามโมดูล |
 
@@ -138,7 +138,7 @@ flowchart TD
 | `/customers/[id]` | `/app/customers/:id` |
 | `/projects/[id]` | `/app/projects/:id` |
 | `/tasks` | `/app/tasks` |
-| `/chat` | *(ยังไม่มี)* |
+| `/chat` | `/app/chat` (กล่องข้อความทีม) |
 | `/ads` | `/app/ads` |
 | `/content` | `/app/content` |
 | `/finance` | `/app/finance` |
@@ -179,7 +179,7 @@ flowchart TD
 
 | Phase สเปก | โมดูลที่มีแล้วใน repo |
 |------------|------------------------|
-| Phase 2: Ads + Report | `/app/ads`, `/app/reports`, client report |
+| Phase 2: Ads + Report | `/app/ads`, `/app/reports`, `/app/client/reports` (รายเดือน + PDF) |
 | Phase 3: Finance + Document | `/app/finance`, `/app/sales`, renewals |
 | Phase 4: Content + Creator | `/app/content`, `/app/creators` |
 | Phase 5: Automation + AI | `/app/assistant`, notifications |
@@ -225,23 +225,23 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 |-------|-----|--------|----------|
 | A | `/contact` UI + route | ✅ UI ใหม่ | Deploy โปรเจกต์ `ops-npcreate` |
 | B | RPC `submit_public_inquiry` + antiflood | ✅ | migration `00044`–`00047` |
-| C | `platform_settings.default_lead_owner_id` | ⏳ | SQL snippet / ตั้ง Sales จริง |
+| C | `platform_settings.default_lead_owner_id` | ✅ | `/app/admin` — เลือก Sales รับ Lead จาก `/contact` |
 | D | Client Workspace แท็บ | ✅ | `/app/client/*` |
 | E | โมดูล Projects | ✅ พื้นฐาน | ขยายผูก Task / Timeline |
 
 ### Sprint ถัดไป — ทำให้ระบบครบ MVP สเปก
 
 1. ~~**Project ↔ Task**~~ — `tasks.project_id`, รายการงานในโปรเจกต์ ✅  
-2. ~~**Group Chat (MVP)**~~ — แชทต่อโปรเจกต์, Realtime, สร้าง Task จากข้อความ ✅  
-3. **Brief ลูกค้า** — อัปโหลดไฟล์ (Storage RLS), แจ้ง Account เมื่อครบ  
-4. **Quotation flow** — สถานะ `viewed` / `accepted`, ลิงก์สาธารณะให้ลูกค้า  
-5. **Wizard สร้างบัญชีลูกค้า** (Admin)  
+2. ~~**Group Chat**~~ — inbox, อ่านแล้ว, แจ้งเตือน, แนบไฟล์, สร้าง Task + ข้อความระบบ ✅ (`00054`–`00055`)  
+3. ~~**Brief ลูกค้า**~~ — อัปโหลดไฟล์, client บันทึก/ส่งบรีฟ, แจ้ง Account ✅  
+4. ~~**Quotation flow**~~ — สถานะ `viewed` / `accepted`, ลิงก์ `/q/:token` ✅ (`00051` enum + `00052` RPC)  
+5. ~~**Wizard สร้างบัญชีลูกค้า**~~ — `/app/admin` wizard 3 ขั้น + Edge `create-client-user` ✅ (`00053`)  
 
 ### Phase 2–5 (มีโมดูลแล้ว — ขยายความลึก)
 
 | Phase | โฟกัส | โมดูล |
 |-------|--------|--------|
-| 2 | Ads + Report | `/app/ads`, `/app/reports`, client report |
+| 2 | Ads + Report | `/app/ads`, `/app/reports`, `/app/client/reports` (รายเดือน + PDF) |
 | 3 | Finance | `/app/finance`, renewals, เอกสาร PDF |
 | 4 | Content + Creator | `/app/content`, `/app/creators` |
 | 5 | AI + Automation | `/app/assistant`, LINE/Email แจ้งเตือน |

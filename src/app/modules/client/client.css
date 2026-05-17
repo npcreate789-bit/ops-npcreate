@@ -39,3 +39,143 @@
 .client-content-list li:last-child {
   border-bottom: none;
 }
+
+.client-reports__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.client-reports__section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.client-ads-report-print-wrap {
+  display: none;
+}
+
+.client-ads-report-doc {
+  padding: 1.75rem 2rem;
+  background: #fff;
+  color: #1a1a1a;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  max-width: 210mm;
+  margin: 0 auto;
+}
+
+.client-ads-report-doc__title-block {
+  text-align: center;
+  margin: 0 0 1.25rem;
+}
+
+.client-ads-report-doc__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.client-ads-report-doc__subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.95rem;
+}
+
+.client-ads-report-doc__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 0 0 1.25rem;
+}
+
+.client-ads-report-doc__summary dt {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.client-ads-report-doc__summary dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+
+.client-ads-report-doc__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.client-ads-report-doc__table th,
+.client-ads-report-doc__table td {
+  border: 1px solid #e5e7eb;
+  padding: 0.4rem 0.5rem;
+}
+
+.client-ads-report-doc__table th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.client-ads-report-doc__num {
+  text-align: right;
+}
+
+.client-ads-report-doc__footer {
+  margin-top: 1.25rem;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body {
+    background: #fff !important;
+    margin: 0;
+  }
+
+  .app-shell,
+  .app-main {
+    display: block !important;
+    background: #fff !important;
+  }
+
+  .sidebar,
+  .breadcrumb,
+  .no-print {
+    display: none !important;
+  }
+
+  .client-reports-page {
+    padding: 0 !important;
+  }
+
+  .client-reports-page .card {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .client-ads-report-print-wrap {
+    display: block !important;
+  }
+
+  .client-ads-report-doc {
+    border: none;
+    border-radius: 0;
+    max-width: none;
+    padding: 14mm 16mm;
+    margin: 0;
+  }
+}

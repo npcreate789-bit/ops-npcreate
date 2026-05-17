@@ -1,6 +1,8 @@
 export type QuotationStatus =
   | 'draft'
   | 'sent'
+  | 'viewed'
+  | 'accepted'
   | 'awaiting_payment'
   | 'paid'
   | 'cancelled'
@@ -62,7 +64,10 @@ export interface Quotation {
   terms: string | null
   notes: string | null
   sent_at: string | null
+  viewed_at: string | null
+  accepted_at: string | null
   paid_at: string | null
+  public_token: string | null
   created_at: string
   updated_at: string
   items?: QuotationItem[]
@@ -75,6 +80,36 @@ export interface QuotationItemInput {
   quantity: number
   unit_price: number
   sort_order: number
+}
+
+export interface PublicQuotationItem {
+  id: string
+  description: string
+  quantity: number
+  unit_price: number
+  line_total: number
+  sort_order: number
+}
+
+export interface PublicQuotation {
+  id: string
+  quotation_number: string
+  status: QuotationStatus
+  subtotal: number
+  discount: number
+  vat_rate: number
+  vat_amount: number
+  total: number
+  contract_months: number | null
+  terms: string | null
+  notes: string | null
+  sent_at: string | null
+  viewed_at: string | null
+  accepted_at: string | null
+  created_at: string
+  brand_name: string | null
+  items: PublicQuotationItem[]
+  can_accept: boolean
 }
 
 export interface QuotationInput {

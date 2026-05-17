@@ -3,8 +3,10 @@ import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/clie
 import {
   ensureProjectChatRoom,
   listChatMessages,
+  markChatRoomRead,
   sendChatMessage,
 } from '../api/chat'
+import { uploadChatFile } from '../api/chatFiles'
 import type { ChatMessage } from '../types'
 
 export function useProjectChat(projectId: string | undefined, userId: string) {
@@ -32,6 +34,7 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
       const rid = await ensureProjectChatRoom(projectId)
       setRoomId(rid)
       setMessages(await listChatMessages(rid, projectId))
+      await markChatRoomRead(rid)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'โหลดแชทไม่สำเร็จ')
     } finally {
@@ -61,7 +64,12 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
           filter: `room_id=eq.${roomId}`,
         },
         () => {
-          void listChatMessages(roomId, projectId).then(setMessages).catch(() => {})
+          void listChatMessages(roomId, projectId)
+            .then((rows) => {
+              setMessages(rows)
+              return markChatRoomRead(roomId)
+            })
+            .catch(() => {})
         },
       )
       .subscribe()
@@ -84,6 +92,7 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
         if (!isSupabaseConfigured) {
           setMessages((prev) => [...prev, row])
         }
+        await markChatRoomRead(roomId)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'ส่งไม่สำเร็จ')
       } finally {
@@ -91,6 +100,26 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
       }
     },
     [roomId, userId, projectId],
+  )
+
+  const sendFile = useCallback(
+    async (file: File, caption?: string) => {
+      if (!roomId || !projectId) return
+      setSending(true)
+      setError(null)
+      try {
+        await uploadChatFile(projectId, roomId, file, caption)
+        if (!isSupabaseConfigured) {
+          await load()
+        }
+        await markChatRoomRead(roomId)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'อัปโหลดไม่สำเร็จ')
+      } finally {
+        setSending(false)
+      }
+    },
+    [roomId, userId, projectId, load],
   )
 
   return {
@@ -101,6 +130,7 @@ export function useProjectChat(projectId: string | undefined, userId: string) {
     error,
     bottomRef,
     send,
+    sendFile,
     reload: load,
   }
 }

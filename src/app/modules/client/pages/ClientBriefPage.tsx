@@ -1,13 +1,23 @@
-import { useCallback, useEffect, useState } from 'react'
-import { getOnboardingDetail, saveOnboardingForm } from '../../onboarding/api/onboarding'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { getOnboardingDetail } from '../../onboarding/api/onboarding'
 import type { OnboardingFormInput } from '../../onboarding/types'
+import {
+  deleteBriefAttachment,
+  getBriefFileUrl,
+  listBriefAttachments,
+  uploadBriefFile,
+  validateBriefFile,
+  type BriefAttachment,
+} from '../api/briefFiles'
+import { saveClientBrief } from '../api/clientBrief'
+import { saveOnboardingForm } from '../../onboarding/api/onboarding'
 import { ClientPreviewBar } from '../components/ClientPreviewBar'
 import { useClientWorkspace } from '../hooks/useClientWorkspace'
 import '../../crm/crm.css'
 import '../../onboarding/onboarding.css'
 import '../client-workspace.css'
 
-const STEPS = ['ข้อมูลร้าน', 'สินค้า & ราคา', 'เป้าหมายแอด', 'หมายเหตุ'] as const
+const STEPS = ['ข้อมูลร้าน', 'สินค้า & ราคา', 'เป้าหมายแอด', 'ไฟล์แนบ & หมายเหตุ'] as const
 
 const emptyForm = (): OnboardingFormInput => ({
   tiktok_shop_url: '',
@@ -25,15 +35,29 @@ const emptyForm = (): OnboardingFormInput => ({
   notes: '',
 })
 
+function formatFileSize(bytes: number | null): string {
+  if (!bytes) return ''
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export function ClientBriefPage() {
   const ws = useClientWorkspace()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<OnboardingFormInput>(emptyForm())
+  const [attachments, setAttachments] = useState<BriefAttachment[]>([])
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
 
   const loadBrief = useCallback(async (customerId: string) => {
-    const detail = await getOnboardingDetail(customerId)
+    const [detail, files] = await Promise.all([
+      getOnboardingDetail(customerId),
+      listBriefAttachments(customerId),
+    ])
+    setAttachments(files)
     if (detail?.form) {
       setForm({
         tiktok_shop_url: detail.form.tiktok_shop_url ?? '',
@@ -59,18 +83,70 @@ export function ClientBriefPage() {
     if (ws.customerId) void loadBrief(ws.customerId)
   }, [ws.customerId, loadBrief])
 
-  async function handleSave() {
+  async function persist(submit: boolean) {
     if (!ws.customerId) return
     setSaving(true)
     setSaveMsg(null)
     try {
-      await saveOnboardingForm(ws.customerId, form)
-      setSaveMsg('บันทึกบรีฟแล้ว — ทีม Account จะตรวจความครบถ้วน')
+      if (ws.isClientOnly) {
+        await saveClientBrief(ws.customerId, form, submit)
+      } else {
+        await saveOnboardingForm(ws.customerId, form)
+      }
+      setSaveMsg(
+        submit
+          ? 'ส่งบรีฟแล้ว — ทีม Account ได้รับแจ้งเตือนและจะตรวจความครบถ้วน'
+          : 'บันทึก Draft แล้ว',
+      )
       await ws.reload()
+      await loadBrief(ws.customerId)
     } catch (e) {
       setSaveMsg(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleFilePick(file: File | null) {
+    if (!file || !ws.customerId) return
+    const err = validateBriefFile(file)
+    if (err) {
+      setFileError(err)
+      return
+    }
+    setFileError(null)
+    setUploading(true)
+    try {
+      const row = await uploadBriefFile(ws.customerId, file)
+      setAttachments((prev) => [row, ...prev])
+    } catch (e) {
+      setFileError(e instanceof Error ? e.message : 'อัปโหลดไม่สำเร็จ')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  async function handleOpenFile(row: BriefAttachment) {
+    try {
+      const url = await getBriefFileUrl(row.storage_path)
+      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      setFileError(e instanceof Error ? e.message : 'เปิดไฟล์ไม่สำเร็จ')
+    }
+  }
+
+  async function handleDeleteFile(row: BriefAttachment) {
+    if (!window.confirm(`ลบไฟล์ ${row.file_name}?`)) return
+    setUploading(true)
+    setFileError(null)
+    try {
+      await deleteBriefAttachment(row)
+      setAttachments((prev) => prev.filter((a) => a.id !== row.id))
+    } catch (e) {
+      setFileError(e instanceof Error ? e.message : 'ลบไม่สำเร็จ')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -100,7 +176,7 @@ export function ClientBriefPage() {
     <div className="page">
       <header className="page__header">
         <h1>บรีฟงาน</h1>
-        <p className="muted">กรอกทีละขั้น — บันทึกได้ตลอด (Draft)</p>
+        <p className="muted">กรอกทีละขั้น — บันทึก Draft ได้ตลอด · กดส่งบรีฟเมื่อพร้อม</p>
       </header>
 
       <ClientPreviewBar
@@ -116,32 +192,37 @@ export function ClientBriefPage() {
 
       <div className="client-brief-steps" role="list">
         {STEPS.map((label, i) => (
-          <span
+          <button
             key={label}
+            type="button"
             role="listitem"
-            className={`client-brief-step${i <= step ? ' client-brief-step--done' : ''}`}
+            className={`client-brief-step${i === step ? ' client-brief-step--active' : ''}${i < step ? ' client-brief-step--done' : ''}`}
+            onClick={() => setStep(i)}
           >
             {i + 1}. {label}
-          </span>
+          </button>
         ))}
       </div>
 
-      <section className="card card--wide crm-form">
+      <section className="card card--wide crm-form client-brief-form">
         {step === 0 && (
           <>
-            <label className="task-field">
-              <span className="task-field__label">ลิงก์ TikTok Shop</span>
+            <label className="client-field">
+              <span className="client-field__label">ลิงก์ TikTok Shop</span>
               <input
-                className="task-input"
+                className="client-field__input"
+                type="url"
+                placeholder="https://..."
                 value={form.tiktok_shop_url ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, tiktok_shop_url: e.target.value }))}
               />
             </label>
-            <label className="task-field">
-              <span className="task-field__label">ลิงก์สินค้า (หลายบรรทัดได้)</span>
+            <label className="client-field">
+              <span className="client-field__label">ลิงก์สินค้า (หลายบรรทัดได้)</span>
               <textarea
-                className="task-textarea"
+                className="client-field__input client-field__textarea"
                 rows={4}
+                placeholder="วางลิงก์สินค้าแต่ละ SKU"
                 value={form.product_links ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, product_links: e.target.value }))}
               />
@@ -150,33 +231,35 @@ export function ClientBriefPage() {
         )}
         {step === 1 && (
           <>
-            <label className="task-field">
-              <span className="task-field__label">ราคา / โปรโมชัน</span>
+            <label className="client-field">
+              <span className="client-field__label">ราคา / โปรโมชัน</span>
               <textarea
-                className="task-textarea"
+                className="client-field__input client-field__textarea"
                 rows={2}
                 value={form.pricing_info ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, pricing_info: e.target.value }))}
               />
             </label>
-            <label className="task-field">
-              <span className="task-field__label">โปรที่ต้องการดัน</span>
+            <label className="client-field">
+              <span className="client-field__label">โปรที่ต้องการดัน</span>
               <input
-                className="task-input"
+                className="client-field__input"
                 value={form.promotion_info ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, promotion_info: e.target.value }))}
               />
             </label>
-            <label className="task-field">
-              <span className="task-field__label">กำไร / ต้นทุน / คอมมิชชั่น</span>
+            <label className="client-field">
+              <span className="client-field__label">กำไร / ต้นทุน</span>
               <input
-                className="task-input"
+                className="client-field__input"
                 value={form.profit_margin ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, profit_margin: e.target.value }))}
               />
+            </label>
+            <label className="client-field">
+              <span className="client-field__label">คอมมิชชั่น</span>
               <input
-                className="task-input"
-                style={{ marginTop: '0.5rem' }}
+                className="client-field__input"
                 value={form.commission_info ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, commission_info: e.target.value }))}
               />
@@ -185,11 +268,13 @@ export function ClientBriefPage() {
         )}
         {step === 2 && (
           <>
-            <label className="task-field">
-              <span className="task-field__label">งบแอดต่อวัน (บาท)</span>
+            <label className="client-field">
+              <span className="client-field__label">งบแอดต่อวัน (บาท)</span>
               <input
-                className="task-input"
+                className="client-field__input"
                 type="number"
+                inputMode="numeric"
+                min={0}
                 value={form.daily_ad_budget ?? ''}
                 onChange={(e) =>
                   setForm((f) => ({
@@ -199,12 +284,13 @@ export function ClientBriefPage() {
                 }
               />
             </label>
-            <label className="task-field">
-              <span className="task-field__label">เป้าหมาย ROI</span>
+            <label className="client-field">
+              <span className="client-field__label">เป้าหมาย ROI</span>
               <input
-                className="task-input"
+                className="client-field__input"
                 type="number"
                 step="0.1"
+                min={0}
                 value={form.target_roi ?? ''}
                 onChange={(e) =>
                   setForm((f) => ({
@@ -214,10 +300,10 @@ export function ClientBriefPage() {
                 }
               />
             </label>
-            <label className="task-field">
-              <span className="task-field__label">คลิปที่มีอยู่</span>
+            <label className="client-field">
+              <span className="client-field__label">คลิป / คอนเทนต์ที่มีอยู่</span>
               <textarea
-                className="task-textarea"
+                className="client-field__input client-field__textarea"
                 rows={3}
                 value={form.existing_content ?? ''}
                 onChange={(e) => setForm((f) => ({ ...f, existing_content: e.target.value }))}
@@ -226,18 +312,83 @@ export function ClientBriefPage() {
           </>
         )}
         {step === 3 && (
-          <label className="task-field">
-            <span className="task-field__label">หมายเหตุ / ปัญหาปัจจุบัน</span>
-            <textarea
-              className="task-textarea"
-              rows={4}
-              value={form.notes ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            />
-          </label>
+          <>
+            <label className="client-field">
+              <span className="client-field__label">หมายเหตุ / ปัญหาปัจจุบัน</span>
+              <textarea
+                className="client-field__input client-field__textarea"
+                rows={4}
+                value={form.notes ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </label>
+
+            <div className="client-brief-files">
+              <div className="client-brief-files__head">
+                <span className="client-field__label">ไฟล์แนบ (รูป, PDF, Excel)</span>
+                <button
+                  type="button"
+                  className="crm-btn crm-btn--ghost crm-btn--sm"
+                  disabled={uploading || saving}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  {uploading ? 'กำลังอัปโหลด...' : '+ เลือกไฟล์'}
+                </button>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  className="client-brief-files__input"
+                  accept="image/jpeg,image/png,image/webp,application/pdf,.xlsx,.xls,text/plain"
+                  onChange={(e) => void handleFilePick(e.target.files?.[0] ?? null)}
+                />
+              </div>
+              <p className="client-field__hint muted">สูงสุด 50 MB ต่อไฟล์</p>
+              {fileError && (
+                <p className="client-brief-files__error" role="alert">
+                  {fileError}
+                </p>
+              )}
+              {attachments.length === 0 ? (
+                <p className="muted">ยังไม่มีไฟล์แนบ</p>
+              ) : (
+                <ul className="client-brief-files__list">
+                  {attachments.map((row) => (
+                    <li key={row.id} className="client-brief-files__item">
+                      <div>
+                        <strong>{row.file_name}</strong>
+                        <span className="muted"> · {formatFileSize(row.byte_size)}</span>
+                      </div>
+                      <div className="client-brief-files__actions">
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn--ghost crm-btn--sm"
+                          onClick={() => void handleOpenFile(row)}
+                        >
+                          เปิด
+                        </button>
+                        {ws.isClientOnly && (
+                          <button
+                            type="button"
+                            className="crm-btn crm-btn--ghost crm-btn--sm"
+                            disabled={uploading}
+                            onClick={() => void handleDeleteFile(row)}
+                          >
+                            ลบ
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
         )}
 
-        <div className="crm-form__actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div
+          className="crm-form__actions client-brief-form__actions"
+          style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}
+        >
           {step > 0 && (
             <button type="button" className="crm-btn" onClick={() => setStep((s) => s - 1)}>
               ย้อนกลับ
@@ -251,17 +402,27 @@ export function ClientBriefPage() {
             <button
               type="button"
               className="crm-btn crm-btn--primary"
-              disabled={saving}
-              onClick={() => void handleSave()}
+              disabled={saving || uploading}
+              onClick={() => void persist(true)}
             >
-              {saving ? 'กำลังบันทึก...' : 'ส่งบรีฟ'}
+              {saving ? 'กำลังส่ง...' : 'ส่งบรีฟ'}
             </button>
           )}
-          <button type="button" className="crm-btn" disabled={saving} onClick={() => void handleSave()}>
+          <button
+            type="button"
+            className="crm-btn"
+            disabled={saving || uploading}
+            onClick={() => void persist(false)}
+          >
             บันทึก Draft
           </button>
         </div>
-        {saveMsg && <p className="muted">{saveMsg}</p>}
+
+        {saveMsg && (
+          <p className={saveMsg.includes('ไม่สำเร็จ') ? 'crm-error' : 'client-brief-form__msg'} role="status">
+            {saveMsg}
+          </p>
+        )}
       </section>
     </div>
   )

@@ -5,6 +5,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   'user.deactivate': 'ปิดบัญชี',
   'user.roles_update': 'อัปเดตบทบาท',
   'user.create': 'สร้างบัญชีพนักงาน',
+  'user.create_client': 'สร้างบัญชีลูกค้า (พอร์ทัล)',
   'client_access.set': 'ผูกลูกค้า (client)',
   'client_access.clear': 'ยกเลิกผูกลูกค้า',
   'lead.create': 'สร้าง Lead',

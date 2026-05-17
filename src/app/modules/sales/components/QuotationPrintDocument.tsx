@@ -8,13 +8,18 @@ import '../sales.css'
 interface QuotationPrintDocumentProps {
   quotation: Quotation
   brandName: string | null
+  audience?: 'staff' | 'public'
 }
 
 function money(n: number) {
   return n.toLocaleString('th-TH', { minimumFractionDigits: 2 })
 }
 
-export function QuotationPrintDocument({ quotation, brandName }: QuotationPrintDocumentProps) {
+export function QuotationPrintDocument({
+  quotation,
+  brandName,
+  audience = 'staff',
+}: QuotationPrintDocumentProps) {
   const issued = quotation.created_at ? formatBangkokDate(quotation.created_at.slice(0, 10)) : '—'
 
   return (
@@ -41,10 +46,12 @@ export function QuotationPrintDocument({ quotation, brandName }: QuotationPrintD
           <dt>ระยะสัญญา</dt>
           <dd>{quotation.contract_months ? `${quotation.contract_months} เดือน` : '—'}</dd>
         </div>
-        <div>
-          <dt>สถานะ</dt>
-          <dd>{quotationStatusLabel(quotation.status)}</dd>
-        </div>
+        {audience === 'staff' && (
+          <div>
+            <dt>สถานะ</dt>
+            <dd>{quotationStatusLabel(quotation.status)}</dd>
+          </div>
+        )}
       </dl>
 
       <table className="qt-document__table">

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { listProjectsForCustomer } from '../../projects/api/projects'
 import { ProjectChatPanel } from '../../chat/components/ProjectChatPanel'
+import { useChatInbox } from '../../chat/hooks/useChatInbox'
 import type { Project } from '../../projects/types'
 import { ClientPreviewBar } from '../components/ClientPreviewBar'
 import { useClientWorkspace } from '../hooks/useClientWorkspace'
@@ -15,6 +16,12 @@ export function ClientChatPage() {
   const { profile, configured } = useAuth()
   const userId = profile?.id ?? DEV_OWNER
   const canCreateTask = hasTasksTeamView(profile?.roles ?? []) || !configured
+  const { items: inboxItems, totalUnread } = useChatInbox(userId)
+
+  const unreadByProject = useMemo(
+    () => new Map(inboxItems.map((row) => [row.project_id, row.unread_count])),
+    [inboxItems],
+  )
 
   const [projects, setProjects] = useState<Project[]>([])
   const [projectId, setProjectId] = useState('')
@@ -44,7 +51,10 @@ export function ClientChatPage() {
     <div className="page">
       <header className="page__header">
         <h1>แชทกับทีม</h1>
-        <p className="muted">สนทนาต่อโปรเจกต์ — ทีมงานจะเห็นข้อความแบบเรียลไทม์</p>
+          <p className="muted">
+            สนทนาต่อโปรเจกต์ — ทีมงานจะเห็นข้อความแบบเรียลไทม์
+            {totalUnread > 0 ? ` · ${totalUnread} ข้อความใหม่` : ''}
+          </p>
       </header>
 
       <ClientPreviewBar
@@ -76,11 +86,15 @@ export function ClientChatPage() {
                 onChange={(e) => setProjectId(e.target.value)}
               >
                 {projects.length === 0 && <option value="">— ยังไม่มีโปรเจกต์ —</option>}
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.project_name}
-                  </option>
-                ))}
+                {projects.map((p) => {
+                  const unread = unreadByProject.get(p.id) ?? 0
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.project_name}
+                      {unread > 0 ? ` (${unread} ใหม่)` : ''}
+                    </option>
+                  )
+                })}
               </select>
             </label>
           </section>

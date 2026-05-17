@@ -18,6 +18,8 @@ import type { QuotationInput, Package, Quotation } from '../types'
 import { QuotationForm } from '../components/QuotationForm'
 import { printDocument } from '../../../../shared/print/printDocument'
 import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
+import { QuotationPublicLink } from '../components/QuotationPublicLink'
+import { isQuotationSentLike } from '../constants'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../sales.css'
@@ -145,8 +147,7 @@ export function QuotationEditorPage() {
         </p>
       )}
 
-      {initial?.customer_id &&
-        ['sent', 'awaiting_payment', 'paid'].includes(initial.status) && (
+      {initial?.customer_id && isQuotationSentLike(initial.status) && (
           <p className="crm-banner no-print">
             {initial.status === 'paid' ? 'ปิดการขายแล้ว' : 'พร้อมบันทึกการชำระเงิน'} —{' '}
             <Link
@@ -158,6 +159,18 @@ export function QuotationEditorPage() {
             </Link>
           </p>
         )}
+
+      {!isNew && initial && (
+        <section className="card card--wide no-print">
+          <h2 className="crm-section-title">ลิงก์สำหรับลูกค้า</h2>
+          <QuotationPublicLink
+            quotation={initial}
+            onTokenReady={() => {
+              if (id) void getQuotation(id).then((qt) => qt && setInitial(qt))
+            }}
+          />
+        </section>
+      )}
 
       <section className="card card--wide no-print">
         <QuotationForm

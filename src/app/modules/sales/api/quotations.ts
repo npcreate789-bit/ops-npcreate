@@ -3,7 +3,8 @@ import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/clie
 import { updateLead } from '../../crm/api/leads'
 import type { LeadStatus } from '../../crm/types'
 import type { Quotation, QuotationInput, Package, QuotationStatus } from '../types'
-import { calcQuotationTotals } from '../constants'
+import { appUrl } from '../../../../shared/config/appUrl'
+import { calcQuotationTotals, isQuotationSentLike, publicQuotationPath } from '../constants'
 import { mockSalesApi } from './mockStore'
 
 export async function listPackages(): Promise<Package[]> {
@@ -97,7 +98,7 @@ export async function createQuotation(input: QuotationInput): Promise<Quotation>
   if (numError) throw new Error(numError.message)
 
   const now = new Date().toISOString()
-  const marksSent = ['sent', 'awaiting_payment', 'paid'].includes(input.status)
+  const marksSent = isQuotationSentLike(input.status)
   const { data, error } = await supabase
     .from('quotations')
     .insert({
@@ -162,9 +163,7 @@ export async function updateQuotation(id: string, input: QuotationInput): Promis
       terms: input.terms,
       notes: input.notes,
       sent_at:
-        ['sent', 'awaiting_payment', 'paid'].includes(input.status) && !existing?.sent_at
-          ? now
-          : existing?.sent_at,
+        isQuotationSentLike(input.status) && !existing?.sent_at ? now : existing?.sent_at,
       paid_at:
         input.status === 'paid' ? (existing?.paid_at ?? now) : existing?.paid_at ?? null,
     })
@@ -185,7 +184,13 @@ export async function updateQuotation(id: string, input: QuotationInput): Promis
   return (await getQuotation(id))!
 }
 
-const CUSTOMER_LINK_STATUSES: QuotationStatus[] = ['sent', 'awaiting_payment', 'paid']
+const CUSTOMER_LINK_STATUSES: QuotationStatus[] = [
+  'sent',
+  'viewed',
+  'accepted',
+  'awaiting_payment',
+  'paid',
+]
 
 async function linkCustomerForQuotation(quotationId: string, input: QuotationInput) {
   if (!input.lead_id || !CUSTOMER_LINK_STATUSES.includes(input.status)) return
@@ -205,6 +210,8 @@ async function syncLeadStatusFromQuotation(input: QuotationInput) {
   const statusMap: Record<string, string> = {
     draft: 'scheduled',
     sent: 'quotation_sent',
+    viewed: 'quotation_sent',
+    accepted: 'awaiting_payment',
     awaiting_payment: 'awaiting_payment',
     paid: 'won',
   }
@@ -240,6 +247,22 @@ export async function promoteLeadToCustomer(leadId: string): Promise<string> {
   })
   if (error) throw new Error(error.message)
   return data as string
+}
+
+export async function ensureQuotationPublicToken(quotationId: string): Promise<string> {
+  if (!isSupabaseConfigured || !supabase) {
+    return mockSalesApi.ensurePublicToken(quotationId)
+  }
+
+  const { data, error } = await supabase.rpc('ensure_quotation_public_token', {
+    p_quotation_id: quotationId,
+  })
+  if (error) throw new Error(error.message)
+  return data as string
+}
+
+export function quotationPublicUrl(token: string): string {
+  return appUrl(publicQuotationPath(token))
 }
 
 export async function deleteQuotation(id: string): Promise<void> {

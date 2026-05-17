@@ -37,14 +37,137 @@
 
 .client-brief-step {
   font-size: 0.78rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
   background: rgba(255, 255, 255, 0.06);
   color: var(--npc-text-muted);
+  cursor: pointer;
+  font: inherit;
+}
+
+.client-brief-step:hover {
+  color: var(--npc-text);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.client-brief-step--active {
+  color: var(--npc-text);
+  background: rgba(110, 231, 255, 0.12);
+  border-color: rgba(110, 231, 255, 0.25);
 }
 
 .client-brief-step--done {
-  color: #4ade80;
+  color: #86efac;
+}
+
+.client-brief-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.client-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.client-field__label {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--npc-text-muted);
+}
+
+.client-field__input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--npc-text);
+  font-size: 1rem;
+  font-family: inherit;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.client-field__input:focus {
+  outline: none;
+  border-color: var(--npc-accent);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+}
+
+.client-field__textarea {
+  min-height: 5rem;
+  resize: vertical;
+}
+
+.client-field__hint {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.client-brief-form__msg {
+  margin: 0;
+  color: #86efac;
+  font-size: 0.88rem;
+}
+
+.client-brief-files {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.client-brief-files__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.client-brief-files__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.client-brief-files__error {
+  margin: 0.35rem 0 0;
+  color: #fca5a5;
+  font-size: 0.85rem;
+}
+
+.client-brief-files__list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.client-brief-files__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.client-brief-files__actions {
+  display: flex;
+  gap: 0.35rem;
 }
 
 .client-placeholder {

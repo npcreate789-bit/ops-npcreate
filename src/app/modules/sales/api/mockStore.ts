@@ -1,5 +1,5 @@
-import type { Customer, Package, Quotation, QuotationInput } from '../types'
-import { calcQuotationTotals } from '../constants'
+import type { Customer, Package, PublicQuotation, Quotation, QuotationInput } from '../types'
+import { calcQuotationTotals, isQuotationSentLike } from '../constants'
 
 const PKG_KEY = 'npcreate_packages_dev'
 const QT_KEY = 'npcreate_quotations_dev'
@@ -96,8 +96,11 @@ export const mockSalesApi = {
       contract_months: input.contract_months,
       terms: input.terms,
       notes: input.notes,
-      sent_at: ['sent', 'awaiting_payment', 'paid'].includes(input.status) ? now : null,
+      sent_at: isQuotationSentLike(input.status) ? now : null,
+      viewed_at: null,
+      accepted_at: null,
       paid_at: input.status === 'paid' ? now : null,
+      public_token: isQuotationSentLike(input.status) ? crypto.randomUUID() : null,
       created_at: now,
       updated_at: now,
       items,
@@ -138,11 +141,13 @@ export const mockSalesApi = {
       contract_months: input.contract_months,
       terms: input.terms,
       notes: input.notes,
-      sent_at:
-        ['sent', 'awaiting_payment', 'paid'].includes(input.status) && !prev.sent_at
-          ? now
-          : prev.sent_at,
+      sent_at: isQuotationSentLike(input.status) && !prev.sent_at ? now : prev.sent_at,
+      viewed_at: prev.viewed_at,
+      accepted_at: prev.accepted_at,
       paid_at: paid ? (prev.paid_at ?? now) : prev.paid_at,
+      public_token:
+        prev.public_token ??
+        (isQuotationSentLike(input.status) ? crypto.randomUUID() : null),
       updated_at: now,
       items,
     }
@@ -201,5 +206,88 @@ export const mockSalesApi = {
 
   async deleteQuotation(id: string): Promise<void> {
     saveQuotations(loadQuotations().filter((q) => q.id !== id))
+  },
+
+  async ensurePublicToken(quotationId: string): Promise<string> {
+    const all = loadQuotations()
+    const idx = all.findIndex((q) => q.id === quotationId)
+    if (idx === -1) throw new Error('ไม่พบใบเสนอราคา')
+    if (!isQuotationSentLike(all[idx].status)) {
+      throw new Error('ต้องส่งใบเสนอราคาก่อนสร้างลิงก์ให้ลูกค้า')
+    }
+    if (!all[idx].public_token) {
+      all[idx].public_token = crypto.randomUUID()
+      all[idx].updated_at = new Date().toISOString()
+      saveQuotations(all)
+    }
+    return all[idx].public_token!
+  },
+
+  toPublicPayload(q: Quotation): PublicQuotation {
+    return {
+      id: q.id,
+      quotation_number: q.quotation_number,
+      status: q.status,
+      subtotal: q.subtotal,
+      discount: q.discount,
+      vat_rate: q.vat_rate,
+      vat_amount: q.vat_amount,
+      total: q.total,
+      contract_months: q.contract_months,
+      terms: q.terms,
+      notes: q.notes,
+      sent_at: q.sent_at,
+      viewed_at: q.viewed_at,
+      accepted_at: q.accepted_at,
+      created_at: q.created_at,
+      brand_name: q.lead_brand_name ?? null,
+      items: (q.items ?? []).map((item) => ({
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        line_total: item.line_total,
+        sort_order: item.sort_order,
+      })),
+      can_accept: q.status === 'sent' || q.status === 'viewed',
+    }
+  },
+
+  async getPublicByToken(token: string): Promise<PublicQuotation | null> {
+    const q = loadQuotations().find((row) => row.public_token === token)
+    if (!q || !isQuotationSentLike(q.status)) return null
+    return mockSalesApi.toPublicPayload(q)
+  },
+
+  async markPublicViewed(token: string): Promise<PublicQuotation | null> {
+    const all = loadQuotations()
+    const idx = all.findIndex((row) => row.public_token === token)
+    if (idx === -1 || !isQuotationSentLike(all[idx].status)) return null
+    const now = new Date().toISOString()
+    if (all[idx].status === 'sent') {
+      all[idx].status = 'viewed'
+      all[idx].viewed_at = all[idx].viewed_at ?? now
+    } else if (!all[idx].viewed_at) {
+      all[idx].viewed_at = now
+    }
+    all[idx].updated_at = now
+    saveQuotations(all)
+    return mockSalesApi.toPublicPayload(all[idx])
+  },
+
+  async acceptPublic(token: string, _acceptedByName?: string): Promise<PublicQuotation | null> {
+    const all = loadQuotations()
+    const idx = all.findIndex((row) => row.public_token === token)
+    if (idx === -1 || !isQuotationSentLike(all[idx].status)) return null
+    if (all[idx].status !== 'sent' && all[idx].status !== 'viewed') {
+      return mockSalesApi.toPublicPayload(all[idx])
+    }
+    const now = new Date().toISOString()
+    all[idx].status = 'accepted'
+    all[idx].viewed_at = all[idx].viewed_at ?? now
+    all[idx].accepted_at = now
+    all[idx].updated_at = now
+    saveQuotations(all)
+    return mockSalesApi.toPublicPayload(all[idx])
   },
 }

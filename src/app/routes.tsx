@@ -32,6 +32,8 @@ import { ClientPaymentPage } from './modules/client/pages/ClientPaymentPage'
 import { ClientProjectsPage } from './modules/client/pages/ClientProjectsPage'
 import { ClientReportsPage } from './modules/client/pages/ClientReportsPage'
 import { ContactPage } from './modules/contact/pages/ContactPage'
+import { ChatHubPage } from './modules/chat/pages/ChatHubPage'
+import { PublicQuotationPage } from './modules/sales/pages/PublicQuotationPage'
 import { ProjectDetailPage } from './modules/projects/pages/ProjectDetailPage'
 import { ProjectsListPage } from './modules/projects/pages/ProjectsListPage'
 import { NotificationsPage } from './modules/notifications/pages/NotificationsPage'
@@ -68,6 +70,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route path="/q/:token" element={<PublicQuotationPage />} />
       <Route
         path="/set-password"
         element={
@@ -134,6 +137,7 @@ export function AppRoutes() {
           path="projects/:id"
           element={<Module path="/app/projects" element={<ProjectDetailPage />} />}
         />
+        <Route path="chat" element={<Module path="/app/chat" element={<ChatHubPage />} />} />
         <Route
           path="notifications"
           element={<Module path="/app/notifications" element={<NotificationsPage />} />}

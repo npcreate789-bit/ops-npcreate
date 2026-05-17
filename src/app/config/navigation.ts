@@ -128,6 +128,15 @@ export const NAV_ITEMS: NavItem[] = [
     ready: true,
   },
   {
+    path: '/app/chat',
+    label: 'Chat',
+    labelTh: 'แชท',
+    icon: '◇',
+    roles: ['ceo', 'operations', 'account', 'sales', 'ads', 'senior_ads', 'content', 'dev'],
+    phase: 5,
+    ready: true,
+  },
+  {
     path: '/app/ads',
     label: 'Ads Operations',
     labelTh: 'งานยิงแอด',

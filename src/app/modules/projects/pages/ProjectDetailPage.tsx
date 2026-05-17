@@ -257,6 +257,8 @@ export function ProjectDetailPage() {
               <Link to={`/app/onboarding/${project.customer_id}`}>บรีฟ / Onboarding</Link>
               {' · '}
               <Link to={`/app/tasks?project=${project.id}`}>งานทั้งหมดของโปรเจกต์</Link>
+              {' · '}
+              <Link to={`/app/chat?project=${project.id}`}>เปิดในกล่องแชท</Link>
             </p>
           </section>
         </>

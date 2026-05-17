@@ -106,6 +106,26 @@ export function canEditContentJob(
   return job.assignee_id === userId || job.created_by === userId
 }
 
+// --- Chat hub ---
+
+/** กล่องแชทรวม — ทีมที่เข้าถึงโปรเจกต์ได้ */
+export const CHAT_HUB_VIEW_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'account',
+  'sales',
+  'ads',
+  'senior_ads',
+  'content',
+  'dev',
+]
+
+export function canViewChatHub(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.every((r) => r === 'client')) return false
+  return hasNavFullAccess(roles) || roles.some((r) => CHAT_HUB_VIEW_ROLES.includes(r))
+}
+
 // --- Phase 2: Admin ---
 
 export function canManageAdminUsers(roles: AppRole[]): boolean {

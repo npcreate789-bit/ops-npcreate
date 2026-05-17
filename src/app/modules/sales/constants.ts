@@ -3,6 +3,8 @@ import type { QuotationStatus } from './types'
 export const QUOTATION_STATUS_OPTIONS: { value: QuotationStatus; label: string }[] = [
   { value: 'draft', label: 'แบบร่าง' },
   { value: 'sent', label: 'ส่งแล้ว' },
+  { value: 'viewed', label: 'ลูกค้าเปิดดูแล้ว' },
+  { value: 'accepted', label: 'ลูกค้ายอมรับแล้ว' },
   { value: 'awaiting_payment', label: 'รอชำระเงิน' },
   { value: 'paid', label: 'ชำระแล้ว' },
   { value: 'cancelled', label: 'ยกเลิก' },
@@ -11,9 +13,27 @@ export const QUOTATION_STATUS_OPTIONS: { value: QuotationStatus; label: string }
 export const PIPELINE_STAGES: { status: QuotationStatus; label: string }[] = [
   { status: 'draft', label: 'แบบร่าง' },
   { status: 'sent', label: 'ส่งใบเสนอราคา' },
+  { status: 'viewed', label: 'เปิดดูแล้ว' },
+  { status: 'accepted', label: 'ยอมรับแล้ว' },
   { status: 'awaiting_payment', label: 'รอชำระ' },
   { status: 'paid', label: 'ปิดการขาย' },
 ]
+
+const SENT_LIKE_STATUSES: QuotationStatus[] = [
+  'sent',
+  'viewed',
+  'accepted',
+  'awaiting_payment',
+  'paid',
+]
+
+export function isQuotationSentLike(status: QuotationStatus): boolean {
+  return SENT_LIKE_STATUSES.includes(status)
+}
+
+export function publicQuotationPath(token: string): string {
+  return `/q/${token}`
+}
 
 export const DEFAULT_TERMS =
   'รับดูแลขั้นต่ำ 3 เดือน มัดจำงวแรกก่อนเริ่มงาน ราคายังไม่รวมค่าแอด'
