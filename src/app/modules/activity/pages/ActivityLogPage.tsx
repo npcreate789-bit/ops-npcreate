@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { canAccessNavPath } from '../../../config/navigation'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
+  canUseGlobalSearch,
   canViewActivityLog,
   canViewAdminAudit,
+  canViewCustomer360,
+  canViewReports,
+  canViewWeeklyReport,
 } from '../../../../shared/auth/access'
 import {
   AUDIT_ACTION_GROUPS,
@@ -18,6 +23,14 @@ import {
   listActivityActors,
   listActivityLogs,
 } from '../api/activityLogs'
+import { ActivityCategoryFilterBar } from '../components/ActivityCategoryFilterBar'
+import { ActivityRoleGuide } from '../components/ActivityRoleGuide'
+import {
+  activityCustomerId,
+  activityEntityHref,
+  activityEntityLabel,
+} from '../entityLinks'
+import { ACTIVITY_CATEGORY_ALL, countActivityByCategory } from '../pipeline'
 import { EMPTY_ACTIVITY_FILTERS, type ActivityFilters } from '../types'
 import '../../crm/crm.css'
 import '../../tasks/tasks.css'
@@ -33,10 +46,18 @@ export function ActivityLogPage() {
   const canView = canViewActivityLog(roles) || !configured
   const isAdminAudit = canViewAdminAudit(roles) || !configured
   const sensitiveHidden = configured && !canViewSensitiveAudit(roles)
+  const showCustomers = canViewCustomer360(roles) || !configured
+  const showWeekly = canViewWeeklyReport(roles) || !configured
+  const showReports = canViewReports(roles) || !configured
+  const showSearch = canUseGlobalSearch(roles) || !configured
 
   const [filters, setFilters] = useState<ActivityFilters>(EMPTY_ACTIVITY_FILTERS)
+  const [categoryFilter, setCategoryFilter] = useState(ACTIVITY_CATEGORY_ALL)
   const [searchInput, setSearchInput] = useState('')
   const [rows, setRows] = useState<Awaited<ReturnType<typeof listActivityLogs>>>([])
+  const [categoryCounts, setCategoryCounts] = useState<
+    Partial<Record<string, number>>
+  >({})
   const [entityTypes, setEntityTypes] = useState<string[]>([])
   const [actors, setActors] = useState<Awaited<ReturnType<typeof listActivityActors>>>([])
   const [loading, setLoading] = useState(true)
@@ -59,8 +80,14 @@ export function ActivityLogPage() {
   useEffect(() => {
     if (!canView) return
     listActivityLogs(EMPTY_ACTIVITY_FILTERS, roles)
-      .then((all) => setEntityTypes(activityEntityTypes(all)))
-      .catch(() => setEntityTypes([]))
+      .then((all) => {
+        setEntityTypes(activityEntityTypes(all))
+        setCategoryCounts(countActivityByCategory(all))
+      })
+      .catch(() => {
+        setEntityTypes([])
+        setCategoryCounts({})
+      })
   }, [canView, roles])
 
   const load = useCallback(async () => {
@@ -80,10 +107,24 @@ export function ActivityLogPage() {
     void load()
   }, [load])
 
+  function selectCategory(value: string) {
+    setCategoryFilter(value)
+    setFilters((f) => ({ ...f, action_prefix: value }))
+  }
+
   function clearFilters() {
     setSearchInput('')
+    setCategoryFilter(ACTIVITY_CATEGORY_ALL)
     setFilters(EMPTY_ACTIVITY_FILTERS)
   }
+
+  const visibleGroups = useMemo(
+    () =>
+      AUDIT_ACTION_GROUPS.filter((g) =>
+        sensitiveHidden ? g.value !== 'user' && g.value !== 'client_access' : true,
+      ),
+    [sensitiveHidden],
+  )
 
   if (!canView) {
     return (
@@ -103,22 +144,30 @@ export function ActivityLogPage() {
     filters.search.trim()
 
   return (
-    <div className="page">
+    <div className="page activity-page">
       <header className="page__header crm-page__header phase2-page__header">
         <div>
           <h1>บันทึกกิจกรรม</h1>
           <p className="muted">
             {isCeo
-              ? 'ติดตามการทำงานของพนักงาน — ใครทำอะไร กับข้อมูลใด เมื่อไหร่'
-              : 'ติดตามการเปลี่ยนแปลงสำคัญในระบบ — อ่านอย่างเดียว'}
+              ? 'ติดตามการทำงานของทีม — ใครทำอะไร กับข้อมูลใด เมื่อไหร่'
+              : 'ประวัติการเปลี่ยนแปลงสำคัญในระบบ — อ่านอย่างเดียว'}
           </p>
-          {isAdminAudit && (
-            <p className="admin-hint">
-              <Link to="/app/admin/logs">Audit ผู้ดูแลระบบ</Link> (CEO / Operations / Dev)
-            </p>
-          )}
         </div>
-        <div className="crm-page__actions">
+        <div className="activity-page__header-actions">
+          <Link to="/app/dashboard" className="crm-btn crm-btn--ghost">
+            แดชบอร์ด
+          </Link>
+          {showSearch && (
+            <Link to="/app/search" className="crm-btn crm-btn--ghost">
+              ค้นหารวม
+            </Link>
+          )}
+          {isAdminAudit && (
+            <Link to="/app/admin/logs" className="crm-btn crm-btn--ghost">
+              Audit ผู้ดูแล
+            </Link>
+          )}
           <button
             type="button"
             className="crm-btn crm-btn--ghost"
@@ -130,7 +179,7 @@ export function ActivityLogPage() {
                 rows.map((row) => [
                   formatBangkokDateTime(row.created_at),
                   auditActionLabel(row.action),
-                  row.entity_type,
+                  activityEntityLabel(row.entity_type),
                   row.entity_id ?? '',
                   formatAuditMetadata(row.metadata),
                   row.actor_name ?? row.actor_email ?? '',
@@ -146,22 +195,51 @@ export function ActivityLogPage() {
         </div>
       </header>
 
+      <ActivityRoleGuide showAdminAudit={isAdminAudit} />
+
+      {(showWeekly || showReports) && (
+        <div className="activity-hint-banner">
+          <p>
+            ต้องการสรุปตัวเลข
+            {showReports ? (
+              <>
+                {' '}
+                → <Link to="/app/reports">รายงานรายเดือน</Link>
+              </>
+            ) : null}
+            {showWeekly ? (
+              <>
+                {' '}
+                → <Link to="/app/weekly">สรุปรายสัปดาห์</Link>
+              </>
+            ) : null}
+          </p>
+        </div>
+      )}
+
       {!configured && (
         <p className="crm-banner crm-banner--warn">โหมดพัฒนา — ข้อมูลตัวอย่าง</p>
       )}
 
       {sensitiveHidden && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
-          ซ่อนบันทึกที่เกี่ยวกับผู้ใช้และสิทธิ์ — เฉพาะผู้ดูแลระบบดูได้ครบ
+          ซ่อนบันทึกผู้ใช้และพอร์ทัลลูกค้า — ผู้ดูแลระบบดูได้ครบที่ Audit ผู้ดูแล
         </p>
       )}
 
       <section className="card card--wide">
+        <ActivityCategoryFilterBar
+          active={categoryFilter}
+          onSelect={selectCategory}
+          counts={categoryCounts}
+          hideSensitive={sensitiveHidden}
+        />
+
         <div className="task-filters activity-filters">
           <label className="task-field">
             <span className="task-field__label">พนักงาน</span>
             <select
-              className="task-select"
+              className="task-select crm-select"
               value={filters.actor_id}
               onChange={(e) => setFilters((f) => ({ ...f, actor_id: e.target.value }))}
             >
@@ -174,15 +252,17 @@ export function ActivityLogPage() {
             </select>
           </label>
           <label className="task-field">
-            <span className="task-field__label">หมวด</span>
+            <span className="task-field__label">หมวด (ละเอียด)</span>
             <select
-              className="task-select"
+              className="task-select crm-select"
               value={filters.action_prefix}
-              onChange={(e) => setFilters((f) => ({ ...f, action_prefix: e.target.value }))}
+              onChange={(e) => {
+                const value = e.target.value
+                setCategoryFilter(value)
+                setFilters((f) => ({ ...f, action_prefix: value }))
+              }}
             >
-              {AUDIT_ACTION_GROUPS.filter((g) =>
-                sensitiveHidden ? g.value !== 'user' && g.value !== 'client_access' : true,
-              ).map((g) => (
+              {visibleGroups.map((g) => (
                 <option key={g.value || 'all'} value={g.value}>
                   {g.label}
                 </option>
@@ -192,14 +272,14 @@ export function ActivityLogPage() {
           <label className="task-field">
             <span className="task-field__label">ประเภทข้อมูล</span>
             <select
-              className="task-select"
+              className="task-select crm-select"
               value={filters.entity_type}
               onChange={(e) => setFilters((f) => ({ ...f, entity_type: e.target.value }))}
             >
               <option value="">ทั้งหมด</option>
               {entityTypes.map((t) => (
                 <option key={t} value={t}>
-                  {t}
+                  {activityEntityLabel(t)}
                 </option>
               ))}
             </select>
@@ -228,7 +308,7 @@ export function ActivityLogPage() {
               className="crm-input"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="action, ผู้ทำ, รายละเอียด..."
+              placeholder="ชื่อแบรนด์, ผู้ทำ, รายละเอียด..."
             />
           </label>
           {hasFilters && (
@@ -242,16 +322,21 @@ export function ActivityLogPage() {
         {loading && <p className="muted">กำลังโหลด...</p>}
 
         {!loading && rows.length === 0 && (
-          <p className="muted">
+          <p className="muted activity-empty">
             {hasFilters
               ? 'ยังไม่มีบันทึกที่ตรงกับตัวกรอง'
-              : 'ยังไม่มีบันทึกในระบบ — การกระทำใหม่จะปรากฏที่นี่อัตโนมัติ'}
+              : 'ยังไม่มีบันทึก — การบันทึกจาก CRM, การเงิน, งาน ฯลฯ จะปรากฏที่นี่อัตโนมัติ'}
           </p>
         )}
 
         {!loading && rows.length > 0 && (
           <>
-            <p className="muted activity-count">แสดง {rows.length} รายการ (ล่าสุดไม่เกิน 200)</p>
+            <p className="muted activity-count">
+              แสดง {rows.length} รายการ (ล่าสุดไม่เกิน 200)
+              {categoryFilter
+                ? ` · หมวด ${visibleGroups.find((g) => g.value === categoryFilter)?.label ?? categoryFilter}`
+                : ''}
+            </p>
             <div className="crm-table-wrap">
               <table className="crm-table activity-table">
                 <thead>
@@ -261,11 +346,25 @@ export function ActivityLogPage() {
                     <th>การกระทำ</th>
                     <th>ข้อมูล</th>
                     <th>รายละเอียด</th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => {
                     const meta = formatAuditMetadata(row.metadata)
+                    const href = activityEntityHref(row)
+                    const customerId = activityCustomerId(row)
+                    const customerHref =
+                      customerId && showCustomers
+                        ? `/app/customers/${customerId}`
+                        : null
+                    const canOpenEntity =
+                      href && (!configured || canAccessNavPath(roles, href))
+                    const canOpenCustomer =
+                      customerHref &&
+                      customerHref !== href &&
+                      (!configured || canAccessNavPath(roles, customerHref))
+
                     return (
                       <tr key={row.id}>
                         <td>{formatBangkokDateTime(row.created_at)}</td>
@@ -280,13 +379,31 @@ export function ActivityLogPage() {
                         </td>
                         <td>{auditActionLabel(row.action)}</td>
                         <td>
-                          <strong>{row.entity_type}</strong>
+                          <strong>{activityEntityLabel(row.entity_type)}</strong>
                           {row.entity_id && (
-                            <span className="activity-meta"> · {row.entity_id.slice(0, 8)}…</span>
+                            <span className="activity-meta">
+                              <br />
+                              {row.entity_id.slice(0, 8)}…
+                            </span>
                           )}
                         </td>
                         <td className="activity-meta-cell">
                           {meta || <span className="muted">—</span>}
+                        </td>
+                        <td className="activity-actions-cell">
+                          {canOpenEntity && (
+                            <Link to={href!} className="crm-btn crm-btn--ghost activity-open-btn">
+                              เปิด
+                            </Link>
+                          )}
+                          {canOpenCustomer && (
+                            <Link
+                              to={customerHref!}
+                              className="crm-btn crm-btn--ghost activity-open-btn"
+                            >
+                              360°
+                            </Link>
+                          )}
                         </td>
                       </tr>
                     )

@@ -1,3 +1,98 @@
+.activity-page__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.activity-role-guide h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.activity-role-guide__flow {
+  margin: 0;
+  padding-left: 1.15rem;
+  line-height: 1.75;
+  color: var(--npc-text-muted);
+  font-size: 0.88rem;
+}
+
+.activity-role-guide__flow a {
+  color: var(--npc-accent);
+}
+
+.activity-hint-banner {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.08);
+}
+
+.activity-hint-banner p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--npc-text-muted);
+}
+
+.activity-hint-banner a {
+  color: var(--npc-accent);
+}
+
+.activity-category-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.activity-category-bar__stage {
+  flex: 1 1 7.5rem;
+  min-width: 6.5rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--npc-text-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-category-bar__stage--active {
+  border-color: rgba(110, 231, 255, 0.55);
+  background: rgba(110, 231, 255, 0.1);
+  color: var(--npc-text);
+}
+
+.activity-category-bar__label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.activity-category-bar__meta {
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 0.15rem;
+  opacity: 0.85;
+}
+
+.activity-empty {
+  margin: 1rem 0 0;
+}
+
+.activity-actions-cell {
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.activity-open-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
 .activity-meta {
   font-size: 0.8rem;
   color: var(--npc-text-muted);
