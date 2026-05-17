@@ -133,6 +133,23 @@
   gap: 1rem;
 }
 
+.client-reports__staff-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+}
+
+.client-reports__staff-hint a {
+  color: var(--npc-accent);
+}
+
+.client-reports__month {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
 .client-reports__section-head {
   display: flex;
   flex-wrap: wrap;

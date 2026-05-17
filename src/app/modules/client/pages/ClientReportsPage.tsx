@@ -66,9 +66,14 @@ export function ClientReportsPage() {
         <div>
           <h2>รายงานผล</h2>
           <p className="muted">สรุปแอดรายเดือนและภาพรวม 7 วันล่าสุด</p>
+          {!ws.isClientOnly && (
+            <p className="muted client-reports__staff-hint">
+              ทีมบันทึกผลรายวันที่ <Link to="/app/ads">งานยิงแอด</Link> — หน้านี้เป็นสรุปให้ลูกค้าดู
+            </p>
+          )}
         </div>
-        <label className="task-field">
-          <span className="task-field__label">เดือน</span>
+        <label className="client-reports__month">
+          เดือน
           <input
             type="month"
             className="crm-input"

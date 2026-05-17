@@ -4,6 +4,12 @@ import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { hasAdsPrivilegedBypass } from '../../../../shared/auth/access'
 import { isSupabaseConfigured } from '../../../../shared/supabase/client'
 import {
+  canLinkCustomerClient,
+  canLinkCustomerOnboarding,
+  canViewCustomer360,
+} from '../../customers/access'
+import { clientWorkspaceUrl } from '../../customers/customerLinks'
+import {
   getCampaignForCustomer,
   getDailyMetric,
   listRecentMetrics,
@@ -72,7 +78,11 @@ function SummaryMetric({
 export function AdsReportPage() {
   const { customerId } = useParams<{ customerId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { profile, hasAnyRole } = useAuth()
+  const { profile, hasAnyRole, configured } = useAuth()
+  const roles = profile?.roles ?? []
+  const showOnboarding = canLinkCustomerOnboarding(roles) || !configured
+  const showClient = canLinkCustomerClient(roles) || !configured
+  const show360 = canViewCustomer360(roles) || !configured
   const ownerId = profile?.id ?? DEV_OWNER
   const privileged =
     hasAdsPrivilegedBypass(profile?.roles ?? []) || !isSupabaseConfigured
@@ -251,15 +261,49 @@ export function AdsReportPage() {
 
   return (
     <div className="page ads-report-page">
-      <header className="page__header">
+      <header className="page__header crm-page__header">
         <Link to="/app/ads" className="crm-back">
           ← กลับรายการ
         </Link>
         <h1>{brandName}</h1>
-        <p>
-          {campaign.name} · {campaign.campaign_type}
+        <p className="muted">
+          {campaign.name} · {campaign.campaign_type} — บันทึกที่นี่ ลูกค้าดูสรุปใน{' '}
+          {customerId && showClient ? (
+            <Link to={clientWorkspaceUrl(customerId, 'reports')}>พื้นที่ลูกค้า → รายงาน</Link>
+          ) : (
+            'พื้นที่ลูกค้า → รายงาน'
+          )}
         </p>
       </header>
+
+      {customerId && (show360 || showOnboarding || showClient) && (
+        <nav className="ads-related-links" aria-label="ลิงก์ที่เกี่ยวข้อง">
+          {show360 && (
+            <Link to={`/app/customers/${customerId}`} className="crm-btn crm-btn--ghost crm-btn--sm">
+              ลูกค้า 360°
+            </Link>
+          )}
+          {showOnboarding && (
+            <Link
+              to={`/app/onboarding/${customerId}`}
+              className="crm-btn crm-btn--ghost crm-btn--sm"
+            >
+              รับบรีฟ
+            </Link>
+          )}
+          {showClient && (
+            <Link
+              to={clientWorkspaceUrl(customerId, 'reports')}
+              className="crm-btn crm-btn--ghost crm-btn--sm"
+            >
+              รายงานลูกค้า
+            </Link>
+          )}
+          <Link to="/app/ads" className="crm-btn crm-btn--ghost crm-btn--sm">
+            รายการแอดทั้งหมด
+          </Link>
+        </nav>
+      )}
 
       {error && <p className="crm-error">{error}</p>}
       {saveSuccess && (
