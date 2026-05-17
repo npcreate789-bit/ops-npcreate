@@ -913,7 +913,8 @@
 }
 
 .chat-bubble__bubble:hover .chat-bubble__toolbar,
-.chat-bubble__bubble:focus-within .chat-bubble__toolbar {
+.chat-bubble__bubble:focus-within .chat-bubble__toolbar,
+.chat-bubble--notes-open .chat-bubble__toolbar {
   opacity: 1;
 }
 

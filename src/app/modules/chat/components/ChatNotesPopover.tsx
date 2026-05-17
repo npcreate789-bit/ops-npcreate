@@ -78,14 +78,6 @@ export function ChatNotesPopover({
     }
   }, [anchorEl])
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const text = draft.trim()

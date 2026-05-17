@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { scrollChatFeedToBottom } from '../utils/chatScroll'
+import { scrollChatFeedToBottom, scrollChatFeedToBottomAfterLayout } from '../utils/chatScroll'
 import { groupMessagesByDay } from '../utils/chatDisplay'
 import type {
   ChatMessage,
@@ -78,6 +78,15 @@ export function ChatMessageList({
     el.addEventListener('scroll', onScroll)
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
+
+  const prevLoadingRef = useRef(loading)
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current
+    prevLoadingRef.current = loading
+    if (wasLoading && !loading && feedRef.current) {
+      scrollChatFeedToBottomAfterLayout(feedRef.current, 'auto')
+    }
+  }, [loading, messages.length])
 
   function scrollToLatest() {
     scrollChatFeedToBottom(feedRef.current, 'smooth')

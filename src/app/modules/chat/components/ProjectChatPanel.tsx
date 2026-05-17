@@ -174,16 +174,35 @@ export function ProjectChatPanel({
   }
 
   function openNotedFromTopBar(messageId: string, anchor: HTMLElement) {
+    if (searchQuery.trim()) {
+      setSearchQuery('')
+    }
     setOpenNotesMessageId(messageId)
     setOpenNotesAnchor(anchor)
     setNotesPanelOpen(true)
-    scrollToMessage(messageId)
+    window.setTimeout(() => scrollToMessage(messageId), 0)
   }
 
   function closeNotes() {
     setOpenNotesMessageId(null)
     setOpenNotesAnchor(null)
   }
+
+  function closeNotesUi() {
+    closeNotes()
+    setNotesPanelOpen(false)
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return
+      if (openNotesMessageId || notesPanelOpen) {
+        closeNotesUi()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [openNotesMessageId, notesPanelOpen])
 
   async function handleSaveNote(messageId: string, body: string) {
     setNotesSaving(true)
@@ -210,13 +229,16 @@ export function ProjectChatPanel({
     setNotesSaving(true)
     try {
       await deleteChatMessageNote(noteId, messageId)
-      setSocial((prev) => ({
-        ...prev,
-        notes: {
-          ...prev.notes,
-          [messageId]: (prev.notes[messageId] ?? []).filter((n) => n.id !== noteId),
-        },
-      }))
+      setSocial((prev) => {
+        const next = (prev.notes[messageId] ?? []).filter((n) => n.id !== noteId)
+        const notes = { ...prev.notes }
+        if (next.length === 0) {
+          delete notes[messageId]
+        } else {
+          notes[messageId] = next
+        }
+        return { ...prev, notes }
+      })
     } catch (e) {
       alert(e instanceof Error ? e.message : 'ลบโน้ตไม่สำเร็จ')
     } finally {
@@ -376,7 +398,7 @@ export function ProjectChatPanel({
           anchorEl={openNotesAnchor}
           onSave={(body) => handleSaveNote(notesTarget.id, body)}
           onDelete={(noteId) => handleDeleteNote(notesTarget.id, noteId)}
-          onClose={closeNotes}
+          onClose={closeNotesUi}
         />
       )}
 

@@ -95,7 +95,10 @@ export function ChatRoomTopBar({
           <ChatNoteIcon size={15} active={hasNoted || notesPanelOpen} />
           <span>โน้ต</span>
           {hasNoted && (
-            <span className="chat-room-top-bar__notes-count" aria-label={`${totalNotes} โน้ต`}>
+            <span
+              className="chat-room-top-bar__notes-count"
+              aria-label={`${notedEntries.length} ข้อความ · ${totalNotes} โน้ต`}
+            >
               {notedEntries.length}
             </span>
           )}

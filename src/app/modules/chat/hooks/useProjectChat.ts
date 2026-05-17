@@ -9,7 +9,12 @@ import {
 } from '../api/chat'
 import { uploadChatFile } from '../api/chatFiles'
 import { clearActiveChatFocus, setActiveChatFocus } from '../activeChatFocus'
-import { findChatFeedFromAnchor, scrollChatFeedToBottom } from '../utils/chatScroll'
+import {
+  findChatFeedFromAnchor,
+  isChatFeedNearBottom,
+  scrollChatFeedToBottom,
+  scrollChatFeedToBottomAfterLayout,
+} from '../utils/chatScroll'
 import type { ChatMessage } from '../types'
 
 export function useProjectChat(
@@ -24,15 +29,26 @@ export function useProjectChat(
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  /** บังคับเลื่อนล่างหลังเปิดห้อง / รีเฟรช / ส่งข้อความ */
+  const forceBottomRef = useRef(true)
+
+  const getFeed = useCallback(
+    () => findChatFeedFromAnchor(bottomRef.current),
+    [],
+  )
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const feed = findChatFeedFromAnchor(bottomRef.current)
+    const feed = getFeed()
     if (feed) {
-      scrollChatFeedToBottom(feed, behavior)
+      if (behavior === 'auto') {
+        scrollChatFeedToBottomAfterLayout(feed, 'auto')
+      } else {
+        scrollChatFeedToBottom(feed, behavior)
+      }
       return
     }
     bottomRef.current?.scrollIntoView({ behavior, block: 'end' })
-  }, [])
+  }, [getFeed])
 
   const load = useCallback(async () => {
     if (!projectId) {
@@ -42,6 +58,7 @@ export function useProjectChat(
       return
     }
     setLoading(true)
+    forceBottomRef.current = true
     setError(null)
     try {
       const rid = await ensureProjectChatChannel(projectId, activeChannel)
@@ -67,8 +84,20 @@ export function useProjectChat(
   }, [roomId, projectId, activeChannel])
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, scrollToBottom])
+    if (loading) return
+
+    const feed = getFeed()
+    const force = forceBottomRef.current
+    const nearBottom = force || isChatFeedNearBottom(feed)
+
+    if (!nearBottom) {
+      forceBottomRef.current = false
+      return
+    }
+
+    scrollToBottom(force ? 'auto' : 'smooth')
+    forceBottomRef.current = false
+  }, [messages, loading, scrollToBottom, getFeed])
 
   useEffect(() => {
     if (!roomId || !isSupabaseConfigured || !supabase) return
@@ -103,6 +132,7 @@ export function useProjectChat(
     async (body: string, replyToId?: string | null) => {
       if (!roomId || !userId) return
       setSending(true)
+      forceBottomRef.current = true
       setError(null)
       try {
         const row = await sendChatMessage(
@@ -127,6 +157,7 @@ export function useProjectChat(
     async (file: File, caption?: string, replyToId?: string | null) => {
       if (!roomId || !projectId) return
       setSending(true)
+      forceBottomRef.current = true
       setError(null)
       try {
         await uploadChatFile(projectId, roomId, file, caption, replyToId)
