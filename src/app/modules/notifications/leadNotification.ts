@@ -43,3 +43,10 @@ export function mapNotificationRow(row: Record<string, unknown>): UserNotificati
 
 /** แจ้งเตือน Lead ในเครื่อง (โหมด dev) */
 export const NOTIFICATION_PUSH_EVENT = 'npcreate-notification-push'
+
+/** แจ้งให้ toast / badge รีเฟรชหลังอ่านหรือเปลี่ยนสถานะ */
+export function emitNotificationChange(userId: string): void {
+  window.dispatchEvent(
+    new CustomEvent(NOTIFICATION_PUSH_EVENT, { detail: { userId } }),
+  )
+}

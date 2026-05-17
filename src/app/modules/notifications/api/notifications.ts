@@ -7,7 +7,9 @@ import type { UserNotification } from '../types'
 
 import {
   buildLeadNotificationInput,
+  emitNotificationChange,
   isLeadNotification,
+  leadNotificationDedupeKey,
   mapNotificationRow,
 } from '../leadNotification'
 
@@ -125,6 +127,7 @@ export async function getUnreadNotificationCount(userId: string): Promise<number
 export async function markNotificationRead(userId: string, id: string): Promise<void> {
   if (!isSupabaseConfigured || !supabase) {
     await mockNotificationsApi.markRead(userId, id)
+    emitNotificationChange(userId)
     return
   }
 
@@ -135,6 +138,36 @@ export async function markNotificationRead(userId: string, id: string): Promise<
     .eq('user_id', userId)
 
   if (error) throw new Error(error.message)
+  emitNotificationChange(userId)
+}
+
+export async function markNotificationReadByDedupeKey(
+  userId: string,
+  dedupeKey: string,
+): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    await mockNotificationsApi.markReadByDedupeKey(userId, dedupeKey)
+    emitNotificationChange(userId)
+    return
+  }
+
+  const { error } = await supabase
+    .from('user_notifications')
+    .update({ read_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('dedupe_key', dedupeKey)
+    .is('read_at', null)
+
+  if (error) throw new Error(error.message)
+  emitNotificationChange(userId)
+}
+
+/** รับทราบแจ้งเตือน Lead เมื่อเปิดดูหน้า Lead */
+export async function markLeadNotificationReadByLeadId(
+  userId: string,
+  leadId: string,
+): Promise<void> {
+  await markNotificationReadByDedupeKey(userId, leadNotificationDedupeKey(leadId))
 }
 
 /** แจ้งเตือน Lead ที่ยังไม่อ่าน — สำหรับ toast เรียลไทม์ */
@@ -183,6 +216,7 @@ export async function pushLeadNotification(
 export async function markAllNotificationsRead(userId: string): Promise<void> {
   if (!isSupabaseConfigured || !supabase) {
     await mockNotificationsApi.markAllRead(userId)
+    emitNotificationChange(userId)
     return
   }
 
@@ -193,4 +227,5 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
     .is('read_at', null)
 
   if (error) throw new Error(error.message)
+  emitNotificationChange(userId)
 }

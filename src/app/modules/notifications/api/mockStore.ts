@@ -1,6 +1,6 @@
 import {
-  NOTIFICATION_PUSH_EVENT,
   buildLeadNotificationInput,
+  emitNotificationChange,
   isLeadNotification,
 } from '../leadNotification'
 import type { UserNotification } from '../types'
@@ -62,6 +62,15 @@ export const mockNotificationsApi = {
     save(rows)
   },
 
+  async markReadByDedupeKey(userId: string, dedupeKey: string) {
+    const rows = load()
+    const row = rows.find(
+      (n) => n.user_id === userId && n.dedupe_key === dedupeKey && !n.read_at,
+    )
+    if (row) row.read_at = new Date().toISOString()
+    save(rows)
+  },
+
   async markAllRead(userId: string) {
     const now = new Date().toISOString()
     save(
@@ -103,9 +112,7 @@ export const mockNotificationsApi = {
       updated_at: now,
     })
     save(rows)
-    window.dispatchEvent(
-      new CustomEvent(NOTIFICATION_PUSH_EVENT, { detail: { userId } }),
-    )
+    emitNotificationChange(userId)
   },
 
   seedUserId: DEV_USER,

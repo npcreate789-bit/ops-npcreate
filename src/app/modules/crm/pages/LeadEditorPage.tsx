@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
+  canAccessNotifications,
   canCreateCrmLead,
   canEditCrmLead,
   canCreateSalesQuotation,
   hasDbPrivilegedRole,
   isCrmReadOnly,
 } from '../../../../shared/auth/access'
+import { useAcknowledgeLeadNotificationOnView } from '../../notifications/useAcknowledgeLeadNotificationOnView'
 import { isSupabaseConfigured } from '../../../../shared/supabase/client'
 import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
 import { canViewLeadAttachments } from '../access'
@@ -42,6 +44,9 @@ export function LeadEditorPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [initial, setInitial] = useState<Awaited<ReturnType<typeof getLead>>>(null)
+  const acknowledgeLeadNotif =
+    (canAccessNotifications(roles) || !configured) && !isNew && !!initial
+  useAcknowledgeLeadNotificationOnView(userId, acknowledgeLeadNotif ? id : undefined, true)
   const canEdit =
     (isNew ? canCreate : canEditCrmLead(roles, initial?.owner_id, userId)) ||
     !configured
