@@ -184,10 +184,202 @@
   font-size: 0.8rem;
 }
 
+.project-detail-page .page__header .project-form__subtitle {
+  margin: 0;
+  max-width: 36rem;
+  line-height: 1.5;
+}
+
 .project-detail-page .crm-form.project-form {
   display: flex;
   flex-direction: column;
   gap: 0;
+}
+
+.project-form--create {
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.project-form--create .project-form__panel {
+  margin: 0 0 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.project-form--create .project-form__panel:last-of-type {
+  margin-bottom: 0;
+}
+
+.project-form__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-right: 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--npc-bg-deep);
+  background: linear-gradient(135deg, var(--npc-accent), #4fd1c5);
+  vertical-align: middle;
+}
+
+.project-form--create .project-form__legend {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.project-form__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.project-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.project-form__field > span:first-child {
+  color: var(--npc-text-muted);
+}
+
+.project-form__input-lg {
+  font-size: 1rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.project-form .crm-input:focus,
+.project-form .crm-select:focus,
+.project-form__textarea:focus {
+  outline: none;
+  border-color: rgba(110, 231, 255, 0.55);
+  box-shadow: 0 0 0 2px rgba(110, 231, 255, 0.15);
+}
+
+.project-form__textarea {
+  min-height: 5.5rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.project-form__customer-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.08);
+}
+
+.project-form__customer-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.project-form__customer-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--npc-text-muted);
+}
+
+.project-form__customer-card strong {
+  font-size: 1.05rem;
+  color: var(--npc-text);
+}
+
+.project-form__customer-meta {
+  font-size: 0.78rem;
+}
+
+.project-form__customer-link {
+  flex-shrink: 0;
+}
+
+.project-form__service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.project-form__service-chip {
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--npc-text-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.project-form__service-chip:hover {
+  border-color: rgba(110, 231, 255, 0.35);
+  color: var(--npc-text);
+}
+
+.project-form__service-chip--on {
+  border-color: rgba(110, 231, 255, 0.5);
+  background: rgba(110, 231, 255, 0.12);
+  color: var(--npc-accent);
+  font-weight: 600;
+}
+
+.project-form__optional {
+  margin: 0.25rem 0 0;
+  border-radius: 10px;
+  border: 1px dashed var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.project-form__optional-summary {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--npc-text-muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.project-form__optional-summary::-webkit-details-marker {
+  display: none;
+}
+
+.project-form__optional-summary::before {
+  content: '▸ ';
+  color: var(--npc-accent);
+}
+
+.project-form__optional[open] .project-form__optional-summary::before {
+  content: '▾ ';
+}
+
+.project-form__optional-body {
+  padding: 0 1rem 1rem;
+}
+
+.project-form__actions--create {
+  margin-top: 1.25rem;
 }
 
 .project-form__section {

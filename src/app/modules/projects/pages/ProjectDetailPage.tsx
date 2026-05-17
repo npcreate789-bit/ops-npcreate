@@ -11,6 +11,7 @@ import {
 } from '../constants'
 import { ProjectChatPanel } from '../../chat/components/ProjectChatPanel'
 import type { ChatChannelKey } from '../../chat/types'
+import { ProjectCreateForm } from '../components/ProjectCreateForm'
 import { ProjectNextStepsPanel } from '../components/ProjectNextStepsPanel'
 import { ProjectTasksSection } from '../components/ProjectTasksSection'
 import type { Project, ProjectServiceType, ProjectStatus } from '../types'
@@ -147,10 +148,16 @@ export function ProjectDetailPage() {
             ← โปรเจกต์ทั้งหมด
           </Link>
           <h1>{isNew ? 'สร้างโปรเจกต์' : project?.project_name ?? 'โปรเจกต์'}</h1>
-          {!isNew && project && (
-            <p className="muted">
-              {projectServiceLabel(project.service_type)} · {projectStatusLabel(project.status)}
+          {isNew ? (
+            <p className="muted project-form__subtitle">
+              เลือกลูกค้า ตั้งชื่อและประเภทบริการ — ปรับสถานะและความคืบหน้าได้หลังสร้างแล้ว
             </p>
+          ) : (
+            project && (
+              <p className="muted">
+                {projectServiceLabel(project.service_type)} · {projectStatusLabel(project.status)}
+              </p>
+            )
           )}
         </div>
       </header>
@@ -159,178 +166,178 @@ export function ProjectDetailPage() {
 
       {!isNew && project && <ProjectNextStepsPanel project={project} />}
 
-      <form className="card card--wide crm-form project-form" onSubmit={handleSubmit}>
-        {isNew && presetCustomer && (
-          <p className="crm-banner">
-            ลูกค้า: <strong>{presetCustomer.brand_name}</strong> — จากลิงก์ Customer 360°
-          </p>
+      <form
+        className={`card card--wide crm-form project-form${isNew ? ' project-form--create' : ''}`}
+        onSubmit={handleSubmit}
+      >
+        {isNew ? (
+          <ProjectCreateForm
+            customers={customers}
+            customerId={customerId}
+            onCustomerIdChange={setCustomerId}
+            presetCustomer={presetCustomer}
+            presetCustomerId={presetCustomerId}
+            projectName={projectName}
+            onProjectNameChange={setProjectName}
+            serviceType={serviceType}
+            onServiceTypeChange={setServiceType}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+            endDate={endDate}
+            onEndDateChange={setEndDate}
+            notes={notes}
+            onNotesChange={setNotes}
+            saving={saving}
+          />
+        ) : (
+          <>
+            <fieldset className="project-form__section">
+              <legend className="project-form__legend">ข้อมูลหลัก</legend>
+              <div className="crm-form__grid">
+                <label>
+                  ลูกค้า
+                  <div className="project-form__readonly">
+                    {selectedCustomer?.brand_name ?? '—'}
+                    {customerId && (
+                      <>
+                        {' '}
+                        ·{' '}
+                        <Link to={`/app/customers/${customerId}`}>เปิด 360°</Link>
+                      </>
+                    )}
+                  </div>
+                </label>
+
+                <label className="crm-form__full project-form__field">
+                  ชื่อโปรเจกต์ <span className="req">*</span>
+                  <input
+                    className="crm-input"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="เช่น GMV Max — ร้าน ABC"
+                    required
+                  />
+                </label>
+
+                <label className="project-form__field">
+                  ประเภทบริการ
+                  <select
+                    className="crm-select project-form__select"
+                    value={serviceType}
+                    onChange={(e) => setServiceType(e.target.value as ProjectServiceType)}
+                  >
+                    {PROJECT_SERVICE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset className="project-form__section">
+              <legend className="project-form__legend">สถานะและความคืบหน้า</legend>
+              <div className="crm-form__grid">
+                <label className="project-form__field">
+                  สถานะ
+                  <select
+                    className="crm-select project-form__select"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+                  >
+                    {PROJECT_STATUS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="crm-form__full project-form__progress">
+                  ความคืบหน้า
+                  <div className="project-form__progress-row">
+                    <input
+                      type="range"
+                      className="project-form__range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={progress}
+                      onChange={(e) => setProgress(clampProgress(Number(e.target.value)))}
+                      aria-valuenow={progress}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                    />
+                    <input
+                      type="number"
+                      className="crm-input project-form__progress-input"
+                      min={0}
+                      max={100}
+                      value={progress}
+                      onChange={(e) => setProgress(clampProgress(Number(e.target.value)))}
+                      aria-label="ความคืบหน้า (เปอร์เซ็นต์)"
+                    />
+                    <span className="project-form__progress-suffix">%</span>
+                  </div>
+                  <div className="project-form__progress-bar" role="progressbar" aria-valuenow={progress}>
+                    <div
+                      className="project-form__progress-fill"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset className="project-form__section">
+              <legend className="project-form__legend">กำหนดการ</legend>
+              <div className="crm-form__grid">
+                <label className="project-form__field">
+                  วันเริ่ม
+                  <input
+                    className="crm-input"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </label>
+                <label className="project-form__field">
+                  วันสิ้นสุด
+                  <input
+                    className="crm-input"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset className="project-form__section project-form__section--last">
+              <legend className="project-form__legend">หมายเหตุ</legend>
+              <label className="crm-form__full project-form__field">
+                บันทึกภายในทีม
+                <textarea
+                  className="crm-input project-form__textarea"
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="เป้าหมาย ข้อตกลง หรือสิ่งที่ต้องติดตาม..."
+                />
+              </label>
+            </fieldset>
+
+            <div className="crm-form__actions">
+              <Link to="/app/projects" className="crm-btn crm-btn--ghost">
+                ยกเลิก
+              </Link>
+              <button type="submit" className="crm-btn crm-btn--primary" disabled={saving}>
+                {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </>
         )}
-
-        <fieldset className="project-form__section">
-          <legend className="project-form__legend">ข้อมูลหลัก</legend>
-          <div className="crm-form__grid">
-            {isNew ? (
-              <label>
-                ลูกค้า <span className="req">*</span>
-                <select
-                  className="crm-select project-form__select"
-                  value={customerId}
-                  onChange={(e) => setCustomerId(e.target.value)}
-                  required
-                  disabled={Boolean(presetCustomerId)}
-                >
-                  <option value="">— เลือกลูกค้า —</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.brand_name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <label>
-                ลูกค้า
-                <div className="project-form__readonly">
-                  {selectedCustomer?.brand_name ?? '—'}
-                  {customerId && (
-                    <>
-                      {' '}
-                      ·{' '}
-                      <Link to={`/app/customers/${customerId}`}>เปิด 360°</Link>
-                    </>
-                  )}
-                </div>
-              </label>
-            )}
-
-            <label className="crm-form__full">
-              ชื่อโปรเจกต์ <span className="req">*</span>
-              <input
-                className="crm-input"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="เช่น GMV Max — ร้าน ABC"
-                required
-              />
-            </label>
-
-            <label>
-              ประเภทบริการ
-              <select
-                className="crm-select project-form__select"
-                value={serviceType}
-                onChange={(e) => setServiceType(e.target.value as ProjectServiceType)}
-              >
-                {PROJECT_SERVICE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset className="project-form__section">
-          <legend className="project-form__legend">สถานะและความคืบหน้า</legend>
-          <div className="crm-form__grid">
-            <label>
-              สถานะ
-              <select
-                className="crm-select project-form__select"
-                value={status}
-                onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-              >
-                {PROJECT_STATUS_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="crm-form__full project-form__progress">
-              ความคืบหน้า
-              <div className="project-form__progress-row">
-                <input
-                  type="range"
-                  className="project-form__range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={progress}
-                  onChange={(e) => setProgress(clampProgress(Number(e.target.value)))}
-                  aria-valuenow={progress}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                />
-                <input
-                  type="number"
-                  className="crm-input project-form__progress-input"
-                  min={0}
-                  max={100}
-                  value={progress}
-                  onChange={(e) => setProgress(clampProgress(Number(e.target.value)))}
-                  aria-label="ความคืบหน้า (เปอร์เซ็นต์)"
-                />
-                <span className="project-form__progress-suffix">%</span>
-              </div>
-              <div className="project-form__progress-bar" role="progressbar" aria-valuenow={progress}>
-                <div
-                  className="project-form__progress-fill"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset className="project-form__section">
-          <legend className="project-form__legend">กำหนดการ</legend>
-          <div className="crm-form__grid">
-            <label>
-              วันเริ่ม
-              <input
-                className="crm-input"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </label>
-            <label>
-              วันสิ้นสุด
-              <input
-                className="crm-input"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset className="project-form__section project-form__section--last">
-          <legend className="project-form__legend">หมายเหตุ</legend>
-          <label className="crm-form__full">
-            บันทึกภายในทีม
-            <textarea
-              className="crm-input"
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="เป้าหมาย ข้อตกลง หรือสิ่งที่ต้องติดตาม..."
-            />
-          </label>
-        </fieldset>
-
-        <div className="crm-form__actions">
-          <Link to="/app/projects" className="crm-btn crm-btn--ghost">
-            ยกเลิก
-          </Link>
-          <button type="submit" className="crm-btn crm-btn--primary" disabled={saving}>
-            {saving ? 'กำลังบันทึก...' : 'บันทึก'}
-          </button>
-        </div>
       </form>
 
       {!isNew && project && (
