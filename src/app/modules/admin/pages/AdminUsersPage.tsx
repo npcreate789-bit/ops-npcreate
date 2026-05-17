@@ -25,6 +25,7 @@ import { DefaultLeadOwnerSettingCard } from '../components/DefaultLeadOwnerSetti
 import {
   adminUserKind,
   adminUserKindLabel,
+  assertValidRoleMix,
   countAdminAudience,
   matchesAdminAudience,
   STAFF_MANAGEABLE_ROLES,
@@ -139,6 +140,12 @@ export function AdminUsersPage() {
       setError('ต้องมีอย่างน้อย 1 บทบาท')
       return
     }
+    try {
+      assertValidRoleMix(next)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'บทบาทไม่ถูกต้อง')
+      return
+    }
     setSavingId(user.id)
     setError(null)
     try {
@@ -178,8 +185,11 @@ export function AdminUsersPage() {
     )
   }
 
-  const showStaffRolesColumn = audienceFilter !== 'client'
-  const showClientColumn = audienceFilter !== 'staff'
+  const showStaffRolesColumn =
+    audienceFilter === 'staff' || audienceFilter === 'mixed' || audienceFilter === 'all'
+  const showClientColumn =
+    audienceFilter === 'client' || audienceFilter === 'mixed' || audienceFilter === 'all'
+  const mixedCount = audienceCounts.mixed ?? 0
 
   return (
     <div className="page admin-page">
@@ -198,11 +208,37 @@ export function AdminUsersPage() {
 
       <AdminRoleGuide />
 
-      <DefaultLeadOwnerSettingCard actorId={profile?.id ?? DEV_OWNER} disabled={!canManage} />
+      {mixedCount > 0 && audienceFilter !== 'mixed' && (
+        <p className="crm-banner crm-banner--warn admin-mixed-banner">
+          มีบัญชีผสมบทบาท {mixedCount} รายการ —{' '}
+          <button
+            type="button"
+            className="crm-btn crm-btn--ghost"
+            onClick={() => setAudienceFilter('mixed')}
+          >
+            ดูและแยกบัญชี
+          </button>
+        </p>
+      )}
 
-      <ChatTemplatesAdmin disabled={!canManage} />
+      <div className="admin-summary-grid">
+        <div className="admin-summary-card">
+          <span className="muted">พนักงาน</span>
+          <strong>{audienceCounts.staff ?? 0}</strong>
+        </div>
+        <div className="admin-summary-card admin-summary-card--client">
+          <span className="muted">ลูกค้าพอร์ทัล</span>
+          <strong>{audienceCounts.client ?? 0}</strong>
+        </div>
+        {mixedCount > 0 && (
+          <div className="admin-summary-card admin-summary-card--warn">
+            <span className="muted">ผสมบทบาท</span>
+            <strong>{mixedCount}</strong>
+          </div>
+        )}
+      </div>
 
-      <section className="card card--wide admin-create-card admin-create-card--client">
+      <section className="card card--wide admin-create-card admin-create-card--client" id="admin-create-client">
         <CreateClientAccountWizard
           creatorRoles={roles}
           configured={configured}
@@ -210,7 +246,7 @@ export function AdminUsersPage() {
         />
       </section>
 
-      <section className="card card--wide admin-create-card admin-create-card--staff">
+      <section className="card card--wide admin-create-card admin-create-card--staff" id="admin-create-staff">
         <CreateEmployeeForm
           creatorRoles={roles}
           configured={configured}
@@ -218,10 +254,16 @@ export function AdminUsersPage() {
         />
       </section>
 
+      <details className="card card--wide admin-settings-details">
+        <summary>การตั้งค่าระบบ (Lead, แชท)</summary>
+        <DefaultLeadOwnerSettingCard actorId={profile?.id ?? DEV_OWNER} disabled={!canManage} />
+        <ChatTemplatesAdmin disabled={!canManage} />
+      </details>
+
       <section className="card card--wide">
         <h2 className="crm-section-title">รายการบัญชีในระบบ</h2>
         <p className="muted admin-list-intro">
-          กรองตามประเภทก่อนแก้บทบาท — ลูกค้าเห็นเฉพาะแบรนด์ที่ผูก · พนักงานเห็นเฉพาะบทบาททีม
+          แท็บพนักงาน/ลูกค้าแสดงเฉพาะประเภทนั้น — บัญชีผสมบทบาทอยู่แท็บ「ผสมบทบาท」เท่านั้น
         </p>
 
         <AdminAudienceFilterBar
@@ -318,7 +360,9 @@ export function AdminUsersPage() {
                       {showStaffRolesColumn && (
                         <td>
                           {kind === 'client' ? (
-                            <span className="muted">ไม่ใช้บทบาทพนักงาน</span>
+                            <span className="muted">บัญชีพอร์ทัล — ไม่มีบทบาทพนักงาน</span>
+                          ) : kind === 'none' ? (
+                            <span className="muted">ยังไม่มีบทบาท — เลือกบทบาทพนักงาน</span>
                           ) : (
                             <div className="admin-roles">
                               {STAFF_MANAGEABLE_ROLES.map((role) => {
@@ -415,10 +459,12 @@ export function AdminUsersPage() {
                 {query.trim()
                   ? 'ไม่พบผู้ใช้ที่ตรงกับคำค้น'
                   : audienceFilter === 'client'
-                    ? 'ยังไม่มีบัญชีลูกค้าพอร์ทัล — สร้างจากวิซาร์ดด้านบน'
+                    ? 'ยังไม่มีบัญชีลูกค้าพอร์ทัล — สร้างจากวิซาร์ด「สร้างบัญชีลูกค้า (พอร์ทัล)」ด้านบน'
                     : audienceFilter === 'staff'
-                      ? 'ยังไม่มีบัญชีพนักงาน — สร้างจากฟอร์มด้านบน'
-                      : 'ยังไม่มีผู้ใช้ในระบบ'}
+                      ? 'ยังไม่มีบัญชีพนักงาน — สร้างจาก「สร้างบัญชีพนักงาน」ด้านบน'
+                      : audienceFilter === 'mixed'
+                        ? 'ไม่มีบัญชีผสมบทบาท — ดีแล้ว'
+                        : 'ยังไม่มีผู้ใช้ในระบบ'}
               </p>
             )}
           </div>

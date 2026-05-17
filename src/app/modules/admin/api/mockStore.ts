@@ -1,3 +1,4 @@
+import { assertValidRoleMix } from '../userAudience'
 import { staffAuthEmail } from '../../../../shared/auth/staffAuth'
 import { generateTempPassword } from '../../../../shared/auth/tempPassword'
 import { normalizeLoginId } from '../../../../shared/auth/loginId'
@@ -52,6 +53,18 @@ const MOCK_USERS: AdminUserRow[] = [
     client_customer_id: null,
     created_at: new Date().toISOString(),
   },
+  {
+    id: '00000000-0000-4000-8000-000000000010',
+    login_id: 'branddemo',
+    email: 'branddemo@client.npcreate.local',
+    full_name: 'ลูกค้า Demo',
+    is_active: true,
+    must_change_password: true,
+    temporary_password: 'Demo-Client-99',
+    roles: ['client'],
+    client_customer_id: 'cust-demo-1',
+    created_at: new Date().toISOString(),
+  },
 ]
 
 function clone(): AdminUserRow[] {
@@ -73,6 +86,7 @@ export const mockAdminApi = {
   },
 
   async setUserRoles(userId: string, roles: AppRole[]): Promise<void> {
+    assertValidRoleMix(roles)
     const u = MOCK_USERS.find((x) => x.id === userId)
     if (u) {
       u.roles = [...roles]

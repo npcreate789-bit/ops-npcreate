@@ -4,6 +4,7 @@ import {
   canEditCeoUserRoles,
   canManageCeoUserStatus,
 } from '../access'
+import { assertValidRoleMix } from '../userAudience'
 import type { AppRole } from '../../../../shared/types/roles'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { setClientCustomerAccess } from '../../client/api/clientReport'
@@ -144,6 +145,7 @@ export async function setUserRoles(
 
   const targetRoles = (existing ?? []).map((r) => r.role as AppRole)
   assertCanSetUserRoles(actorRoles, targetRoles, roles)
+  assertValidRoleMix(roles)
 
   const current = new Set(targetRoles)
   const next = new Set(roles)

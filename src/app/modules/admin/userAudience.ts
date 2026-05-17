@@ -1,9 +1,9 @@
 import { APP_ROLES, type AppRole } from '../../../shared/types/roles'
 import type { AdminUserRow } from './types'
 
-export type AdminAudienceFilter = 'all' | 'staff' | 'client'
+export type AdminAudienceFilter = 'staff' | 'client' | 'mixed' | 'all'
 
-export type AdminUserKind = 'staff' | 'client' | 'mixed'
+export type AdminUserKind = 'staff' | 'client' | 'mixed' | 'none'
 
 /** บทบาทที่แก้ได้ในตารางพนักงาน — ไม่รวม client */
 export const STAFF_MANAGEABLE_ROLES = APP_ROLES.filter(
@@ -16,7 +16,7 @@ export function adminUserKind(row: AdminUserRow): AdminUserKind {
   if (hasClient && staffRoles.length === 0) return 'client'
   if (!hasClient && staffRoles.length > 0) return 'staff'
   if (hasClient && staffRoles.length > 0) return 'mixed'
-  return 'staff'
+  return 'none'
 }
 
 export function adminUserKindLabel(kind: AdminUserKind): string {
@@ -27,6 +27,19 @@ export function adminUserKindLabel(kind: AdminUserKind): string {
       return 'พนักงาน'
     case 'mixed':
       return 'ผสมบทบาท'
+    case 'none':
+      return 'ยังไม่มีบทบาท'
+  }
+}
+
+/** ห้ามรวม client กับบทบาทพนักงานในบัญชีเดียว */
+export function assertValidRoleMix(roles: AppRole[]): void {
+  const hasClient = roles.includes('client')
+  const staffRoles = roles.filter((r) => r !== 'client')
+  if (hasClient && staffRoles.length > 0) {
+    throw new Error(
+      'อย่ารวมบทบาทลูกค้าพอร์ทัลกับบทบาทพนักงานในบัญชีเดียว — สร้างคนละบัญชี',
+    )
   }
 }
 
@@ -35,9 +48,7 @@ export function matchesAdminAudience(
   filter: AdminAudienceFilter,
 ): boolean {
   if (filter === 'all') return true
-  const kind = adminUserKind(row)
-  if (filter === 'staff') return kind === 'staff' || kind === 'mixed'
-  return kind === 'client' || kind === 'mixed'
+  return adminUserKind(row) === filter
 }
 
 export function countAdminAudience(
@@ -48,13 +59,14 @@ export function countAdminAudience(
   let mixed = 0
   for (const row of rows) {
     const kind = adminUserKind(row)
-    if (kind === 'staff') staff += 1
+    if (kind === 'staff' || kind === 'none') staff += 1
     else if (kind === 'client') client += 1
-    else mixed += 1
+    else if (kind === 'mixed') mixed += 1
   }
   return {
     all: rows.length,
-    staff: staff + mixed,
-    client: client + mixed,
+    staff,
+    client,
+    mixed,
   }
 }
