@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { ChatMessage, ChatMessageNote } from '../types'
 import { chatMessagePreviewText } from '../utils/replyPreview'
@@ -16,16 +16,25 @@ interface ChatNotesPopoverProps {
   onClose: () => void
 }
 
-function computePosition(anchor: HTMLElement, panel: HTMLElement) {
+function isUsableAnchorRect(rect: DOMRect): boolean {
+  return rect.width > 0 || rect.height > 0 || rect.bottom > 0 || rect.right > 0
+}
+
+function readAnchorRect(anchor: HTMLElement): DOMRect | null {
+  if (!anchor.isConnected) return null
+  const rect = anchor.getBoundingClientRect()
+  return isUsableAnchorRect(rect) ? rect : null
+}
+
+function computePosition(anchorRect: DOMRect, panel: HTMLElement) {
   const gap = 8
   const margin = 12
-  const rect = anchor.getBoundingClientRect()
   const panelRect = panel.getBoundingClientRect()
   const vw = window.innerWidth
   const vh = window.innerHeight
 
-  let top = rect.bottom + gap
-  let left = rect.left + rect.width / 2 - panelRect.width / 2
+  let top = anchorRect.bottom + gap
+  let left = anchorRect.left + anchorRect.width / 2 - panelRect.width / 2
 
   if (left < margin) left = margin
   if (left + panelRect.width > vw - margin) {
@@ -33,10 +42,25 @@ function computePosition(anchor: HTMLElement, panel: HTMLElement) {
   }
 
   if (top + panelRect.height > vh - margin) {
-    top = rect.top - gap - panelRect.height
+    top = anchorRect.top - gap - panelRect.height
   }
   if (top < margin) top = margin
 
+  return { top, left }
+}
+
+/** กลางจอ — ใช้เมื่อ anchor หลุดหลังลบโน้ต / รายการในแถบบนถูกถอด */
+function computeCenteredPosition(panel: HTMLElement) {
+  const margin = 12
+  const panelRect = panel.getBoundingClientRect()
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  let left = (vw - panelRect.width) / 2
+  let top = (vh - panelRect.height) / 2
+  if (left < margin) left = margin
+  if (top < margin) top = margin
+  if (left + panelRect.width > vw - margin) left = vw - margin - panelRect.width
+  if (top + panelRect.height > vh - margin) top = vh - margin - panelRect.height
   return { top, left }
 }
 
@@ -52,31 +76,48 @@ export function ChatNotesPopover({
 }: ChatNotesPopoverProps) {
   const [draft, setDraft] = useState('')
   const panelRef = useRef<HTMLDivElement>(null)
+  const anchorRectRef = useRef<DOMRect | null>(null)
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
 
   const senderLabel =
     message.sender_id === userId ? 'คุณ' : (message.sender_name?.trim() || 'สมาชิก')
   const preview = chatMessagePreviewText(message)
 
-  useLayoutEffect(() => {
+  const applyPosition = useCallback(() => {
     const panel = panelRef.current
     if (!panel) return
-    setCoords(computePosition(anchorEl, panel))
-  }, [anchorEl, notes.length])
+
+    const live = readAnchorRect(anchorEl)
+    if (live) {
+      anchorRectRef.current = live
+    }
+
+    const anchorRect = anchorRectRef.current
+    if (anchorRect) {
+      setCoords(computePosition(anchorRect, panel))
+      return
+    }
+
+    setCoords(computeCenteredPosition(panel))
+  }, [anchorEl])
+
+  useLayoutEffect(() => {
+    anchorRectRef.current = readAnchorRect(anchorEl)
+    applyPosition()
+  }, [anchorEl, applyPosition])
+
+  useLayoutEffect(() => {
+    applyPosition()
+  }, [notes.length, applyPosition])
 
   useEffect(() => {
-    function reposition() {
-      const panel = panelRef.current
-      if (!panel) return
-      setCoords(computePosition(anchorEl, panel))
-    }
-    window.addEventListener('resize', reposition)
-    window.addEventListener('scroll', reposition, true)
+    window.addEventListener('resize', applyPosition)
+    window.addEventListener('scroll', applyPosition, true)
     return () => {
-      window.removeEventListener('resize', reposition)
-      window.removeEventListener('scroll', reposition, true)
+      window.removeEventListener('resize', applyPosition)
+      window.removeEventListener('scroll', applyPosition, true)
     }
-  }, [anchorEl])
+  }, [applyPosition])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
