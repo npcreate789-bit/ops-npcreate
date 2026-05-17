@@ -81,15 +81,17 @@ export function ClientReportsPage() {
       <section className="card card--wide">
         <h2>ภาพรวม 7 วันล่าสุด</h2>
         <p className="muted">
-          รายงานล่าสุด: {formatBangkokDate(ads_summary.latest_report_date)}
+          {ads_summary.latest_report_date
+            ? `ข้อมูลล่าสุด: ${formatBangkokDate(ads_summary.latest_report_date)}`
+            : 'ยังไม่มีข้อมูลแอด 7 วันล่าสุด — ทีมจะอัปเดตเมื่อเริ่มยิง'}
         </p>
         <div className="client-metrics">
           <div className="client-metric">
-            <span className="muted">Spend</span>
+            <span className="muted">ใช้จ่ายแอด</span>
             <strong>{formatMoney(ads_summary.last_7_days_spend)}</strong>
           </div>
           <div className="client-metric">
-            <span className="muted">GMV</span>
+            <span className="muted">ยอดขาย (GMV)</span>
             <strong>{formatMoney(ads_summary.last_7_days_gmv)}</strong>
           </div>
           <div className="client-metric">
@@ -127,11 +129,11 @@ export function ClientReportsPage() {
           <>
             <div className="client-metrics no-print">
               <div className="client-metric">
-                <span className="muted">Spend เดือนนี้</span>
+                <span className="muted">ใช้จ่ายแอดเดือนนี้</span>
                 <strong>{formatMoney(monthly.totals.spend)}</strong>
               </div>
               <div className="client-metric">
-                <span className="muted">GMV เดือนนี้</span>
+                <span className="muted">ยอดขายเดือนนี้</span>
                 <strong>{formatMoney(monthly.totals.gmv)}</strong>
               </div>
               <div className="client-metric">
@@ -154,8 +156,8 @@ export function ClientReportsPage() {
                   <thead>
                     <tr>
                       <th>วันที่</th>
-                      <th>Spend</th>
-                      <th>GMV</th>
+                      <th>ใช้จ่าย</th>
+                      <th>ยอดขาย</th>
                       <th>ออเดอร์</th>
                       <th>ROI</th>
                     </tr>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getOnboardingDetail } from '../../onboarding/api/onboarding'
 import type { OnboardingFormInput } from '../../onboarding/types'
 import {
@@ -11,6 +12,7 @@ import {
 } from '../api/briefFiles'
 import { saveClientBrief } from '../api/clientBrief'
 import { saveOnboardingForm } from '../../onboarding/api/onboarding'
+import { withClientPreview } from '../clientNav'
 import { useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
 import '../../crm/crm.css'
 import '../../onboarding/onboarding.css'
@@ -167,6 +169,15 @@ export function ClientBriefPage() {
       <header className="page__header">
         <h2>บรีฟงาน</h2>
         <p className="muted">กรอกทีละขั้น — บันทึก Draft ได้ตลอด · กดส่งบรีฟเมื่อพร้อม</p>
+        {ws.data ? (
+          <p className="muted client-brief-progress-label">
+            ความครบฟอร์ม{' '}
+            <strong>{ws.data.brief_submitted ? 100 : ws.data.brief_progress}%</strong>
+            {ws.data.brief_submitted ? ' · ส่งแล้ว' : ''}
+            {' · '}
+            <Link to={withClientPreview('/app/client', ws.previewId || undefined)}>กลับภาพรวม</Link>
+          </p>
+        ) : null}
       </header>
 
       {ws.data?.brief_submitted && (

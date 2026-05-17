@@ -1,3 +1,4 @@
+import { withClientPreview } from '../client/clientNav'
 import type { Project, ProjectStatus } from './types'
 
 export type ProjectPipelineStage = 'kickoff' | 'active' | 'done' | 'closed'
@@ -176,18 +177,33 @@ export function clientProjectStatusHint(status: ProjectStatus): string {
 
 export function clientProjectPrimaryCta(
   project: Project,
+  previewCustomerId?: string | null,
 ): { label: string; to: string; state?: { projectId: string } } {
   switch (project.status) {
     case 'waiting_brief':
     case 'onboarding':
-      return { label: 'กรอกบรีฟ', to: '/app/client/brief' }
+      return {
+        label: 'กรอกบรีฟ',
+        to: withClientPreview('/app/client/brief', previewCustomerId),
+      }
     case 'waiting_approval':
     case 'in_progress':
     case 'planning':
-      return { label: 'แชททีม', to: '/app/client/chat', state: { projectId: project.id } }
+      return {
+        label: 'แชททีม',
+        to: withClientPreview('/app/client/chat', previewCustomerId),
+        state: { projectId: project.id },
+      }
     case 'completed':
-      return { label: 'ดูรายงาน', to: '/app/client/reports' }
+      return {
+        label: 'ดูรายงาน',
+        to: withClientPreview('/app/client/reports', previewCustomerId),
+      }
     default:
-      return { label: 'แชททีม', to: '/app/client/chat', state: { projectId: project.id } }
+      return {
+        label: 'แชททีม',
+        to: withClientPreview('/app/client/chat', previewCustomerId),
+        state: { projectId: project.id },
+      }
   }
 }

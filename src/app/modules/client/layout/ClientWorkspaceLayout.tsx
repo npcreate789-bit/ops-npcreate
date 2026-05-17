@@ -1,6 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
+import {
+  formatClientCustomerStatus,
+  formatClientReadyForAds,
+} from '../clientLabels'
+import { withClientPreview } from '../clientNav'
 import { ClientPreviewBar } from '../components/ClientPreviewBar'
 import { ClientStaffToolbar } from '../components/ClientStaffToolbar'
 import { ClientWorkspaceProvider, useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
@@ -21,6 +26,8 @@ function ClientWorkspaceShell() {
   const roles = profile?.roles ?? []
   const customer = ws.data?.customer
   const isStaffPreview = ws.canPreview && !ws.isClientOnly
+  const previewForNav =
+    isStaffPreview && (ws.previewId || customer?.id) ? ws.previewId || customer?.id : undefined
 
   return (
     <div className="client-workspace">
@@ -35,8 +42,12 @@ function ClientWorkspaceShell() {
               <p className="client-workspace__eyebrow">พื้นที่ลูกค้า</p>
               <h1 className="client-workspace__title">{customer.brand_name}</h1>
               <p className="muted client-workspace__meta">
-                สัญญาถึง {formatBangkokDate(customer.contract_end)} · {customer.status}
-                {customer.ready_for_ads ? ' · พร้อมยิงแอด' : ' · รอตรวจบรีฟ'}
+                สัญญาถึง {formatBangkokDate(customer.contract_end)} ·{' '}
+                {formatClientCustomerStatus(customer.status)} ·{' '}
+                {formatClientReadyForAds(
+                  customer.ready_for_ads,
+                  Boolean(ws.data?.brief_submitted),
+                )}
               </p>
             </header>
           ) : null}
@@ -64,7 +75,7 @@ function ClientWorkspaceShell() {
         {TABS.map((tab) => (
           <NavLink
             key={tab.to}
-            to={tab.to}
+            to={withClientPreview(tab.to, previewForNav)}
             end={tab.end}
             title={tab.hint}
             className={({ isActive }) =>

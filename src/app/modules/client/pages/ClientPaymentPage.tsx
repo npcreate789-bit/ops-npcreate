@@ -5,6 +5,8 @@ import { listPaymentsForCustomer } from '../../finance/api/payments'
 import { PaymentStatusBadge } from '../../finance/components/PaymentStatusBadge'
 import { isPaymentOverdue } from '../../finance/pipeline'
 import type { Payment } from '../../finance/types'
+import { contractEndHint, daysUntilContractEnd, formatClientCustomerStatus } from '../clientLabels'
+import { withClientPreview } from '../clientNav'
 import { useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
 import '../../crm/crm.css'
 import '../../finance/finance.css'
@@ -48,6 +50,14 @@ export function ClientPaymentPage() {
 
   const pending = payments.filter((p) => p.status === 'pending' || p.status === 'overdue')
   const paid = payments.filter((p) => p.status === 'paid')
+  const isStaffPreview = ws.canPreview && !ws.isClientOnly
+  const previewForNav =
+    isStaffPreview && ws.data && (ws.previewId || ws.data.customer.id)
+      ? ws.previewId || ws.data.customer.id
+      : undefined
+  const contractHint = ws.data
+    ? contractEndHint(daysUntilContractEnd(ws.data.customer.contract_end))
+    : null
 
   return (
     <div className="page client-page">
@@ -63,9 +73,14 @@ export function ClientPaymentPage() {
             แบรนด์ <strong>{ws.data.customer.brand_name}</strong>
           </p>
           <p className="muted">
-            สถานะ: {ws.data.customer.status} · สิ้นสุด{' '}
+            สถานะ: {formatClientCustomerStatus(ws.data.customer.status)} · สิ้นสุด{' '}
             {formatBangkokDate(ws.data.customer.contract_end)}
           </p>
+          {contractHint ? (
+            <p className="crm-banner crm-banner--warn" style={{ marginTop: '0.75rem' }}>
+              {contractHint}
+            </p>
+          ) : null}
         </section>
       ) : (
         <p className="muted">ยังไม่มีข้อมูลลูกค้าที่ผูกกับบัญชีนี้</p>
@@ -130,7 +145,10 @@ export function ClientPaymentPage() {
       )}
 
       <p style={{ marginTop: '0.75rem' }}>
-        <Link to="/app/client/chat" className="crm-btn crm-btn--ghost">
+        <Link
+          to={withClientPreview('/app/client/chat', previewForNav)}
+          className="crm-btn crm-btn--ghost"
+        >
           แจ้งทีมผ่านแชท
         </Link>
         {' · '}

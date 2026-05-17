@@ -26,8 +26,12 @@ export function ClientPreviewBar({
   if (!data && !canPreview) {
     return (
       <section className="card card--wide client-preview-bar">
+        <h2 className="client-preview-bar__empty-title">ยังเข้าพื้นที่ลูกค้าไม่ได้</h2>
         <p className="crm-error">
-          {error ?? 'ยังไม่มีสิทธิ์เข้าถึง — ติดต่อทีมงาน NP Create'}
+          {error ?? 'บัญชีนี้ยังไม่ได้ผูกกับแบรนด์ — ติดต่อทีม NP Create เพื่อเปิดสิทธิ์'}
+        </p>
+        <p className="muted">
+          เมื่อทีมผูกบัญชีแล้ว คุณจะเห็นบรีฟ โปรเจกต์ รายงานแอด และการชำระเงินที่นี่
         </p>
       </section>
     )

@@ -13,6 +13,9 @@ import '../client-workspace.css'
 export function ClientProjectsPage() {
   const ws = useClientWorkspaceContext()
   const { projects, projectsLoading } = ws
+  const isStaffPreview = ws.canPreview && !ws.isClientOnly
+  const previewForNav =
+    isStaffPreview && (ws.previewId || ws.customerId) ? ws.previewId || ws.customerId : undefined
 
   if (ws.loading) {
     return null
@@ -51,7 +54,7 @@ export function ClientProjectsPage() {
       ) : (
         <ul className="client-content-list client-project-list">
           {projects.map((p) => {
-            const cta = clientProjectPrimaryCta(p)
+            const cta = clientProjectPrimaryCta(p, previewForNav)
             return (
               <li key={p.id} className="client-project-list__item">
                 <div className="client-project-list__main">
