@@ -1,9 +1,10 @@
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { parseChatChannel, type ChatChannelKey } from '../constants/channels'
+import { attachReplyPreviews } from '../utils/replyPreview'
 import type { ChatChannelTab, ChatInboxItem, ChatMessage, ChatMessageInput } from '../types'
 
 const MESSAGE_SELECT =
-  'id, room_id, sender_id, body, message_type, attachment_path, attachment_name, attachment_mime, attachment_size, created_task_id, created_at'
+  'id, room_id, sender_id, body, message_type, attachment_path, attachment_name, attachment_mime, attachment_size, created_task_id, reply_to_id, created_at'
 
 const MOCK_KEY = 'npcreate_chat_dev'
 const MOCK_READS_KEY = 'npcreate_chat_reads_dev'
@@ -35,6 +36,7 @@ function mapMessage(row: Record<string, unknown>, senderName?: string | null): C
     attachment_mime: (row.attachment_mime as string) ?? null,
     attachment_size: row.attachment_size != null ? Number(row.attachment_size) : null,
     created_task_id: (row.created_task_id as string) ?? null,
+    reply_to_id: (row.reply_to_id as string) ?? null,
     created_at: row.created_at as string,
     sender_name: senderName ?? null,
   }
@@ -115,7 +117,8 @@ export async function listChatMessages(
       projectIdForMock && channelForMock
         ? mockStoreKey(projectIdForMock, channelForMock)
         : (projectIdForMock ?? roomId)
-    return (loadMock()[key] ?? []).slice().sort((a, b) => a.created_at.localeCompare(b.created_at))
+    const rows = (loadMock()[key] ?? []).slice().sort((a, b) => a.created_at.localeCompare(b.created_at))
+    return attachReplyPreviews(rows)
   }
 
   const { data, error } = await supabase
@@ -134,9 +137,10 @@ export async function listChatMessages(
     if (!names.has(sid)) names.set(sid, await senderName(sid))
   }
 
-  return rows.map((r) =>
+  const mapped = rows.map((r) =>
     mapMessage(r as Record<string, unknown>, names.get((r as { sender_id: string }).sender_id)),
   )
+  return attachReplyPreviews(mapped)
 }
 
 export async function sendChatMessage(
@@ -164,21 +168,28 @@ export async function sendChatMessage(
       attachment_mime: null,
       attachment_size: null,
       created_task_id: null,
+      reply_to_id: input.reply_to_id ?? null,
       created_at: new Date().toISOString(),
       sender_name: 'คุณ (Dev)',
     }
     store[key] = [...(store[key] ?? []), row]
     saveMock(store)
-    return row
+    const all = attachReplyPreviews(store[key])
+    return all[all.length - 1] ?? row
+  }
+
+  const insertPayload: Record<string, unknown> = {
+    room_id: input.room_id,
+    sender_id: input.sender_id,
+    body,
+  }
+  if (input.reply_to_id) {
+    insertPayload.reply_to_id = input.reply_to_id
   }
 
   const { data, error } = await supabase
     .from('chat_messages')
-    .insert({
-      room_id: input.room_id,
-      sender_id: input.sender_id,
-      body,
-    })
+    .insert(insertPayload)
     .select(MESSAGE_SELECT)
     .single()
 

@@ -14,9 +14,18 @@ import {
   unpinChatMessage,
 } from '../api/chatSocial'
 import { messageMatchesSearch } from '../utils/chatDisplay'
-import type { ChatMessage, ChatMessageTemplate, ChatMentionCandidate, ChatReactionEmoji } from '../types'
+import type {
+  ChatMessage,
+  ChatMessageTemplate,
+  ChatMentionCandidate,
+  ChatReactionEmoji,
+  ChatReplyTarget,
+} from '../types'
+import { messageToReplyTarget } from '../utils/replyPreview'
+import { scrollChatFeedToBottom } from '../utils/chatScroll'
 import { ChatChannelTabs } from './ChatChannelTabs'
 import { ChatComposer } from './ChatComposer'
+import { ChatReplyBar } from './ChatReplyBar'
 import { ChatMessageList } from './ChatMessageList'
 import { ChatPinnedBar } from './ChatPinnedBar'
 import { ChatRoomHeader } from './ChatRoomHeader'
@@ -59,6 +68,7 @@ export function ProjectChatPanel({
 
   const [channelTabs, setChannelTabs] = useState<{ channel: ChatChannelKey; label: string }[]>([])
   const [draft, setDraft] = useState('')
+  const [replyTarget, setReplyTarget] = useState<ChatReplyTarget | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [creatingFromId, setCreatingFromId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<ChatMessageTemplate[]>([])
@@ -97,6 +107,10 @@ export function ProjectChatPanel({
       .catch(() => setMentionCandidates([]))
   }, [projectId, isClientOnly])
 
+  useEffect(() => {
+    setReplyTarget(null)
+  }, [projectId, activeChannel])
+
   const visibleMessages = useMemo(
     () => messages.filter((m) => messageMatchesSearch(m, searchQuery)),
     [messages, searchQuery],
@@ -113,9 +127,27 @@ export function ProjectChatPanel({
   async function submitMessage() {
     const text = draft.trim()
     if (!text || sending) return
+    const replyToId = replyTarget?.id ?? null
     setDraft('')
-    await send(text)
+    setReplyTarget(null)
+    await send(text, replyToId)
     await reloadSocial()
+  }
+
+  function startReply(message: ChatMessage) {
+    if (message.message_type === 'system') return
+    setReplyTarget(messageToReplyTarget(message))
+    document.querySelector<HTMLTextAreaElement>('.chat-composer__input')?.focus()
+  }
+
+  function scrollToMessage(messageId: string) {
+    const el = document.getElementById(`chat-msg-${messageId}`)
+    const feed = el?.closest('.chat-feed')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    } else if (feed instanceof HTMLElement) {
+      scrollChatFeedToBottom(feed, 'smooth')
+    }
   }
 
   function handlePickFile() {
@@ -127,7 +159,9 @@ export function ProjectChatPanel({
   }
 
   async function handleVoiceRecorded(file: File) {
-    await sendFile(file)
+    const replyToId = replyTarget?.id ?? null
+    setReplyTarget(null)
+    await sendFile(file, undefined, replyToId)
     await reloadSocial()
   }
 
@@ -141,8 +175,10 @@ export function ProjectChatPanel({
       return
     }
     const caption = draft.trim() || undefined
+    const replyToId = replyTarget?.id ?? null
     if (caption) setDraft('')
-    await sendFile(file, caption)
+    setReplyTarget(null)
+    await sendFile(file, caption, replyToId)
     await reloadSocial()
   }
 
@@ -258,7 +294,18 @@ export function ProjectChatPanel({
         onPin={(id) => void handlePin(id)}
         onUnpin={(id) => void handleUnpin(id)}
         onToggleReaction={(id, emoji) => void handleToggleReaction(id, emoji)}
+        onReply={startReply}
+        onJumpToMessage={scrollToMessage}
       />
+
+      {replyTarget && (
+        <ChatReplyBar
+          target={replyTarget}
+          userId={userId}
+          onCancel={() => setReplyTarget(null)}
+          onJump={() => scrollToMessage(replyTarget.id)}
+        />
+      )}
 
       <input
         ref={fileInputRef}
@@ -288,6 +335,8 @@ export function ProjectChatPanel({
         templates={templates}
         mentionCandidates={mentionCandidates}
         showTemplateSuggestions={showTemplateSuggestions}
+        replyTarget={replyTarget}
+        onCancelReply={() => setReplyTarget(null)}
       />
     </section>
   )

@@ -26,6 +26,8 @@ interface ChatMessageListProps {
   onPin?: (messageId: string) => void
   onUnpin?: (messageId: string) => void
   onToggleReaction?: (messageId: string, emoji: ChatReactionEmoji) => void
+  onReply?: (message: ChatMessage) => void
+  onJumpToMessage?: (messageId: string) => void
 }
 
 export function ChatMessageList({
@@ -43,6 +45,8 @@ export function ChatMessageList({
   onPin,
   onUnpin,
   onToggleReaction,
+  onReply,
+  onJumpToMessage,
 }: ChatMessageListProps) {
   const feedRef = useRef<HTMLDivElement>(null)
   const [showJump, setShowJump] = useState(false)
@@ -133,6 +137,12 @@ export function ChatMessageList({
                     onToggleReaction={
                       onToggleReaction
                         ? (emoji) => onToggleReaction(message.id, emoji)
+                        : undefined
+                    }
+                    onReply={onReply ? () => onReply(message) : undefined}
+                    onJumpToReply={
+                      onJumpToMessage && message.reply_to_id
+                        ? () => onJumpToMessage(message.reply_to_id!)
                         : undefined
                     }
                   />

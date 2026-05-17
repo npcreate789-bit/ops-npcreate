@@ -8,7 +8,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react'
-import type { ChatMentionCandidate, ChatMessageTemplate } from '../types'
+import type { ChatMentionCandidate, ChatMessageTemplate, ChatReplyTarget } from '../types'
 import { getActiveMentionQuery, insertMention } from '../utils/chatBody'
 import { resizeChatComposerTextarea, resetChatComposerTextarea } from '../utils/composerResize'
 import { ChatVoiceRecorder } from './ChatVoiceRecorder'
@@ -28,6 +28,8 @@ interface ChatComposerProps {
   mentionCandidates?: ChatMentionCandidate[]
   showTemplateSuggestions?: boolean
   placeholder?: string
+  replyTarget?: ChatReplyTarget | null
+  onCancelReply?: () => void
 }
 
 export function ChatComposer({
@@ -44,6 +46,8 @@ export function ChatComposer({
   mentionCandidates = [],
   showTemplateSuggestions = false,
   placeholder = 'พิมพ์ข้อความ… (Enter ส่ง · Shift+Enter ขึ้นบรรทัด)',
+  replyTarget = null,
+  onCancelReply,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const composingRef = useRef(false)
@@ -148,6 +152,12 @@ export function ChatComposer({
         e.preventDefault()
         return
       }
+    }
+
+    if (e.key === 'Escape' && replyTarget && onCancelReply) {
+      e.preventDefault()
+      onCancelReply()
+      return
     }
 
     if (e.key === 'Enter' && !e.shiftKey) {

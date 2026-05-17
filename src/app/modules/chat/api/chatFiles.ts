@@ -70,6 +70,7 @@ export async function uploadChatFile(
   roomId: string,
   file: File,
   caption?: string,
+  replyToId?: string | null,
 ): Promise<string> {
   const validation = validateChatFile(file)
   if (validation) throw new Error(validation)
@@ -95,6 +96,7 @@ export async function uploadChatFile(
     p_mime_type: file.type || null,
     p_byte_size: file.size,
     p_caption: caption?.trim() || null,
+    p_reply_to_id: replyToId ?? null,
   })
 
   if (error) {

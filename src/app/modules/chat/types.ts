@@ -15,15 +15,30 @@ export interface ChatMessage {
   attachment_mime: string | null
   attachment_size: number | null
   created_task_id: string | null
+  reply_to_id: string | null
   created_at: string
   sender_name?: string | null
   sender_login?: string | null
+  reply_to_sender_id?: string | null
+  reply_to_sender_name?: string | null
+  reply_to_message_type?: ChatMessageType | null
+  reply_to_body?: string | null
+}
+
+export interface ChatReplyTarget {
+  id: string
+  sender_id: string
+  sender_name: string | null
+  message_type: ChatMessageType
+  body: string
+  attachment_name: string | null
 }
 
 export interface ChatMessageInput {
   room_id: string
   sender_id: string
   body: string
+  reply_to_id?: string | null
 }
 
 import type { ChatChannelKey } from './constants/channels'

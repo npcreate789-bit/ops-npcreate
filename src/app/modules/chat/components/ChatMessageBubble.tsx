@@ -8,6 +8,7 @@ import { formatReadReceiptLabel, readersForMessage } from '../utils/readReceipts
 import type { ChatMessage, ChatReactionEmoji, ChatReactionEntry, ChatReadReceipt } from '../types'
 import { ChatAvatar } from './ChatAvatar'
 import { ChatReactionRow } from './ChatReactionRow'
+import { ChatReplyQuote } from './ChatReplyQuote'
 import '../chat.css'
 
 interface ChatMessageBubbleProps {
@@ -25,6 +26,8 @@ interface ChatMessageBubbleProps {
   onPin?: () => void
   onUnpin?: () => void
   onToggleReaction?: (emoji: ChatReactionEmoji) => void
+  onReply?: () => void
+  onJumpToReply?: () => void
 }
 
 export function ChatMessageBubble({
@@ -42,6 +45,8 @@ export function ChatMessageBubble({
   onPin,
   onUnpin,
   onToggleReaction,
+  onReply,
+  onJumpToReply,
 }: ChatMessageBubbleProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -137,6 +142,13 @@ export function ChatMessageBubble({
         )}
 
         <div className="chat-bubble__bubble">
+          <ChatReplyQuote
+            message={message}
+            userId={userId}
+            onJump={
+              message.reply_to_id && onJumpToReply ? () => onJumpToReply() : undefined
+            }
+          />
           {isFile ? (
             <div className="chat-bubble__file">
               <ChatMediaAttachment
@@ -173,6 +185,11 @@ export function ChatMessageBubble({
                 title="คัดลอกข้อความ"
               >
                 {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+              </button>
+            )}
+            {onReply && (
+              <button type="button" className="chat-bubble__tool" onClick={onReply}>
+                ตอบกลับ
               </button>
             )}
             {onPin && !isPinned && (

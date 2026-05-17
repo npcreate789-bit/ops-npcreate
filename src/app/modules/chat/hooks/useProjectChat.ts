@@ -100,13 +100,13 @@ export function useProjectChat(
   }, [roomId, projectId, activeChannel])
 
   const send = useCallback(
-    async (body: string) => {
+    async (body: string, replyToId?: string | null) => {
       if (!roomId || !userId) return
       setSending(true)
       setError(null)
       try {
         const row = await sendChatMessage(
-          { room_id: roomId, sender_id: userId, body },
+          { room_id: roomId, sender_id: userId, body, reply_to_id: replyToId ?? null },
           projectId,
           activeChannel,
         )
@@ -124,12 +124,12 @@ export function useProjectChat(
   )
 
   const sendFile = useCallback(
-    async (file: File, caption?: string) => {
+    async (file: File, caption?: string, replyToId?: string | null) => {
       if (!roomId || !projectId) return
       setSending(true)
       setError(null)
       try {
-        await uploadChatFile(projectId, roomId, file, caption)
+        await uploadChatFile(projectId, roomId, file, caption, replyToId)
         if (!isSupabaseConfigured) {
           await load()
         }
