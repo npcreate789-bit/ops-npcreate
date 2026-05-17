@@ -1,3 +1,133 @@
+.admin-page__subnav {
+  margin-top: 0.5rem;
+}
+
+.admin-role-guide h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.admin-role-guide__flow {
+  margin: 0;
+  padding-left: 1.15rem;
+  line-height: 1.75;
+  color: var(--npc-text-muted);
+  font-size: 0.88rem;
+}
+
+.admin-role-guide__flow a {
+  color: var(--npc-accent);
+}
+
+.admin-create-card--client {
+  border-left: 3px solid rgba(110, 231, 255, 0.45);
+}
+
+.admin-create-card--staff {
+  border-left: 3px solid rgba(74, 222, 128, 0.4);
+}
+
+.admin-list-intro {
+  margin: 0 0 0.85rem;
+  font-size: 0.88rem;
+}
+
+.admin-audience-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.admin-audience-bar__stage {
+  flex: 1 1 8rem;
+  min-width: 7rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--npc-text-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-audience-bar__stage--active {
+  border-color: rgba(110, 231, 255, 0.55);
+  background: rgba(110, 231, 255, 0.1);
+  color: var(--npc-text);
+}
+
+.admin-audience-bar__label {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.admin-audience-bar__meta {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+  opacity: 0.85;
+}
+
+.admin-audience-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.admin-audience-badge--staff {
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  background: rgba(74, 222, 128, 0.12);
+  color: #86efac;
+}
+
+.admin-audience-badge--client {
+  border: 1px solid rgba(110, 231, 255, 0.45);
+  background: rgba(110, 231, 255, 0.12);
+  color: var(--npc-accent);
+}
+
+.admin-audience-badge--mixed {
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.12);
+  color: #fcd34d;
+}
+
+.admin-mixed-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  color: #fcd34d;
+}
+
+.admin-user-table tr.is-mixed-audience td {
+  background: rgba(251, 191, 36, 0.04);
+}
+
+.admin-client-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 10rem;
+}
+
+.admin-client-preview-link {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.admin-client-brand-hint {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.admin-empty {
+  margin: 1rem 0;
+}
+
 .admin-page__header {
   display: flex;
   flex-wrap: wrap;

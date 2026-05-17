@@ -53,3 +53,8 @@ export function assignableRolesForCreator(creatorRoles: AppRole[]): AppRole[] {
   }
   return []
 }
+
+/** บทบาทพนักงานเท่านั้น — ไม่รวม client (ใช้วิซาร์ดสร้างบัญชีลูกค้าแยก) */
+export function assignableStaffRolesForCreator(creatorRoles: AppRole[]): AppRole[] {
+  return assignableRolesForCreator(creatorRoles).filter((r) => r !== 'client')
+}

@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { ROLE_LABELS, type AppRole } from '../../../../shared/types/roles'
 import { normalizeLoginId, validateLoginId } from '../../../../shared/auth/loginId'
-import { assignableRolesForCreator, canCreateEmployeeUser } from '../access'
+import { assignableStaffRolesForCreator, canCreateEmployeeUser } from '../access'
 import { checkLoginIdAvailable, createEmployeeUser } from '../api/createEmployee'
 import type { CreateEmployeeResult } from '../types'
 
@@ -21,7 +21,7 @@ export function CreateEmployeeForm({
   onCreated,
 }: CreateEmployeeFormProps) {
   const assignable = useMemo(
-    () => assignableRolesForCreator(creatorRoles),
+    () => assignableStaffRolesForCreator(creatorRoles),
     [creatorRoles],
   )
 
