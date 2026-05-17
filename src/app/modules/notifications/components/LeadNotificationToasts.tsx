@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { canAccessNotifications } from '../../../../shared/auth/access'
 import type { AppRole } from '../../../../shared/types/roles'
+import { isNotificationSoundEnabled } from '../notificationSound'
 import { useLeadNotificationToasts } from '../useLeadNotificationToasts'
 import '../notifications.css'
 
@@ -12,13 +13,17 @@ interface LeadNotificationToastsProps {
 export function LeadNotificationToasts({ userId, roles }: LeadNotificationToastsProps) {
   const enabled = canAccessNotifications(roles)
   const { toasts, dismiss } = useLeadNotificationToasts(userId, enabled)
+  const soundLooping = toasts.length > 0 && isNotificationSoundEnabled()
 
   if (!enabled || toasts.length === 0) return null
 
   return (
     <div className="lead-toast-stack" role="region" aria-label="แจ้งเตือน Lead ใหม่" aria-live="polite">
       {toasts.map((n) => (
-        <article key={n.id} className={`lead-toast lead-toast--${n.severity}`}>
+        <article
+          key={n.id}
+          className={`lead-toast lead-toast--${n.severity}${soundLooping ? ' lead-toast--ringing' : ''}`}
+        >
           <div className="lead-toast__pulse" aria-hidden />
           <div className="lead-toast__body">
             <strong>{n.title}</strong>

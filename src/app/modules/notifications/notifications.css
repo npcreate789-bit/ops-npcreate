@@ -119,6 +119,16 @@
   border-color: rgba(96, 165, 250, 0.5);
 }
 
+.lead-toast--ringing {
+  animation:
+    lead-toast-in 0.35s ease-out,
+    lead-toast-ring 1.6s ease-in-out infinite;
+}
+
+.lead-toast--ringing .lead-toast__pulse {
+  animation: lead-toast-pulse 0.8s ease-in-out infinite;
+}
+
 .lead-toast__pulse {
   position: absolute;
   left: 0;
@@ -178,6 +188,20 @@
   }
   50% {
     opacity: 0.45;
+  }
+}
+
+@keyframes lead-toast-ring {
+  0%,
+  100% {
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.45),
+      0 0 0 0 rgba(96, 165, 250, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.45),
+      0 0 0 6px rgba(96, 165, 250, 0.08);
   }
 }
 

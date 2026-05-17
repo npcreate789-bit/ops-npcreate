@@ -177,7 +177,7 @@ export function NotificationsPage() {
           </label>
           <label className="notif-sound-toggle">
             <input type="checkbox" checked={soundEnabled} onChange={handleSoundToggle} />
-            <span>เสียงเมื่อมีแจ้งเตือนใหม่</span>
+            <span>เสียงแจ้งเตือน (Lead ใหม่วนจนกว่ากดรับทราบ)</span>
           </label>
           <button
             type="button"

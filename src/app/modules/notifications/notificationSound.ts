@@ -2,10 +2,25 @@ import { isLeadNotification } from './leadNotification'
 
 const STORAGE_KEY = 'npc-notification-sound-enabled'
 const DEBOUNCE_MS = 900
+/** ช่วงห่างระหว่างรอบเสียง Lead (วนจนกว่ารับทราบครบ) */
+const LEAD_ALERT_LOOP_MS = 3_200
+
+const LEAD_CHIME_PATTERN = [
+  { freq: 784, at: 0, dur: 0.1, gain: 0.14 },
+  { freq: 988, at: 0.11, dur: 0.1, gain: 0.16 },
+  { freq: 1318.5, at: 0.22, dur: 0.22, gain: 0.18 },
+] as const
+
+const DEFAULT_CHIME_PATTERN = [
+  { freq: 880, at: 0, dur: 0.12 },
+  { freq: 1174.66, at: 0.14, dur: 0.18 },
+] as const
 
 let audioContext: AudioContext | null = null
 let primed = false
 let lastPlayedAt = 0
+let leadLoopTimer: ReturnType<typeof setInterval> | null = null
+let leadLoopRunning = false
 
 export function isNotificationSoundEnabled(): boolean {
   try {
@@ -23,6 +38,7 @@ export function setNotificationSoundEnabled(enabled: boolean) {
   } catch {
     /* private mode */
   }
+  if (!enabled) stopLeadAlertLoop()
 }
 
 function getAudioContext(): AudioContext | null {
@@ -68,7 +84,10 @@ function playTone(
   osc.stop(start + duration + 0.02)
 }
 
-function runChime(ctx: AudioContext, pattern: { freq: number; at: number; dur: number; gain?: number }[]) {
+function runChime(
+  ctx: AudioContext,
+  pattern: readonly { freq: number; at: number; dur: number; gain?: number }[],
+) {
   const t = ctx.currentTime
   for (const note of pattern) {
     playTone(ctx, note.freq, t + note.at, note.dur, note.gain ?? 0.12)
@@ -82,9 +101,12 @@ function shouldDebounce(): boolean {
   return false
 }
 
-function playChime(pattern: { freq: number; at: number; dur: number; gain?: number }[]) {
+function playPattern(
+  pattern: readonly { freq: number; at: number; dur: number; gain?: number }[],
+  opts?: { debounce?: boolean },
+) {
   if (!isNotificationSoundEnabled()) return
-  if (shouldDebounce()) return
+  if (opts?.debounce !== false && shouldDebounce()) return
 
   const ctx = getAudioContext()
   if (!ctx) return
@@ -98,28 +120,60 @@ function playChime(pattern: { freq: number; at: number; dur: number; gain?: numb
   run()
 }
 
-/** เสียงแจ้งเตือนทั่วไป (สองโน้ต) */
+/** เสียงแจ้งเตือนทั่วไป (สองโน้ต) — ครั้งเดียว */
 export function playNotificationSound() {
-  playChime([
-    { freq: 880, at: 0, dur: 0.12 },
-    { freq: 1174.66, at: 0.14, dur: 0.18 },
-  ])
+  playPattern(DEFAULT_CHIME_PATTERN)
 }
 
-/** เสียง Lead ใหม่ — โทนสูงขึ้น 3 จังหวะ ดึงดูดความสนใจ */
+/** เสียง Lead ครั้งเดียว (ทดสอบ / แจ้งเตือนอื่น) */
 export function playLeadNotificationSound() {
-  playChime([
-    { freq: 784, at: 0, dur: 0.1, gain: 0.14 },
-    { freq: 988, at: 0.11, dur: 0.1, gain: 0.16 },
-    { freq: 1318.5, at: 0.22, dur: 0.22, gain: 0.18 },
-  ])
+  playPattern(LEAD_CHIME_PATTERN)
 }
 
-/** เลือกเสียงตามประเภทแจ้งเตือน */
+/** เลือกเสียงตามประเภทแจ้งเตือน — ครั้งเดียว */
 export function playNotificationAlert(dedupeKey?: string) {
   if (dedupeKey && isLeadNotification(dedupeKey)) {
     playLeadNotificationSound()
     return
   }
   playNotificationSound()
+}
+
+function playLeadChimeOnce() {
+  playPattern(LEAD_CHIME_PATTERN, { debounce: false })
+}
+
+/** หยุดวนเสียง Lead */
+export function stopLeadAlertLoop() {
+  leadLoopRunning = false
+  if (leadLoopTimer !== null) {
+    window.clearInterval(leadLoopTimer)
+    leadLoopTimer = null
+  }
+}
+
+/** วนเสียง Lead จนกว่าจะมี unread = false (รับทราบครบ) */
+export function syncLeadAlertLoop(shouldLoop: boolean) {
+  if (!shouldLoop || !isNotificationSoundEnabled()) {
+    stopLeadAlertLoop()
+    return
+  }
+
+  if (leadLoopRunning) return
+
+  leadLoopRunning = true
+  primeNotificationSound()
+  playLeadChimeOnce()
+
+  leadLoopTimer = window.setInterval(() => {
+    if (!leadLoopRunning || !isNotificationSoundEnabled()) {
+      stopLeadAlertLoop()
+      return
+    }
+    playLeadChimeOnce()
+  }, LEAD_ALERT_LOOP_MS)
+}
+
+export function isLeadAlertLoopActive(): boolean {
+  return leadLoopRunning
 }

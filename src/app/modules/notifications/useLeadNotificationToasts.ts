@@ -5,7 +5,7 @@ import {
 } from './api/notifications'
 import { NOTIFICATION_PUSH_EVENT } from './leadNotification'
 import { useNotificationRealtime } from './NotificationRealtimeContext'
-import { playLeadNotificationSound } from './notificationSound'
+import { stopLeadAlertLoop, syncLeadAlertLoop } from './notificationSound'
 import type { UserNotification } from './types'
 
 function upsertToast(prev: UserNotification[], row: UserNotification): UserNotification[] {
@@ -19,11 +19,7 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
   const initialLoadRef = useRef(true)
   const realtime = useNotificationRealtime()
 
-  const applyToasts = useCallback((next: UserNotification[], playSoundForNew: boolean) => {
-    if (playSoundForNew && !initialLoadRef.current) {
-      const hasNew = next.some((n) => !knownKeysRef.current.has(n.dedupe_key))
-      if (hasNew) playLeadNotificationSound()
-    }
+  const applyToasts = useCallback((next: UserNotification[]) => {
     knownKeysRef.current = new Set(next.map((n) => n.dedupe_key))
     initialLoadRef.current = false
     setToasts(next)
@@ -37,7 +33,7 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
       return
     }
     try {
-      applyToasts(await listUnreadLeadNotifications(userId), true)
+      applyToasts(await listUnreadLeadNotifications(userId))
     } catch {
       knownKeysRef.current = new Set()
       setToasts([])
@@ -46,8 +42,6 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
 
   const handleLeadInsert = useCallback((row: UserNotification) => {
     setToasts((prev) => {
-      const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
-      if (!had) playLeadNotificationSound()
       knownKeysRef.current.add(row.dedupe_key)
       return upsertToast(prev, row)
     })
@@ -59,8 +53,6 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
       return
     }
     setToasts((prev) => {
-      const had = prev.some((t) => t.dedupe_key === row.dedupe_key)
-      if (!had) playLeadNotificationSound()
       knownKeysRef.current.add(row.dedupe_key)
       return upsertToast(prev, row)
     })
@@ -69,6 +61,15 @@ export function useLeadNotificationToasts(userId: string | undefined, enabled: b
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!enabled) {
+      stopLeadAlertLoop()
+      return
+    }
+    syncLeadAlertLoop(toasts.length > 0)
+    return () => stopLeadAlertLoop()
+  }, [toasts.length, enabled])
 
   useEffect(() => {
     if (!userId || !enabled) return
