@@ -117,3 +117,165 @@
 .customer-status--ended {
   font-weight: 600;
 }
+
+.customers-page__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.customers-role-guide h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.customers-role-guide__flow {
+  margin: 0;
+  padding-left: 1.15rem;
+  line-height: 1.75;
+  color: var(--npc-text-muted);
+  font-size: 0.88rem;
+}
+
+.customers-role-guide__flow a {
+  color: var(--npc-accent);
+}
+
+.customers-hint-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.customers-hint-banner p {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.customers-kpi-grid .stat {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.customers-pipeline-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--npc-glass-border);
+}
+
+.customers-pipeline-bar__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--npc-text-muted);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.customers-pipeline-bar__stage--active {
+  border-color: rgba(110, 231, 255, 0.4);
+  background: rgba(110, 231, 255, 0.1);
+  color: var(--npc-text);
+}
+
+.customers-pipeline-bar__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.customers-pipeline-bar__meta {
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+.customers-filters {
+  margin-bottom: 1rem;
+}
+
+.customers-stage-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.customers-stage-badge--brief {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fcd34d;
+}
+
+.customers-stage-badge--ready {
+  background: rgba(74, 222, 128, 0.2);
+  color: #86efac;
+}
+
+.customers-stage-badge--risk {
+  background: rgba(248, 113, 113, 0.15);
+  color: #fca5a5;
+}
+
+.customers-stage-badge--ended {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+
+.customers-table .crm-sub {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.customers-table__actions-head {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.customers-table__actions {
+  white-space: nowrap;
+}
+
+.customers-table__link {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--npc-text-muted);
+  text-decoration: none;
+}
+
+.customers-table__link:hover {
+  color: var(--npc-accent);
+  text-decoration: underline;
+}
+
+.customers-table__link--primary {
+  color: var(--npc-accent);
+  font-weight: 600;
+}
+
+.customer-360-project-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.customer-360-project-list li {
+  padding: 0.35rem 0;
+}

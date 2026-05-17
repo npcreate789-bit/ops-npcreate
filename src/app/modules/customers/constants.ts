@@ -2,10 +2,10 @@ import type { CustomerStatus, CustomerTimelineKind } from './types'
 
 export const CUSTOMER_STATUS_OPTIONS: { value: CustomerStatus | ''; label: string }[] = [
   { value: '', label: 'ทุกสถานะ' },
-  { value: 'pending', label: 'รอดำเนินการ' },
-  { value: 'active', label: 'Active' },
+  { value: 'pending', label: 'รอเปิดใช้' },
+  { value: 'active', label: 'ใช้งานอยู่' },
   { value: 'at_risk', label: 'เสี่ยง' },
-  { value: 'ended', label: 'สิ้นสุด' },
+  { value: 'ended', label: 'สิ้นสุดสัญญา' },
 ]
 
 export function customerStatusLabel(status: CustomerStatus): string {

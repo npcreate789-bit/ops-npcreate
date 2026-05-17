@@ -1,13 +1,31 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
+import { canViewWorkHub } from '../../../../shared/auth/access'
 import { downloadCsv } from '../../../../shared/export/csv'
 import { formatBangkokDate } from '../../../../shared/dates/bangkok'
-import { canViewCustomer360, isCustomer360Scoped } from '../access'
+import {
+  canLinkCustomerClient,
+  canLinkCustomerFinance,
+  canLinkCustomerOnboarding,
+  canViewCustomer360,
+  isCustomer360Scoped,
+} from '../access'
 import { listCustomers } from '../api/customers'
+import { CustomersBriefFilterBar } from '../components/CustomersBriefFilterBar'
+import { CustomersRoleGuide } from '../components/CustomersRoleGuide'
 import { CUSTOMER_STATUS_OPTIONS, customerStatusLabel } from '../constants'
+import { clientWorkspaceUrl } from '../customerLinks'
+import {
+  customerBriefStageClass,
+  customerBriefStageLabel,
+  customerStatusLabelTh,
+  matchesBriefFilter,
+  type CustomerBriefFilter,
+} from '../pipeline'
 import type { CustomerListFilters, CustomerListRow } from '../types'
 import '../../crm/crm.css'
+import '../../sales/sales.css'
 import '../../phase2/phase2.css'
 import '../customers.css'
 
@@ -18,9 +36,14 @@ export function CustomersListPage() {
   const roles = profile?.roles ?? []
   const allowed = canViewCustomer360(roles) || !configured
   const scoped = isCustomer360Scoped(roles) && configured
+  const showWorkLink = canViewWorkHub(roles) || !configured
+  const showOnboarding = canLinkCustomerOnboarding(roles) || !configured
+  const showFinance = canLinkCustomerFinance(roles) || !configured
+  const showClient = canLinkCustomerClient(roles) || !configured
   const navigate = useNavigate()
 
   const [filters, setFilters] = useState<CustomerListFilters>({ search: '', status: '' })
+  const [briefFilter, setBriefFilter] = useState<CustomerBriefFilter>('all')
   const [searchInput, setSearchInput] = useState('')
   const [rows, setRows] = useState<CustomerListRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,19 +73,43 @@ export function CustomersListPage() {
     void load()
   }, [load])
 
+  const briefCounts = useMemo(() => {
+    const counts: Partial<Record<CustomerBriefFilter, number>> = {
+      all: rows.length,
+      awaiting_brief: 0,
+      ready_for_ads: 0,
+    }
+    for (const row of rows) {
+      if (!row.ready_for_ads) counts.awaiting_brief = (counts.awaiting_brief ?? 0) + 1
+      else counts.ready_for_ads = (counts.ready_for_ads ?? 0) + 1
+    }
+    return counts
+  }, [rows])
+
+  const displayedRows = useMemo(
+    () => rows.filter((r) => matchesBriefFilter(r, briefFilter)),
+    [rows, briefFilter],
+  )
+
+  const awaitingBrief = briefCounts.awaiting_brief ?? 0
+
   function exportCsv() {
     downloadCsv(
       'customers',
-      ['แบรนด์', 'ผู้ติดต่อ', 'สถานะ', 'แพ็กเกจ', 'สัญญาถึง', 'พร้อมยิงแอด'],
-      rows.map((r) => [
+      ['แบรนด์', 'ผู้ติดต่อ', 'สถานะ', 'ขั้นตอน', 'แพ็กเกจ', 'สัญญาถึง'],
+      displayedRows.map((r) => [
         r.brand_name,
         r.contact_name ?? '',
-        customerStatusLabel(r.status),
+        customerStatusLabelTh(r.status),
+        customerBriefStageLabel(r),
         r.package_name ?? '',
         r.contract_end ? formatBangkokDate(r.contract_end) : '',
-        r.ready_for_ads ? 'ใช่' : 'ไม่',
       ]),
     )
+  }
+
+  function open360(id: string) {
+    navigate(`/app/customers/${id}`)
   }
 
   if (!allowed) {
@@ -77,17 +124,39 @@ export function CustomersListPage() {
   const activeCount = rows.filter((r) => r.status === 'active').length
 
   return (
-    <div className="page">
-      <header className="page__header crm-page__header phase2-page__header">
+    <div className="page customers-page">
+      <header className="page__header crm-page__header sales-page__header">
         <div>
           <h1>ลูกค้า 360</h1>
-          <p className="muted">ศูนย์กลางข้อมูลลูกค้า — เชื่อมทุกโมดูลจากจุดเดียว</p>
+          <p className="muted">
+            ศูนย์กลางลูกค้า — คลิกแบรนด์เพื่อเปิด 360° แล้วไปรับบรีฟ · โปรเจกต์ · พื้นที่ลูกค้า
+          </p>
         </div>
-        <div className="crm-page__actions">
+        <div className="customers-page__header-actions">
+          {showWorkLink && (
+            <Link to="/app/work" className="crm-btn crm-btn--ghost">
+              งานของฉัน
+            </Link>
+          )}
+          {showOnboarding && (
+            <Link to="/app/onboarding" className="crm-btn crm-btn--ghost">
+              รับบรีฟ
+            </Link>
+          )}
+          {showFinance && (
+            <Link to="/app/finance" className="crm-btn crm-btn--ghost">
+              การเงิน
+            </Link>
+          )}
+          {showClient && (
+            <Link to="/app/client" className="crm-btn crm-btn--ghost">
+              พื้นที่ลูกค้า
+            </Link>
+          )}
           <button
             type="button"
             className="crm-btn crm-btn--ghost"
-            disabled={rows.length === 0}
+            disabled={displayedRows.length === 0}
             onClick={exportCsv}
           >
             ส่งออก CSV
@@ -98,47 +167,75 @@ export function CustomersListPage() {
         </div>
       </header>
 
+      <CustomersRoleGuide />
+
       {!configured && (
         <p className="crm-banner crm-banner--warn">โหมดพัฒนา — ข้อมูลตัวอย่าง</p>
       )}
 
       {scoped && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
-          รายการลูกค้าถูกกรองตาม RLS — Sales เห็นเฉพาะลูกค้าที่รับผิดชอบ แอดเห็นเฉพาะที่มอบหมาย
+          รายการถูกกรองตามสิทธิ์ — เห็นเฉพาะลูกค้าที่รับผิดชอบ
         </p>
       )}
 
-      <section className="card-grid">
+      {awaitingBrief > 0 && briefFilter !== 'awaiting_brief' && (
+        <div className="customers-hint-banner" role="status">
+          <p>
+            มี <strong>{awaitingBrief}</strong> รายการที่ยังไม่พร้อมยิงแอด — แจ้งลูกค้ากรอกบรีฟในพื้นที่ลูกค้า
+          </p>
+          <button
+            type="button"
+            className="crm-btn crm-btn--ghost crm-btn--sm"
+            onClick={() => setBriefFilter('awaiting_brief')}
+          >
+            ดูรายการรอบรีฟ
+          </button>
+        </div>
+      )}
+
+      <section className="card-grid customers-kpi-grid">
         <article className="card card--accent">
           <h2>ลูกค้าที่มองเห็น</h2>
           <p className="stat">{rows.length}</p>
-          <span className="muted">ตามสิทธิ์ในระบบ</span>
         </article>
         <article className="card">
-          <h2>Active</h2>
+          <h2>ใช้งานอยู่</h2>
           <p className="stat">{activeCount}</p>
         </article>
         <article className="card">
+          <h2>รอบรีฟ</h2>
+          <p className="stat">{awaitingBrief}</p>
+          <span className="muted">ยังไม่พร้อมยิงแอด</span>
+        </article>
+        <article className="card">
           <h2>พร้อมยิงแอด</h2>
-          <p className="stat">{rows.filter((r) => r.ready_for_ads).length}</p>
+          <p className="stat">{briefCounts.ready_for_ads ?? 0}</p>
         </article>
       </section>
 
+      <CustomersBriefFilterBar
+        active={briefFilter}
+        onSelect={setBriefFilter}
+        counts={briefCounts}
+      />
+
       <section className="card card--wide">
-        <div className="task-filters">
-          <label className="task-field task-field--grow">
-            <span className="task-field__label">ค้นหา</span>
+        <div className="customers-filters crm-form__grid">
+          <label className="crm-form__full">
+            ค้นหา
             <input
-              className="crm-input"
+              className="crm-input crm-input--search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="แบรนด์, ผู้ติดต่อ, เบอร์..."
             />
           </label>
-          <label className="task-field">
-            <span className="task-field__label">สถานะ</span>
+          <label>
+            สถานะสัญญา
             <select
-              className="task-select"
+              className="crm-select"
+              style={{ width: '100%', minWidth: 0 }}
               value={filters.status}
               onChange={(e) =>
                 setFilters((f) => ({
@@ -159,33 +256,33 @@ export function CustomersListPage() {
         {error && <p className="crm-error">{error}</p>}
         {loading && <p className="muted">กำลังโหลด...</p>}
 
-        {!loading && rows.length === 0 && (
+        {!loading && displayedRows.length === 0 && (
           <p className="muted">
-            {filters.search.trim() || filters.status
+            {filters.search.trim() || filters.status || briefFilter !== 'all'
               ? 'ไม่พบลูกค้าที่ตรงกับตัวกรอง'
-              : 'ยังไม่มีลูกค้าในระบบ หรือ RLS จำกัดการมองเห็น — ลองรีเฟรช'}
+              : 'ยังไม่มีลูกค้าในระบบ — ลูกค้าใหม่จะปรากฏหลัง Finance ยืนยันชำระ'}
           </p>
         )}
 
-        {!loading && rows.length > 0 && (
+        {!loading && displayedRows.length > 0 && (
           <div className="crm-table-wrap">
-            <table className="crm-table crm-table--clickable">
+            <table className="crm-table crm-table--clickable customers-table">
               <thead>
                 <tr>
                   <th>แบรนด์</th>
-                  <th>สถานะ</th>
-                  <th>แพ็กเกจ</th>
-                  <th>สัญญา</th>
-                  <th>แอด</th>
+                  <th>ขั้นตอน</th>
+                  <th>สถานะสัญญา</th>
+                  <th>สัญญาถึง</th>
+                  <th className="customers-table__actions-head">ลิงก์ด่วน</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {displayedRows.map((row) => (
                   <tr
                     key={row.id}
-                    onClick={() => navigate(`/app/customers/${row.id}`)}
+                    onClick={() => open360(row.id)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') navigate(`/app/customers/${row.id}`)
+                      if (e.key === 'Enter') open360(row.id)
                     }}
                     tabIndex={0}
                     role="button"
@@ -193,24 +290,54 @@ export function CustomersListPage() {
                     <td>
                       <strong>{row.brand_name}</strong>
                       {row.contact_name && (
-                        <span className="activity-meta">
-                          <br />
-                          {row.contact_name}
-                        </span>
+                        <span className="crm-sub">{row.contact_name}</span>
                       )}
+                      {row.package_name && (
+                        <span className="crm-sub">{row.package_name}</span>
+                      )}
+                    </td>
+                    <td>
+                      <span
+                        className={`customers-stage-badge ${customerBriefStageClass(row)}`}
+                      >
+                        {customerBriefStageLabel(row)}
+                      </span>
                     </td>
                     <td>
                       <span className={`customer-status--${row.status}`}>
                         {customerStatusLabel(row.status)}
                       </span>
                     </td>
-                    <td>{row.package_name ?? '—'}</td>
                     <td>
-                      {row.contract_end
-                        ? formatBangkokDate(row.contract_end)
-                        : '—'}
+                      {row.contract_end ? formatBangkokDate(row.contract_end) : '—'}
                     </td>
-                    <td>{row.ready_for_ads ? 'พร้อม' : 'รอบรีฟ'}</td>
+                    <td className="customers-table__actions">
+                      {showOnboarding && (
+                        <Link
+                          to={`/app/onboarding/${row.id}`}
+                          className="customers-table__link"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          บรีฟ
+                        </Link>
+                      )}
+                      {showClient && (
+                        <Link
+                          to={clientWorkspaceUrl(row.id)}
+                          className="customers-table__link"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          ลูกค้า
+                        </Link>
+                      )}
+                      <Link
+                        to={`/app/customers/${row.id}`}
+                        className="customers-table__link customers-table__link--primary"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        360°
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
