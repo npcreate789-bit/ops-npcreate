@@ -3,16 +3,19 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canCreateCrmLead,
+  canViewWorkHub,
   hasCrmTeamView,
   isCrmReadOnly,
 } from '../../../../shared/auth/access'
 import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
 import { fetchSalesSummary, listLeads } from '../api/leads'
-import type { Lead, LeadFilters } from '../types'
-import { channelLabel } from '../constants'
+import type { Lead, LeadFilters, LeadStatus } from '../types'
+import { ACTIVE_STATUSES, channelLabel } from '../constants'
 import { LeadFiltersBar } from '../components/LeadFilters'
 import { LeadStatusBadge } from '../components/LeadStatusBadge'
 import { SalesSummary } from '../components/SalesSummary'
+import { CrmPipelineBar } from '../components/CrmPipelineBar'
+import { CrmRoleGuide } from '../components/CrmRoleGuide'
 import '../../tasks/tasks.css'
 import '../../phase2/phase2.css'
 import '../crm.css'
@@ -30,11 +33,13 @@ export function CrmLeadsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [owners, setOwners] = useState<{ id: string; name: string }[]>([])
+  const [dueOnly, setDueOnly] = useState(false)
 
   const roles = profile?.roles ?? []
   const teamView = hasCrmTeamView(roles) || !configured
   const canCreate = canCreateCrmLead(roles) || !configured
   const readOnly = isCrmReadOnly(roles) && configured
+  const showWorkLink = canViewWorkHub(roles) || !configured
 
   useEffect(() => {
     if (!teamView) return
@@ -80,18 +85,56 @@ export function CrmLeadsPage() {
     [leads],
   )
 
+  const statusCounts = useMemo(() => {
+    const map: Partial<Record<LeadStatus, number>> = {}
+    for (const lead of leads) {
+      map[lead.status] = (map[lead.status] ?? 0) + 1
+    }
+    return map
+  }, [leads])
+
+  const activeCount = useMemo(
+    () => leads.filter((l) => ACTIVE_STATUSES.includes(l.status)).length,
+    [leads],
+  )
+
+  const displayedLeads = useMemo(
+    () => (dueOnly ? leads.filter(isReminderDue) : leads),
+    [dueOnly, leads],
+  )
+
+  const pipelineStatus =
+    filters.status && filters.status !== 'all' ? filters.status : 'all'
+
+  function handlePipelineSelect(status: LeadStatus | 'all') {
+    setDueOnly(false)
+    setFilters((f) => ({
+      ...f,
+      status: status === 'all' ? undefined : status,
+    }))
+  }
+
   return (
     <div className="page crm-page">
       <header className="page__header crm-page__header">
         <div>
           <h1>CRM — ลูกค้าเป้าหมาย</h1>
-          <p>จัดการ Lead ใหม่ ติดตามสถานะ และ Reminder</p>
+          <p className="muted">
+            Sales ดูแล Lead → Finance ชำระ → Account รับบรีฟ → ลูกค้าใช้ Client Workspace
+          </p>
         </div>
-        {canCreate && (
-          <Link to="/app/crm/new" className="crm-btn crm-btn--primary">
-            + เพิ่ม Lead
-          </Link>
-        )}
+        <div className="crm-page__header-actions">
+          {showWorkLink && (
+            <Link to="/app/work" className="crm-btn crm-btn--ghost">
+              งานของฉัน
+            </Link>
+          )}
+          {canCreate && (
+            <Link to="/app/crm/new" className="crm-btn crm-btn--primary">
+              + เพิ่ม Lead
+            </Link>
+          )}
+        </div>
       </header>
 
       {readOnly && (
@@ -106,11 +149,44 @@ export function CrmLeadsPage() {
         </p>
       )}
 
+      <section className="card-grid crm-kpi-grid" aria-label="สรุป Lead">
+        <article className="card">
+          <h2>กำลังติดตาม</h2>
+          <p className="stat">{activeCount}</p>
+        </article>
+        <article className={`card${dueReminders > 0 ? ' card--warn' : ''}`}>
+          <h2>ถึงเวลานัด</h2>
+          <p className="stat">{dueReminders}</p>
+          {dueReminders > 0 && showWorkLink && (
+            <p className="muted" style={{ marginTop: '0.5rem' }}>
+              <Link to="/app/work">ดูในงานของฉัน</Link>
+            </p>
+          )}
+        </article>
+        <article className="card">
+          <h2>รอชำระ</h2>
+          <p className="stat">{statusCounts.awaiting_payment ?? 0}</p>
+        </article>
+        <article className="card card--accent">
+          <h2>ปิดการขาย</h2>
+          <p className="stat">{statusCounts.won ?? 0}</p>
+        </article>
+      </section>
+
       {dueReminders > 0 && (
         <p className="crm-banner crm-banner--alert">
-          มี {dueReminders} Lead ถึงเวลาติดตามแล้ว
+          มี {dueReminders} Lead ถึงเวลาติดตามแล้ว —{' '}
+          <button
+            type="button"
+            className="crm-inline-link"
+            onClick={() => setDueOnly((v) => !v)}
+          >
+            {dueOnly ? 'แสดงทั้งหมด' : 'แสดงเฉพาะที่ถึงเวลา'}
+          </button>
         </p>
       )}
+
+      <CrmRoleGuide />
 
       {teamView && (
         <section className="card card--wide">
@@ -119,9 +195,18 @@ export function CrmLeadsPage() {
       )}
 
       <section className="card card--wide">
+        <CrmPipelineBar
+          activeStatus={pipelineStatus}
+          onSelectStatus={handlePipelineSelect}
+          counts={statusCounts}
+        />
+
         <LeadFiltersBar
           filters={filters}
-          onChange={setFilters}
+          onChange={(next) => {
+            setDueOnly(false)
+            setFilters(next)
+          }}
           showOwnerFilter={teamView}
           owners={owners}
         />
@@ -129,11 +214,15 @@ export function CrmLeadsPage() {
         {error && <p className="crm-error">{error}</p>}
         {loading && <p className="muted">กำลังโหลด...</p>}
 
-        {!loading && !error && leads.length === 0 && (
-          <p className="muted">ยังไม่มี Lead — กดเพิ่ม Lead เพื่อเริ่มต้น</p>
+        {!loading && !error && displayedLeads.length === 0 && (
+          <p className="muted">
+            {dueOnly
+              ? 'ไม่มี Lead ถึงเวลาติดตามในชุดที่กรอง'
+              : 'ยังไม่มี Lead — กดเพิ่ม Lead เพื่อเริ่มต้น'}
+          </p>
         )}
 
-        {!loading && leads.length > 0 && (
+        {!loading && displayedLeads.length > 0 && (
           <div className="crm-table-wrap">
             <table className="crm-table crm-table--clickable">
               <thead>
@@ -147,7 +236,7 @@ export function CrmLeadsPage() {
                 </tr>
               </thead>
               <tbody>
-                {leads.map((lead) => (
+                {displayedLeads.map((lead) => (
                   <tr
                     key={lead.id}
                     onClick={() => navigate(`/app/crm/${lead.id}`)}
@@ -157,6 +246,9 @@ export function CrmLeadsPage() {
                       <strong>{lead.brand_name}</strong>
                       {lead.business_type && (
                         <span className="crm-sub">{lead.business_type}</span>
+                      )}
+                      {lead.customer_id && (
+                        <span className="crm-sub crm-sub--ok">มี Customer แล้ว</span>
                       )}
                     </td>
                     <td>

@@ -6,6 +6,141 @@
   flex-wrap: wrap;
 }
 
+.sales-page__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.sales-kpi-grid .stat {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.sales-role-guide h2 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.sales-role-guide__flow {
+  margin: 0;
+  padding-left: 1.15rem;
+  line-height: 1.75;
+  color: var(--npc-text-muted);
+  font-size: 0.88rem;
+}
+
+.sales-role-guide__flow a {
+  color: var(--npc-accent);
+}
+
+.sales-pipeline-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--npc-glass-border);
+}
+
+.sales-pipeline-bar__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--npc-text-muted);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.sales-pipeline-bar__stage:hover {
+  border-color: var(--npc-glass-border);
+  color: var(--npc-text);
+}
+
+.sales-pipeline-bar__stage--active {
+  border-color: rgba(110, 231, 255, 0.4);
+  background: rgba(110, 231, 255, 0.1);
+  color: var(--npc-text);
+}
+
+.sales-pipeline-bar__stage--done {
+  opacity: 0.75;
+}
+
+.sales-pipeline-bar__stage--side {
+  margin-left: auto;
+}
+
+.sales-pipeline-bar__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.sales-pipeline-bar__count {
+  font-size: 0.72rem;
+  color: var(--npc-accent);
+}
+
+.sales-next-steps__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sales-next-steps__head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.sales-next-steps__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.sales-next-steps__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.sales-next-steps__link:hover {
+  border-color: rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.06);
+}
+
+.sales-next-steps__link--primary {
+  border-color: rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.08);
+}
+
+.sales-next-steps__link strong {
+  font-size: 0.88rem;
+}
+
+.sales-next-steps__link .muted {
+  font-size: 0.72rem;
+}
+
 .sales-pipeline {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

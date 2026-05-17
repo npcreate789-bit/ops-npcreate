@@ -12,6 +12,7 @@ import { isSupabaseConfigured } from '../../../../shared/supabase/client'
 import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
 import { canViewLeadAttachments } from '../access'
 import { LeadAttachmentsSection } from '../components/LeadAttachmentsSection'
+import { LeadNextStepsPanel } from '../components/LeadNextStepsPanel'
 import {
   LeadForm,
   formValuesToPayload,
@@ -147,7 +148,7 @@ export function LeadEditorPage() {
         </p>
       )}
 
-      {!isNew && id && initial?.status !== 'won' && showQuotationLink && (
+      {!isNew && initial && showQuotationLink && initial.status !== 'won' && (
         <p style={{ marginBottom: '1rem' }}>
           <Link
             to={`/app/sales/quotations/new?leadId=${id}`}
@@ -159,8 +160,12 @@ export function LeadEditorPage() {
       )}
 
       {initial?.customer_id && (
-        <p className="crm-banner">ปิดการขายแล้ว — มี Customer ในระบบ</p>
+        <p className="crm-banner crm-banner--ok">
+          ปิดการขายแล้ว — มี Customer ในระบบ · ลูกค้าเข้า Client Workspace ได้หลังได้บัญชี
+        </p>
       )}
+
+      {!isNew && initial && <LeadNextStepsPanel lead={initial} />}
 
       <section className="card card--wide">
         <LeadForm

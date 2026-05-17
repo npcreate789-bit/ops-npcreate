@@ -19,7 +19,7 @@ import { QuotationForm } from '../components/QuotationForm'
 import { printDocument } from '../../../../shared/print/printDocument'
 import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import { QuotationPublicLink } from '../components/QuotationPublicLink'
-import { isQuotationSentLike } from '../constants'
+import { QuotationNextStepsPanel } from '../components/QuotationNextStepsPanel'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../sales.css'
@@ -147,18 +147,13 @@ export function QuotationEditorPage() {
         </p>
       )}
 
-      {initial?.customer_id && isQuotationSentLike(initial.status) && (
-          <p className="crm-banner no-print">
-            {initial.status === 'paid' ? 'ปิดการขายแล้ว' : 'พร้อมบันทึกการชำระเงิน'} —{' '}
-            <Link
-              to={`/app/finance/payments/new?customerId=${initial.customer_id}&quotationId=${initial.id}`}
-              className="crm-btn crm-btn--primary"
-              style={{ marginLeft: '0.5rem' }}
-            >
-              ไป Finance
-            </Link>
-          </p>
-        )}
+      {initial?.status === 'paid' && initial.customer_id && (
+        <p className="crm-banner crm-banner--ok no-print">
+          ปิดการขายแล้ว — ลูกค้าเข้า Client Workspace ได้หลังได้บัญชี · Account รับบรีฟต่อ
+        </p>
+      )}
+
+      {!isNew && initial && <QuotationNextStepsPanel quotation={initial} />}
 
       {!isNew && initial && (
         <section className="card card--wide no-print">

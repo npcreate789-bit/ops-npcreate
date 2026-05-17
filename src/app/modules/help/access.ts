@@ -96,8 +96,8 @@ export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
 }
 
 const FLOW_STAFF = [
-  'Lead ลูกค้าใหม่ (CRM)',
-  'Sales เสนอแพ็กเกจ / ใบเสนอราคา',
+  'Lead ใน CRM → ใบเสนอราคา (/app/sales) → ลูกค้าเปิดลิงก์ยอมรับ',
+  'Finance ยืนยันชำระ → Account รับบรีฟ',
   'ปิดการขาย → Admin บันทึกชำระเงิน',
   'ลูกค้ากรอกบรีฟใน Client Workspace → Account ตรวจในรับบรีฟ',
   'แชทลูกค้าและบรีฟค้างปรากฏในงานของฉัน (/app/work)',
