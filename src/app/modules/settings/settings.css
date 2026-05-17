@@ -23,3 +23,110 @@
 .settings-form .task-field + .task-field {
   margin-top: 0.85rem;
 }
+
+.settings-account__intro {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+}
+
+.settings-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.settings-summary dt {
+  font-size: 0.75rem;
+  color: var(--npc-text-muted);
+  margin: 0 0 0.2rem;
+}
+
+.settings-summary dd {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.settings-field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.settings-form__actions {
+  margin-top: 1rem;
+}
+
+.settings-password-hint {
+  margin-top: 1.25rem;
+}
+
+.settings-next-banner__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.settings-next-banner__detail {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+}
+
+.settings-role-guide__lead,
+.settings-related__lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.settings-role-guide__flow {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-related__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.5rem;
+}
+
+.settings-related__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.18);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.settings-related__link:hover {
+  border-color: var(--npc-accent);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.settings-related__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.settings-related__hint {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}

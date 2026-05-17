@@ -1,110 +1,182 @@
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { navItemsForRoles } from '../../../config/navigation'
+import { effectiveRolesForNav, navItemsForRoles } from '../../../config/navigation'
+import { APP_VERSION } from '../../about/appMeta'
+import { runHealthChecks, type HealthCheckResult } from '../../status/api/health'
+import { OpsNextActionBanner } from '../components/OpsNextActionBanner'
+import { OpsRelatedToolbar } from '../components/OpsRelatedToolbar'
+import { OpsRoleGuide } from '../components/OpsRoleGuide'
 import {
   canShowOpsActivityLink,
   canShowOpsNavLink,
   canShowOpsQuickSearch,
   canViewOpsCenter,
   opsChecklistStatus,
+  opsRelatedLinksForRoles,
+  type OpsChecklistKey,
 } from '../access'
+import {
+  labelBackendConnection,
+  labelModuleAccess,
+  labelQuickSearch,
+  OPS_CHECKLIST_STATUS_LABEL,
+  OPS_CHECKLIST_STATUS_SYMBOL,
+} from '../opsLabels'
+import { withOpsContext } from '../opsNav'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../ops.css'
 
-const CHECKLIST = [
+const CHECKLIST: {
+  key: OpsChecklistKey
+  title: string
+  detail: string
+  cmd: string
+}[] = [
   {
-    key: 'env' as const,
+    key: 'env',
     title: 'ตั้งค่า Supabase',
     detail: 'ใส่ VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ใน .env.local',
     cmd: 'npm run setup:step1',
   },
   {
-    key: 'migrate' as const,
+    key: 'migrate',
     title: 'รัน migrations',
     detail: 'ครบ 00001–00036 บน staging ก่อน production',
     cmd: 'npm run db:sql:phase4-7',
   },
   {
-    key: 'build' as const,
+    key: 'build',
     title: 'Build production',
     detail: 'ตรวจ TypeScript + Vite ก่อน deploy',
     cmd: 'npm run build',
   },
   {
-    key: 'deploy' as const,
+    key: 'deploy',
     title: 'Deploy SPA',
     detail: 'Vercel — vercel.json มี SPA rewrite แล้ว',
     cmd: 'vercel deploy --prod',
   },
 ]
 
-const CHECKLIST_STATUS_LABEL = {
-  ok: '✓',
-  warn: '○',
-  manual: '—',
-} as const
-
 export function OpsCenterPage() {
   const { profile, configured } = useAuth()
+  const location = useLocation()
   const roles = profile?.roles ?? []
-  const allowed = canViewOpsCenter(roles) || !configured
-  const showSearch = canShowOpsQuickSearch(roles) || !configured
-  const visibleNav = navItemsForRoles(roles)
+  const navRoles = effectiveRolesForNav(roles, configured)
+  const allowed = canViewOpsCenter(navRoles) || !configured
+  const showSearch = canShowOpsQuickSearch(navRoles) || !configured
+  const visibleNav = navItemsForRoles(navRoles)
   const moduleCount = visibleNav.filter((i) => i.ready && i.path !== '/app').length
-  const showDashboard = canShowOpsNavLink(roles, '/app/dashboard') || !configured
-  const showActivity = canShowOpsActivityLink(roles) || !configured
-  const showSettings = canShowOpsNavLink(roles, '/app/settings') || !configured
+  const relatedLinks = opsRelatedLinksForRoles(roles, configured)
+  const search = location.search
+
+  const showDashboard = canShowOpsNavLink(navRoles, '/app/dashboard') || !configured
+  const showActivity = canShowOpsActivityLink(navRoles) || !configured
+  const showSettings = canShowOpsNavLink(navRoles, '/app/settings') || !configured
+  const showStatus = canShowOpsNavLink(navRoles, '/app/status') || !configured
+
+  const [healthChecks, setHealthChecks] = useState<HealthCheckResult[]>([])
+  const [healthLoading, setHealthLoading] = useState(true)
+
+  const loadHealth = useCallback(async () => {
+    setHealthLoading(true)
+    try {
+      const results = await runHealthChecks()
+      setHealthChecks(results)
+    } catch {
+      setHealthChecks([])
+    } finally {
+      setHealthLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadHealth()
+  }, [loadHealth, configured])
 
   if (!allowed) {
     return (
       <div className="page">
         <h1>ศูนย์ Ops</h1>
         <p className="crm-error">ไม่มีสิทธิ์ดูศูนย์ Ops — เฉพาะ CEO, Operations, Dev</p>
+        <p className="muted">
+          ต้องการดูสถานะทั่วไป? ไปที่{' '}
+          <Link to="/app/status">สถานะระบบ</Link> หรือ <Link to="/app/help">ช่วยเหลือ</Link>
+        </p>
       </div>
     )
   }
+
+  const dbOk = healthChecks.find((c) => c.id === 'db')?.status === 'ok'
 
   return (
     <div className="page">
       <header className="page__header crm-page__header phase2-page__header">
         <div>
           <h1>ศูนย์ Ops</h1>
-          <p className="muted">ความพร้อม deploy และเช็กลิสต์ก่อนขึ้น production</p>
+          <p className="muted">
+            ความพร้อม deploy และเช็กลิสต์ก่อนขึ้น production · เวอร์ชัน {APP_VERSION}
+          </p>
         </div>
-        <Link to="/app" className="crm-btn crm-btn--ghost">
-          หน้าหลัก
-        </Link>
+        <div className="ops-header__actions">
+          {showStatus && (
+            <Link to={withOpsContext('/app/status', search)} className="crm-btn crm-btn--ghost">
+              สถานะระบบ
+            </Link>
+          )}
+          <Link to={withOpsContext('/app', search)} className="crm-btn crm-btn--ghost">
+            หน้าหลัก
+          </Link>
+        </div>
       </header>
 
       {!configured && (
         <p className="crm-banner crm-banner--warn">โหมดพัฒนา — ยังไม่เชื่อม Supabase</p>
       )}
 
+      <OpsNextActionBanner
+        configured={configured}
+        healthChecks={healthChecks}
+        healthLoading={healthLoading}
+        search={search}
+      />
+
       <section className="card-grid">
         <article className="card card--accent">
           <h2>Backend</h2>
-          <p className="stat">{configured ? 'เชื่อมแล้ว' : 'ยังไม่ตั้งค่า'}</p>
-          <span className="muted">Supabase + RLS</span>
+          <p className="stat">{labelBackendConnection(configured)}</p>
+          <span className="muted">
+            {healthLoading
+              ? 'กำลังตรวจ…'
+              : configured && dbOk
+                ? 'Supabase + RLS ตอบสนองได้'
+                : 'Supabase + RLS'}
+          </span>
         </article>
         <article className="card">
           <h2>โมดูลที่เข้าถึงได้</h2>
-          <p className="stat">{moduleCount}</p>
+          <p className="stat">{labelModuleAccess(moduleCount)}</p>
           <span className="muted">ตามบทบาทของคุณ</span>
         </article>
         <article className="card">
           <h2>ค้นหาด่วน</h2>
-          <p className="stat">{showSearch ? '⌘K' : '—'}</p>
+          <p className="stat">{labelQuickSearch(showSearch)}</p>
           <span className="muted">
-            {showSearch ? 'Command palette ทุกหน้า' : 'ไม่มีสิทธิ์'}
+            {showSearch ? 'กด ⌘K จากทุกหน้า' : 'ไม่มีสิทธิ์ใช้ค้นหารวม'}
           </span>
         </article>
       </section>
 
+      <OpsRoleGuide search={search} />
+
       <section className="card card--wide">
         <h2>เช็กลิสต์ก่อน deploy</h2>
         <p className="muted ops-checklist__intro">
-          ✓ ตรวจอัตโนมัติ · ○ ยังไม่ครบ · — ตรวจด้วยตนเองก่อน deploy
+          {OPS_CHECKLIST_STATUS_SYMBOL.ok} {OPS_CHECKLIST_STATUS_LABEL.ok} ·{' '}
+          {OPS_CHECKLIST_STATUS_SYMBOL.warn} {OPS_CHECKLIST_STATUS_LABEL.warn} ·{' '}
+          {OPS_CHECKLIST_STATUS_SYMBOL.manual} {OPS_CHECKLIST_STATUS_LABEL.manual}
         </p>
         <ul className="ops-checklist">
           {CHECKLIST.map((item) => {
@@ -113,9 +185,12 @@ export function OpsCenterPage() {
               <li key={item.key}>
                 <span
                   className={`ops-checklist__status ops-checklist__status--${status}`}
-                  aria-hidden
+                  title={OPS_CHECKLIST_STATUS_LABEL[status]}
                 >
-                  {CHECKLIST_STATUS_LABEL[status]}
+                  <span aria-hidden>{OPS_CHECKLIST_STATUS_SYMBOL[status]}</span>
+                  <span className="ops-checklist__status-text">
+                    {OPS_CHECKLIST_STATUS_LABEL[status]}
+                  </span>
                 </span>
                 <div className="ops-checklist__body">
                   <strong>{item.title}</strong>
@@ -129,29 +204,40 @@ export function OpsCenterPage() {
         </ul>
         <div className="ops-links">
           {showDashboard && (
-            <Link to="/app/dashboard" className="crm-btn crm-btn--ghost">
+            <Link
+              to={withOpsContext('/app/dashboard', search)}
+              className="crm-btn crm-btn--ghost"
+            >
               ภาพรวมผู้บริหาร
             </Link>
           )}
           {showActivity && (
-            <Link to="/app/activity" className="crm-btn crm-btn--ghost">
+            <Link
+              to={withOpsContext('/app/activity', search)}
+              className="crm-btn crm-btn--ghost"
+            >
               บันทึกกิจกรรม
             </Link>
           )}
           {showSearch && (
-            <Link to="/app/search" className="crm-btn crm-btn--ghost">
+            <Link to={withOpsContext('/app/search', search)} className="crm-btn crm-btn--ghost">
               ค้นหารวม
             </Link>
           )}
           {showSettings && (
-            <Link to="/app/settings" className="crm-btn crm-btn--ghost">
+            <Link
+              to={withOpsContext('/app/settings', search)}
+              className="crm-btn crm-btn--ghost"
+            >
               ตั้งค่าบัญชี
             </Link>
           )}
         </div>
       </section>
 
-      <section className="card card--wide">
+      <OpsRelatedToolbar links={relatedLinks} search={search} />
+
+      <section id="ops-env" className="card card--wide">
         <h2>ตัวแปรสภาพแวดล้อม (Vercel)</h2>
         <p className="muted">ตั้งค่าใน Project Settings → Environment Variables</p>
         <ul className="flow-list">

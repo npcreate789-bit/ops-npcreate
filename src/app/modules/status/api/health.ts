@@ -1,9 +1,19 @@
 import {
   APP_CANONICAL_HOST,
+  appHostLabel,
   isCanonicalProductionHost,
   isLocalDevHost,
 } from '../../../../shared/config/appUrl'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
+import {
+  labelDbOk,
+  labelDbSkipped,
+  labelHostDev,
+  labelHostMismatch,
+  labelHostOk,
+  labelSupabaseDev,
+  labelSupabaseOk,
+} from '../statusLabels'
 
 export type HealthStatus = 'ok' | 'warn' | 'error' | 'skip'
 
@@ -27,6 +37,7 @@ export async function runHealthChecks(): Promise<HealthCheckResult[]> {
 
   if (typeof window !== 'undefined') {
     const host = window.location.hostname
+    const hostLabel = appHostLabel()
     checks.push({
       id: 'host',
       label: 'โดเมนแอป',
@@ -36,10 +47,10 @@ export async function runHealthChecks(): Promise<HealthCheckResult[]> {
           ? 'skip'
           : 'warn',
       detail: isCanonicalProductionHost()
-        ? `${host} (production)`
+        ? labelHostOk(hostLabel)
         : isLocalDevHost()
-          ? `${host} — พัฒนาในเครื่อง`
-          : `คาดหวัง ${APP_CANONICAL_HOST} · ปัจจุบัน ${host}`,
+          ? labelHostDev(hostLabel)
+          : labelHostMismatch(APP_CANONICAL_HOST, host),
     })
   }
 
@@ -48,13 +59,13 @@ export async function runHealthChecks(): Promise<HealthCheckResult[]> {
       id: 'config',
       label: 'การตั้งค่า Supabase',
       status: 'warn',
-      detail: 'ไม่พบ VITE_SUPABASE_URL / ANON_KEY — ใช้โหมดพัฒนา',
+      detail: labelSupabaseDev(),
     })
     checks.push({
       id: 'db',
       label: 'ฐานข้อมูล',
       status: 'skip',
-      detail: 'ข้าม — ยังไม่ได้ตั้งค่า backend',
+      detail: labelDbSkipped(),
     })
     return checks
   }
@@ -63,7 +74,7 @@ export async function runHealthChecks(): Promise<HealthCheckResult[]> {
     id: 'config',
     label: 'การตั้งค่า Supabase',
     status: 'ok',
-    detail: 'ตัวแปรสภาพแวดล้อมครบ',
+    detail: labelSupabaseOk(),
   })
 
   const start = performance.now()
@@ -83,7 +94,7 @@ export async function runHealthChecks(): Promise<HealthCheckResult[]> {
         id: 'db',
         label: 'ฐานข้อมูล',
         status: 'ok',
-        detail: `ตอบสนองได้ · ${latencyMs} ms`,
+        detail: labelDbOk(latencyMs),
         latencyMs,
       })
     }

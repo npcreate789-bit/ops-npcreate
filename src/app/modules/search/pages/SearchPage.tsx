@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
+import { effectiveRolesForNav } from '../../../config/navigation'
 import { globalSearch, searchResultTypeLabel } from '../api/search'
 import {
   canOpenSearchResult,
@@ -10,6 +11,11 @@ import {
   scopedSearchKindLabels,
   searchKindsForRoles,
 } from '../access'
+import {
+  SEARCH_KIND_ORDER,
+  searchInputPlaceholder,
+  searchNoResultsHint,
+} from '../searchLabels'
 import type { SearchResult, SearchResultKind } from '../types'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
@@ -50,8 +56,9 @@ function SearchResultRow({
 
 export function SearchPage() {
   const { profile, configured } = useAuth()
-  const roles = profile?.roles ?? []
-  const allowed = canUseGlobalSearch(roles) || !configured
+  const rawRoles = profile?.roles ?? []
+  const roles = effectiveRolesForNav(rawRoles, configured)
+  const allowed = canUseGlobalSearch(rawRoles) || !configured
   const hasKinds = hasGlobalSearchKinds(roles) || !configured
   const scoped = isGlobalSearchScoped(roles) && configured
   const kinds = useMemo(() => searchKindsForRoles(roles), [roles])
@@ -142,7 +149,7 @@ export function SearchPage() {
       <header className="page__header crm-page__header phase2-page__header">
         <div>
           <h1>ค้นหารวม</h1>
-          <p className="muted">Lead · ลูกค้า · งาน — ผลลัพธ์ตาม RLS ของบทบาทคุณ</p>
+          <p className="muted">ลูกค้าเป้าหมาย · ลูกค้า · งาน — ผลลัพธ์ตาม RLS ของบทบาทคุณ</p>
         </div>
         <Link to="/app" className="crm-btn crm-btn--ghost">
           หน้าหลัก
@@ -167,7 +174,7 @@ export function SearchPage() {
               className="crm-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="แบรนด์, ชื่องาน, ผู้ติดต่อ..."
+              placeholder={searchInputPlaceholder(kinds)}
               autoFocus
               aria-describedby="search-hint"
             />
@@ -184,7 +191,7 @@ export function SearchPage() {
         </label>
         <p id="search-hint" className="muted search-hint">
           พิมพ์อย่างน้อย {MIN_QUERY} ตัวอักษร
-          {kinds.length > 0 && !scoped && ' · ค้นหา Lead, ลูกค้า และงาน'}
+          {kinds.length > 0 && !scoped && ` · ${scopedLabel}`}
         </p>
 
         {error && <p className="crm-error" role="alert">{error}</p>}
@@ -194,13 +201,13 @@ export function SearchPage() {
           <p className="search-summary muted" aria-live="polite">
             {resultCount > 0
               ? `พบ ${resultCount} รายการ`
-              : 'ไม่พบผลลัพธ์ — ลองคำอื่นหรือตรวจสิทธิ์ RLS'}
+              : searchNoResultsHint(kinds)}
           </p>
         )}
 
         {!loading && resultCount > 0 && (
           <div className="search-groups">
-            {kinds.map((kind) => {
+            {SEARCH_KIND_ORDER.filter((k) => kinds.includes(k)).map((kind) => {
               const items = grouped.get(kind)
               if (!items?.length) return null
               return (

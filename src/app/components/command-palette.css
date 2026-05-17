@@ -148,6 +148,36 @@
   color: #fbbf24;
 }
 
+.command-palette__dev {
+  margin: 0 1rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8rem;
+}
+
+.command-palette__group {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+}
+
+.command-palette__group-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--npc-text-muted);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.command-palette__group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
 .command-palette__search-link {
   margin-top: 0.75rem;
 }

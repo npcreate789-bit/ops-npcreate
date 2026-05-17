@@ -40,6 +40,12 @@ export const START_CHECKLIST_TASKS: StartTaskDef[] = [
     labelTh: 'ตั้งค่าชื่อและหน้าจอ',
     hint: 'บัญชีและพับแถบเมนู',
   },
+  {
+    id: 'client',
+    path: '/app/client',
+    labelTh: 'เปิดพื้นที่ลูกค้า',
+    hint: 'ชำระเงิน · บรีฟ · แชท · รายงาน',
+  },
 ]
 
 export function startTasksVisibleForRoles(roles: AppRole[], configured: boolean): StartTaskDef[] {

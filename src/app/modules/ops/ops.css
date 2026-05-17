@@ -56,3 +56,96 @@
   gap: 0.5rem;
   margin-top: 1rem;
 }
+
+.ops-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.ops-next-banner__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.ops-next-banner__detail {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+}
+
+.ops-checklist__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 3.25rem;
+}
+
+.ops-checklist__status-text {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--npc-text-muted);
+}
+
+.ops-checklist__status--ok .ops-checklist__status-text {
+  color: #86efac;
+}
+
+.ops-checklist__status--warn .ops-checklist__status-text {
+  color: #fbbf24;
+}
+
+.ops-role-guide__lead,
+.ops-related__lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+}
+
+.ops-role-guide__flow {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ops-related__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.5rem;
+}
+
+.ops-related__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.18);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ops-related__link:hover {
+  border-color: var(--npc-accent);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.ops-related__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.ops-related__hint {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}

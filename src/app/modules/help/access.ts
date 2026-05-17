@@ -2,19 +2,31 @@ export { canViewHelp } from '../../../shared/auth/access'
 
 import { canAccessNavPath, effectiveRolesForNav, sidebarNavItemsForRoles } from '../../config/navigation'
 import {
+  canManageAdminUsers,
   canUseGlobalSearch,
   canUseQuickAccess,
   canViewOpsCenter,
   canViewSystemStatus,
   canViewWorkHub,
+  hasClientPortalStaffPreview,
 } from '../../../shared/auth/access'
 import type { AppRole } from '../../../shared/types/roles'
 import type { HelpShortcut } from './types'
 
 const HELP_SELF_PATH = '/app/help'
 
+export interface HelpRelatedLink {
+  path: string
+  label: string
+  hint: string
+}
+
 function isDevUnconfigured(roles: AppRole[], configured: boolean): boolean {
   return !configured && effectiveRolesForNav(roles, configured).length > 0 && roles.length === 0
+}
+
+function helpDevMode(roles: AppRole[], configured: boolean): boolean {
+  return isDevUnconfigured(roles, configured)
 }
 
 export function canOpenHelpNavLink(
@@ -22,7 +34,7 @@ export function canOpenHelpNavLink(
   path: string,
   configured: boolean,
 ): boolean {
-  if (isDevUnconfigured(roles, configured)) return true
+  if (helpDevMode(roles, configured)) return true
   if (roles.length === 0) return false
   return canAccessNavPath(roles, path)
 }
@@ -37,14 +49,14 @@ export function helpNavItemsForRoles(roles: AppRole[], configured: boolean) {
 }
 
 export function helpShortcutsForRoles(roles: AppRole[], configured: boolean): HelpShortcut[] {
-  const devMode = isDevUnconfigured(roles, configured)
+  const devMode = helpDevMode(roles, configured)
   const shortcuts: HelpShortcut[] = []
 
   if (canUseGlobalSearch(roles) || devMode) {
     shortcuts.push({
       keys: '⌘K / Ctrl+K',
       label: 'ค้นหาด่วน',
-      detail: 'ค้นหา Lead · ลูกค้า · งาน',
+      detail: 'ค้นหาลูกค้าเป้าหมาย · ลูกค้า · งาน · เมนู',
     })
     shortcuts.push({
       keys: '↑ ↓ · Enter',
@@ -75,46 +87,92 @@ export function helpShortcutsForRoles(roles: AppRole[], configured: boolean): He
   return shortcuts
 }
 
-export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
-  const devMode = isDevUnconfigured(roles, configured)
-  const links: { path: string; label: string; detail: string }[] = []
+/** ลิงก์ข้ามโมดูล — กรองตามสิทธิ์จริง */
+export function helpRelatedLinksForRoles(
+  roles: AppRole[],
+  configured: boolean,
+): HelpRelatedLink[] {
+  const effective = effectiveRolesForNav(roles, configured)
+  const devMode = helpDevMode(roles, configured)
+  const isClientOnly =
+    effective.length > 0 && effective.every((r) => r === 'client')
 
-  if (canViewWorkHub(roles) || devMode) {
-    links.push({ path: '/app/work', label: 'งานของฉัน', detail: 'งานค้างและแจ้งเตือน' })
-  }
-  if (canUseGlobalSearch(roles) || devMode) {
-    links.push({ path: '/app/search', label: 'ค้นหารวม (หน้าเต็ม)', detail: 'หรือกด ⌘K จากทุกหน้า' })
-  }
-  if (canViewOpsCenter(roles) || devMode) {
-    links.push({ path: '/app/ops', label: 'ศูนย์ Ops', detail: 'เช็กลิสต์ deploy' })
-  }
-  if (canViewSystemStatus(roles) || devMode) {
-    links.push({ path: '/app/status', label: 'สถานะระบบ', detail: 'ตรวจ Supabase · เวอร์ชันแอป' })
-  }
+  const candidates: HelpRelatedLink[] = [
+    {
+      path: '/app/settings',
+      label: 'ตั้งค่า',
+      hint: 'ชื่อที่แสดงและพับเมนู',
+    },
+    {
+      path: '/app/work',
+      label: 'งานของฉัน',
+      hint: 'งานค้างและแจ้งเตือน',
+    },
+    {
+      path: '/app/client',
+      label: 'พื้นที่ลูกค้า',
+      hint: isClientOnly ? 'งานและรายงานของแบรนด์' : 'ตัวอย่างหน้าที่ลูกค้าเห็น',
+    },
+    {
+      path: '/app/search',
+      label: 'ค้นหารวม',
+      hint: 'หรือกด ⌘K จากทุกหน้า',
+    },
+    {
+      path: '/app/status',
+      label: 'สถานะระบบ',
+      hint: 'ตรวจ Supabase และโดเมน',
+    },
+    {
+      path: '/app/ops',
+      label: 'ศูนย์ Ops',
+      hint: 'เช็กลิสต์ก่อน deploy',
+    },
+    {
+      path: '/app/admin',
+      label: 'ผู้ดูแลระบบ',
+      hint: 'สร้างบัญชี · มอบบทบาท',
+    },
+    {
+      path: '/app/about',
+      label: 'เกี่ยวกับ',
+      hint: 'เวอร์ชันแอป',
+    },
+  ]
 
-  return links.filter((link) => canOpenHelpNavLink(roles, link.path, configured))
+  return candidates.filter((link) => {
+    if (link.path === '/app/work') {
+      return canViewWorkHub(effective) || devMode
+    }
+    if (link.path === '/app/search') {
+      return canUseGlobalSearch(effective) || devMode
+    }
+    if (link.path === '/app/status') {
+      return canViewSystemStatus(effective) || devMode
+    }
+    if (link.path === '/app/ops') {
+      return canViewOpsCenter(effective) || devMode
+    }
+    if (link.path === '/app/admin') {
+      return canManageAdminUsers(effective) || devMode
+    }
+    if (link.path === '/app/client') {
+      return (
+        isClientOnly ||
+        hasClientPortalStaffPreview(effective) ||
+        canAccessNavPath(effective, link.path) ||
+        devMode
+      )
+    }
+    return canOpenHelpNavLink(effective, link.path, configured) || devMode
+  })
 }
 
-const FLOW_STAFF = [
-  'Lead ใน CRM → ใบเสนอราคา (/app/sales) → ลูกค้าเปิดลิงก์ยอมรับ',
-  'Finance ยืนยันชำระ → ลูกค้ากรอกบรีฟ → Account ตรวจ checklist → สร้างโปรเจกต์ (/app/projects)',
-  'ปิดการขาย → Admin บันทึกชำระเงิน',
-  'ลูกค้ากรอกบรีฟใน Client Workspace → Account ตรวจในรับบรีฟ',
-  'แชทลูกค้าและบรีฟค้างปรากฏในงานของฉัน (/app/work)',
-  'Ads + Content ดำเนินงาน · รายงานใน Client Workspace',
-] as const
-
-const FLOW_CLIENT = [
-  'ดูสถานะชำระเงินและเอกสารในเมนูการชำระเงิน — แจ้งสลิปผ่านแชท',
-  'ติดตามโปรเจกต์และแชททีมในเมนูโปรเจกต์',
-  'กรอกบรีฟงานให้ครบ — เมนูบรีฟใน Client Workspace',
-  'แชทกับทีม NP Create — ทีมจะเห็นในศูนย์งานของฉัน',
-  'ดูรายงานผลโฆษณาและสรุปรายเดือนในเมนูรายงาน',
-] as const
-
-export function helpFlowStepsForRoles(roles: AppRole[], configured: boolean): string[] {
-  const effective = effectiveRolesForNav(roles, configured)
-  if (effective.length === 0) return [...FLOW_STAFF]
-  if (effective.every((r) => r === 'client')) return [...FLOW_CLIENT]
-  return [...FLOW_STAFF]
+/** @deprecated ใช้ helpRelatedLinksForRoles แทน */
+export function helpQuickLinksForRoles(roles: AppRole[], configured: boolean) {
+  return helpRelatedLinksForRoles(roles, configured).map((link) => ({
+    path: link.path,
+    label: link.label,
+    detail: link.hint,
+  }))
 }

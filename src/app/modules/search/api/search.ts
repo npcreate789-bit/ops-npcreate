@@ -7,6 +7,7 @@ import type { LeadStatus } from '../../crm/types'
 import type { CustomerStatus } from '../../customers/types'
 import type { TaskStatus } from '../../tasks/types'
 import { filterVisibleSearchResults, searchKindsForRoles } from '../access'
+import { searchKindLabel } from '../searchLabels'
 import type { GlobalSearchResponse, SearchResult, SearchResultKind } from '../types'
 import { mockSearchApi } from './mockStore'
 
@@ -29,12 +30,6 @@ function ilikeOrFilter(columns: string[], q: string): string {
   const pattern = ilikePattern(q)
   const quoted = `"${pattern.replace(/"/g, '""')}"`
   return columns.map((col) => `${col}.ilike.${quoted}`).join(',')
-}
-
-function kindLabel(kind: SearchResultKind): string {
-  if (kind === 'lead') return 'Lead'
-  if (kind === 'customer') return 'ลูกค้า'
-  return 'งาน'
 }
 
 async function searchLeads(q: string): Promise<SearchResult[]> {
@@ -144,5 +139,5 @@ export async function globalSearch(
 }
 
 export function searchResultTypeLabel(kind: SearchResultKind): string {
-  return kindLabel(kind)
+  return searchKindLabel(kind)
 }

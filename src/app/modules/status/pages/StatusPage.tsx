@@ -1,83 +1,43 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { useScrollToHash } from '../../../hooks/useScrollToHash'
 import { effectiveRolesForNav, sidebarNavItemsForRoles } from '../../../config/navigation'
-import { canViewOpsCenter } from '../../../../shared/auth/access'
 import { AboutInfoSection } from '../../about/components/AboutInfoSection'
-import { runHealthChecks, type HealthCheckResult, type HealthStatus } from '../api/health'
+import { authHealthChecks } from '../api/authHealth'
+import { runHealthChecks, type HealthCheckResult } from '../api/health'
+import {
+  canAccessStatusPage,
+  statusRelatedLinksForRoles,
+} from '../access'
+import { StatusNextActionBanner } from '../components/StatusNextActionBanner'
+import { StatusRelatedToolbar } from '../components/StatusRelatedToolbar'
+import { StatusRoleGuide } from '../components/StatusRoleGuide'
+import {
+  labelHealthStatus,
+  labelLastChecked,
+  labelModuleMenuCount,
+  OVERALL_HEALTH_LABEL,
+  summarizeOverallHealth,
+} from '../statusLabels'
+import { withStatusContext } from '../statusNav'
 import '../../../modules/crm/crm.css'
 import '../../../modules/phase2/phase2.css'
 import '../../about/about.css'
 import '../status.css'
 
-const STATUS_LABEL: Record<HealthStatus, string> = {
-  ok: 'ปกติ',
-  warn: 'เตือน',
-  error: 'ผิดพลาด',
-  skip: 'ข้าม',
-}
-
-function authChecks(
-  configured: boolean,
-  loading: boolean,
-  session: boolean,
-  profile: boolean,
-  profileLoadError: string | null,
-): HealthCheckResult[] {
-  const rows: HealthCheckResult[] = []
-
-  if (!configured) {
-    rows.push({
-      id: 'auth-config',
-      label: 'การยืนยันตัวตน',
-      status: 'warn',
-      detail: 'โหมดพัฒนา — ไม่ใช้ Supabase Auth',
-    })
-    return rows
-  }
-
-  if (loading) {
-    rows.push({
-      id: 'auth-loading',
-      label: 'การยืนยันตัวตน',
-      status: 'skip',
-      detail: 'กำลังโหลดเซสชัน…',
-    })
-    return rows
-  }
-
-  rows.push({
-    id: 'session',
-    label: 'เซสชันเข้าสู่ระบบ',
-    status: session ? 'ok' : 'error',
-    detail: session ? 'มี session ที่ใช้งานได้' : 'ยังไม่ได้เข้าสู่ระบบ',
-  })
-
-  if (profileLoadError) {
-    rows.push({
-      id: 'profile',
-      label: 'โปรไฟล์และบทบาท',
-      status: 'error',
-      detail: profileLoadError,
-    })
-  } else {
-    rows.push({
-      id: 'profile',
-      label: 'โปรไฟล์และบทบาท',
-      status: profile ? 'ok' : session ? 'warn' : 'skip',
-      detail: profile ? 'โหลดโปรไฟล์สำเร็จ' : session ? 'ยังไม่มีบทบาทที่มอบหมาย' : '—',
-    })
-  }
-
-  return rows
-}
+const AUTO_REFRESH_MS = 60_000
 
 export function StatusPage() {
   useScrollToHash()
+  const location = useLocation()
   const { configured, loading, session, profile, profileLoadError } = useAuth()
   const roles = profile?.roles ?? []
   const navRoles = effectiveRolesForNav(roles, configured)
+  const search = location.search
+  const allowed = canAccessStatusPage(roles, configured)
+  const relatedLinks = statusRelatedLinksForRoles(roles, configured)
+
   const [remoteChecks, setRemoteChecks] = useState<HealthCheckResult[]>([])
   const [checking, setChecking] = useState(false)
   const [lastRun, setLastRun] = useState<Date | null>(null)
@@ -99,39 +59,92 @@ export function StatusPage() {
     }
   }, [])
 
-  useEffect(() => {
-    void runChecks()
-  }, [runChecks])
-
-  const authRows = authChecks(
+  const authLoading = configured && loading
+  const authRows = authHealthChecks(
     configured,
-    loading,
+    authLoading,
     Boolean(session),
     Boolean(profile),
     profileLoadError,
   )
   const allChecks = [...authRows, ...remoteChecks]
-  const hasError = allChecks.some((c) => c.status === 'error')
-  const hasWarn = allChecks.some((c) => c.status === 'warn')
+  const overall = summarizeOverallHealth(allChecks, {
+    checking: checking && !lastRun,
+    authLoading,
+  })
+
+  useEffect(() => {
+    if (authLoading) return
+    void runChecks()
+  }, [runChecks, authLoading, configured])
+
+  useEffect(() => {
+    if (authLoading || !allowed) return
+    const id = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void runChecks()
+      }
+    }, AUTO_REFRESH_MS)
+    return () => window.clearInterval(id)
+  }, [runChecks, authLoading, allowed])
+
+  if (configured && !loading && !allowed) {
+    return (
+      <div className="page">
+        <header className="page__header phase2-page__header">
+          <h1>สถานะระบบ</h1>
+          <p className="crm-error">ไม่มีสิทธิ์ดูสถานะระบบ — สำหรับทีมภายในเท่านั้น</p>
+          <p className="muted">
+            ลูกค้าใช้ <Link to={withStatusContext('/app/client', search)}>พื้นที่ลูกค้า</Link>
+            {' · '}
+            <Link to={withStatusContext('/app/help', search)}>ช่วยเหลือ</Link>
+          </p>
+        </header>
+      </div>
+    )
+  }
+
+  if (authLoading) {
+    return (
+      <div className="page">
+        <header className="page__header phase2-page__header">
+          <h1>สถานะระบบ</h1>
+          <p className="muted">กำลังโหลดเซสชัน…</p>
+        </header>
+      </div>
+    )
+  }
 
   return (
     <div className="page">
       <header className="page__header crm-page__header phase2-page__header">
         <div>
           <h1>สถานะระบบ</h1>
-          <p className="muted">เวอร์ชันแอป การเชื่อมต่อ backend และการเข้าสู่ระบบ</p>
+          <p className="muted">ตรวจแอป · backend · การเข้าสู่ระบบ — รีเฟรชอัตโนมัติทุก 60 วินาที</p>
         </div>
-        <Link to="/app/help" className="crm-btn crm-btn--ghost">
+        <Link to={withStatusContext('/app/help', search)} className="crm-btn crm-btn--ghost">
           ช่วยเหลือ
         </Link>
       </header>
+
+      <StatusNextActionBanner
+        configured={configured}
+        authLoading={authLoading}
+        profileLoadError={profileLoadError}
+        checks={allChecks}
+        checking={checking && !lastRun}
+        checkError={checkError}
+        search={search}
+      />
+
+      <StatusRoleGuide roles={roles} configured={configured} search={search} />
 
       <section id="about" className="card card--wide">
         <h2>เกี่ยวกับแอป</h2>
         <AboutInfoSection />
       </section>
 
-      <section className="card card--wide">
+      <section id="checks" className="card card--wide">
         <div className="status-toolbar">
           <button
             type="button"
@@ -142,12 +155,16 @@ export function StatusPage() {
             {checking ? 'กำลังตรวจ…' : 'ตรวจสอบอีกครั้ง'}
           </button>
           <p className="status-summary" aria-live="polite">
-            {lastRun
-              ? `ตรวจล่าสุด ${lastRun.toLocaleTimeString('th-TH')}`
-              : 'ยังไม่ได้ตรวจ'}
+            <span
+              className={`status-overall status-overall--${overall}`}
+              aria-label={OVERALL_HEALTH_LABEL[overall]}
+            >
+              {OVERALL_HEALTH_LABEL[overall]}
+            </span>
             {' · '}
-            เมนูงาน {moduleCount} รายการ
-            {hasError ? ' · พบข้อผิดพลาด' : hasWarn ? ' · มีคำเตือน' : allChecks.length ? ' · โดยรวมปกติ' : ''}
+            {labelLastChecked(lastRun)}
+            {' · '}
+            {labelModuleMenuCount(moduleCount)}
           </p>
         </div>
 
@@ -157,11 +174,15 @@ export function StatusPage() {
           </p>
         )}
 
+        {allChecks.length === 0 && !checking && (
+          <p className="muted">ยังไม่มีผลตรวจ — กดปุ่มตรวจสอบอีกครั้ง</p>
+        )}
+
         <ul className="status-list">
           {allChecks.map((row) => (
             <li key={row.id} className="status-row">
               <span className={`status-badge status-badge--${row.status}`}>
-                {STATUS_LABEL[row.status]}
+                {labelHealthStatus(row.status)}
               </span>
               <div>
                 <p className="status-row__label">{row.label}</p>
@@ -172,20 +193,7 @@ export function StatusPage() {
         </ul>
       </section>
 
-      <section className="card card--wide">
-        <h2>คำแนะนำ</h2>
-        <ul className="flow-list">
-          <li>หากฐานข้อมูลผิดพลาด ลองรีเฟรชหรือตรวจ RLS / migration บน Supabase</li>
-          <li>
-            เช็กลิสต์เริ่มต้นอยู่ที่ <Link to="/app/help#start">ช่วยเหลือ → เริ่มใช้งาน</Link>
-          </li>
-          {canViewOpsCenter(navRoles) && (
-            <li>
-              ทีม Ops ใช้ <Link to="/app/ops">ศูนย์ Ops</Link> สำหรับเช็กลิสต์ deploy
-            </li>
-          )}
-        </ul>
-      </section>
+      <StatusRelatedToolbar links={relatedLinks} search={search} />
     </div>
   )
 }
