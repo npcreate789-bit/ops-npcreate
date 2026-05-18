@@ -1,8 +1,7 @@
 /**
  * หลัง submit /contact —
  * 1) push ข้อความถึงลูกค้า (LINE_MESSAGING_CHANNEL_ACCESS_TOKEN)
- * 2) แจ้งทีม OA อีกชุด (LINE_OA_CHANNEL_ACCESS_TOKEN หรือ LINE_NOTIFY_TOKEN)
- * Secrets: SUPABASE_SERVICE_ROLE_KEY, LINE_* (ดู .env.example)
+ * 2) ส่งชุดข้อความเข้า Line OA — Notify / staff IDs / สรุปในแชทลูกค้า (chat.line.biz)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 
@@ -112,6 +111,19 @@ async function pushLineText(
   return { ok: false, reason: 'push_failed' }
 }
 
+async function pushLineTextWithRetry(
+  token: string,
+  to: string,
+  text: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  let result = await pushLineText(token, to, text)
+  if (!result.ok) {
+    await new Promise((r) => setTimeout(r, 400))
+    result = await pushLineText(token, to, text)
+  }
+  return result
+}
+
 async function lineNotify(token: string, message: string): Promise<boolean> {
   const res = await fetch('https://notify-api.line.me/api/notify', {
     method: 'POST',
@@ -128,25 +140,50 @@ async function lineNotify(token: string, message: string): Promise<boolean> {
   return res.ok
 }
 
-/** แจ้งทีม OA — ไม่ทำให้ handoff ลูกค้าล้มเหลว */
-async function notifyLineOaStaff(staffText: string): Promise<boolean> {
-  const notifyToken = Deno.env.get('LINE_NOTIFY_TOKEN')?.trim()
-  if (notifyToken) {
-    return lineNotify(notifyToken, staffText)
-  }
-
-  const oaToken = Deno.env.get('LINE_OA_CHANNEL_ACCESS_TOKEN')?.trim()
+async function notifyLineOaStaffViaIds(oaToken: string, staffText: string): Promise<boolean> {
   const staffIds = parseLineUserIds(Deno.env.get('LINE_OA_NOTIFY_USER_IDS'))
-  if (!oaToken || staffIds.length === 0) {
-    return false
-  }
+  if (staffIds.length === 0) return false
 
   let anyOk = false
   for (const staffId of staffIds) {
-    const result = await pushLineText(oaToken, staffId, staffText)
+    const result = await pushLineTextWithRetry(oaToken, staffId, staffText)
     if (result.ok) anyOk = true
   }
   return anyOk
+}
+
+/**
+ * ส่งชุดข้อความเข้า Line OA — แจ้งทีม (Notify / staff) หรือ push สรุปเข้าแชทกับลูกค้าใน chat.line.biz
+ */
+async function deliverLineOaBundle(input: {
+  lineUserId: string
+  customerText: string
+  staffText: string
+}): Promise<boolean> {
+  const notifyToken = Deno.env.get('LINE_NOTIFY_TOKEN')?.trim()
+  if (notifyToken && (await lineNotify(notifyToken, input.staffText))) {
+    return true
+  }
+
+  const oaToken = Deno.env.get('LINE_OA_CHANNEL_ACCESS_TOKEN')?.trim()
+  const messagingToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
+
+  if (oaToken && (await notifyLineOaStaffViaIds(oaToken, input.staffText))) {
+    return true
+  }
+
+  const inboxToken = oaToken || messagingToken
+  if (!inboxToken) return false
+
+  const inboxPush = await pushLineTextWithRetry(inboxToken, input.lineUserId, input.staffText)
+  if (inboxPush.ok) return true
+
+  if (oaToken && messagingToken && oaToken !== messagingToken) {
+    const viaMessaging = await pushLineTextWithRetry(messagingToken, input.lineUserId, input.staffText)
+    return viaMessaging.ok
+  }
+
+  return false
 }
 
 Deno.serve(async (req) => {
@@ -174,6 +211,7 @@ Deno.serve(async (req) => {
         mode: 'open_chat',
         url: lineOaMessageUrl(text),
         reason: 'invalid_line_user_id',
+        oa_notified: false,
       })
     }
 
@@ -215,33 +253,44 @@ Deno.serve(async (req) => {
     const chatUrl = lineOaMessageUrl(text)
     const staffText = buildOaStaffNotifyMessage({ lead: leadRow, customerText: text })
 
+    const messagingToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
+    const oaToken = Deno.env.get('LINE_OA_CHANNEL_ACCESS_TOKEN')?.trim()
+
+    let oaNotified = false
     try {
-      await notifyLineOaStaff(staffText)
+      oaNotified = await deliverLineOaBundle({ lineUserId, customerText: text, staffText })
     } catch (e) {
-      console.error('contact-line-handoff oa notify', e)
+      console.error('contact-line-handoff oa bundle', e)
     }
 
-    const lineToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
-
-    if (!lineToken) {
-      return json({ ok: true, mode: 'open_chat', url: chatUrl, reason: 'no_messaging_token' })
+    const customerToken = messagingToken || oaToken
+    if (!customerToken) {
+      return json({
+        ok: true,
+        mode: 'open_chat',
+        url: chatUrl,
+        reason: 'no_messaging_token',
+        oa_notified: oaNotified,
+      })
     }
 
-    let pushResult = await pushLineText(lineToken, lineUserId, text)
-    if (!pushResult.ok) {
-      await new Promise((r) => setTimeout(r, 400))
-      pushResult = await pushLineText(lineToken, lineUserId, text)
+    const customerPush = await pushLineTextWithRetry(customerToken, lineUserId, text)
+
+    if (oaToken && messagingToken && oaToken !== messagingToken) {
+      const oaCustomerPush = await pushLineTextWithRetry(oaToken, lineUserId, text)
+      if (oaCustomerPush.ok) oaNotified = true
     }
 
-    if (pushResult.ok) {
-      return json({ ok: true, mode: 'push', url: chatUrl })
+    if (customerPush.ok) {
+      return json({ ok: true, mode: 'push', url: chatUrl, oa_notified: oaNotified })
     }
 
     return json({
       ok: true,
       mode: 'open_chat',
       url: chatUrl,
-      reason: pushResult.reason ?? 'push_failed',
+      reason: customerPush.reason ?? 'push_failed',
+      oa_notified: oaNotified,
     })
   } catch (e) {
     console.error('contact-line-handoff', e)
