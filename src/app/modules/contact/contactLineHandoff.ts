@@ -1,5 +1,4 @@
 import {
-  lineAddFriendUrl,
   lineOaStarterMessageUrl,
   markLineOaContactPending,
 } from '../../../shared/contact/channelConnectConfig'
@@ -102,27 +101,24 @@ export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
 }
 
-/** URL เปิด LINE หลังส่งฟอร์ม — push สำเร็จเปิดแชท OA, ไม่สำเร็จเปิดพร้อมข้อความในช่องพิมพ์ */
-export function contactLineHandoffOpenUrl(input: {
-  chatUrl: string
-  pushedToChat: boolean
-}): string {
-  if (input.pushedToChat) {
-    return lineAddFriendUrl()
-  }
-  return input.chatUrl.trim() || lineAddFriendUrl()
+/** URL เปิด LINE — เสมอใช้ oaMessage พร้อมข้อความในช่องพิมพ์ (ลูกค้ากดส่ง → ทีมเห็นใน chat.line.biz) */
+export function contactLineHandoffOpenUrl(chatUrl: string, message?: string): string {
+  const fromUrl = chatUrl.trim()
+  if (fromUrl) return fromUrl
+  const msg = message?.trim()
+  return msg ? lineOaStarterMessageUrl(msg) : lineOaStarterMessageUrl()
 }
 
 /**
- * หลังกดส่งฟอร์ม — เปิด LINE ทันที (อยู่ใน user gesture ของปุ่มส่ง)
+ * หลังกดส่งฟอร์ม — เปิด LINE พร้อมข้อความในช่องพิมพ์ (user gesture)
  */
 export function openContactLineHandoffAfterSubmit(input: {
   chatUrl: string
-  pushedToChat: boolean
+  message: string
 }): void {
   markLineOaContactPending()
   markContactHandoffSuccessPending()
-  navigateToLineHandoff(contactLineHandoffOpenUrl(input))
+  navigateToLineHandoff(contactLineHandoffOpenUrl(input.chatUrl, input.message))
 }
 
 /**
@@ -158,10 +154,5 @@ export function reopenLineInquiryHandoff(): void {
   const msg = readContactLineHandoffMessage()
   const chatUrl = readContactLineHandoffChatUrl() ?? (msg ? contactLineHandoffUrl(msg) : '')
   markLineOaContactPending()
-  navigateToLineHandoff(
-    contactLineHandoffOpenUrl({
-      chatUrl,
-      pushedToChat: wasContactLineHandoffPushed(),
-    }),
-  )
+  navigateToLineHandoff(contactLineHandoffOpenUrl(chatUrl, msg ?? undefined))
 }

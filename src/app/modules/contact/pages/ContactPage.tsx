@@ -26,15 +26,13 @@ import {
 import { deliverContactLineHandoff } from '../api/contactLineHandoffApi'
 import {
   buildContactLineInquiryMessage,
+  contactLineHandoffUrl,
   openContactLineHandoffAfterSubmit,
   persistContactLineHandoffState,
-  readContactLineHandoffFailReason,
   readContactLineHandoffMessage,
   reopenLineInquiryHandoff,
   takeContactHandoffSuccessPending,
-  wasContactLineHandoffPushed,
 } from '../contactLineHandoff'
-import { lineHandoffFailureMessage } from '../lineHandoffMessages'
 import { isMobileBrowser } from '../../../../shared/line/lineStaffOpenUrl'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
@@ -52,19 +50,13 @@ import '../contact.css'
 const HERO_POINTS = [
   'ขั้นที่ 1 — เชื่อมต่อ LINE Login (เพิ่มเพื่อน @npcreate)',
   'ขั้นที่ 2 — กรอกชื่อ เบอร์ และบริการที่สนใจ',
-  'กดส่ง — เปิด LINE ส่งข้อความอัตโนมัติ (บันทึก Lead ในระบบ)',
+  'กดส่ง — เปิด LINE ข้อความพร้อมในช่องพิมพ์ แล้วกดส่งในแอป',
 ] as const
 
-const HANDOFF_STEPS_OPEN = [
-  'เปิด LINE แล้ว — ข้อความถูกเติมในช่องพิมพ์ กดส่งในแอปเพื่อให้ทีมเห็น',
+const HANDOFF_STEPS = [
+  'เปิด LINE @npcreate — ข้อความถูกเติมในช่องพิมพ์แล้ว',
+  'กดปุ่มส่งในแอป LINE — ทีมจะเห็นแชทและข้อความใน chat.line.biz',
   'ทีม Sales ติดต่อกลับภายใน 1–2 วันทำการ',
-  'หลังเริ่มงาน ใช้แชทใน Client Workspace',
-] as const
-
-const HANDOFF_STEPS_PUSH = [
-  'เปิด LINE แล้ว — ข้อความถูกส่งอัตโนมัติไปแชท @npcreate แล้ว',
-  'ทีม Sales ติดต่อกลับภายใน 1–2 วันทำการ',
-  'หลังเริ่มงาน ใช้แชทใน Client Workspace',
 ] as const
 
 function serviceLabelsForCodes(
@@ -256,18 +248,13 @@ export function ContactPage() {
       })
       markContactCooldown()
 
-      const handoff = await deliverContactLineHandoff({
-        leadId,
-        lineUserId: lineUserId.trim(),
-        text: lineMessage,
-      })
+      const chatUrl = contactLineHandoffUrl(lineMessage)
 
       if (
         !persistContactLineHandoffState({
           message: lineMessage,
-          chatUrl: handoff.url,
-          pushedToChat: handoff.pushedToChat,
-          failReason: handoff.pushedToChat ? undefined : handoff.reason,
+          chatUrl,
+          pushedToChat: false,
         })
       ) {
         throw new Error('ไม่สามารถเตรียมข้อความ LINE ได้')
@@ -275,15 +262,29 @@ export function ContactPage() {
 
       setSaving(false)
 
-      openContactLineHandoffAfterSubmit({
-        chatUrl: handoff.url,
-        pushedToChat: handoff.pushedToChat,
-      })
+      openContactLineHandoffAfterSubmit({ chatUrl, message: lineMessage })
 
       if (document.visibilityState === 'visible' && !isMobileBrowser()) {
         takeContactHandoffSuccessPending()
         tryShowHandoffSuccess()
       }
+
+      void deliverContactLineHandoff({
+        leadId,
+        lineUserId: lineUserId.trim(),
+        text: lineMessage,
+      })
+        .then((handoff) => {
+          persistContactLineHandoffState({
+            message: lineMessage,
+            chatUrl,
+            pushedToChat: handoff.pushedToChat,
+            failReason: handoff.pushedToChat ? undefined : handoff.reason,
+          })
+        })
+        .catch(() => {
+          /* เปิด LINE + กดส่งในแอปเป็นหลัก — push เป็นตัวเสริม */
+        })
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'
       setFormError(friendlyContactSubmitError(raw))
@@ -294,11 +295,6 @@ export function ContactPage() {
 
   if (handedOff) {
     const canReopenLine = Boolean(readContactLineHandoffMessage())
-    const pushedToChat = wasContactLineHandoffPushed()
-    const handoffWarning = pushedToChat
-      ? null
-      : lineHandoffFailureMessage(readContactLineHandoffFailReason() ?? undefined)
-    const handoffSteps = pushedToChat ? HANDOFF_STEPS_PUSH : HANDOFF_STEPS_OPEN
     return (
       <div className="contact-page contact-page--success">
         <div className="contact-page__bg" aria-hidden />
@@ -306,27 +302,16 @@ export function ContactPage() {
           <div className="contact-success-card__icon" aria-hidden>
             ✓
           </div>
-          <h2>{pushedToChat ? 'เปิด LINE และส่งข้อความแล้ว' : 'เปิด LINE แล้ว'}</h2>
+          <h2>เปิด LINE แล้ว — กรุณากดส่งข้อความ</h2>
           <p>
-            {pushedToChat ? (
-              <>
-                บันทึกข้อมูลในระบบแล้ว — เปิด LINE และ<strong>ส่งข้อความอัตโนมัติ</strong>
-                ไปแชท @npcreate แล้ว คุยต่อกับทีม {COMPANY_BRAND_NAME} ในแอปได้เลย
-              </>
-            ) : (
-              <>
-                บันทึกข้อมูลในระบบแล้ว — เปิด LINE แล้ว
-                กรุณา<strong>กดส่ง</strong>ข้อความในแชท @npcreate (ข้อความถูกเติมในช่องพิมพ์แล้ว)
-              </>
-            )}
+            บันทึกข้อมูลในระบบแล้ว — ข้อความถูกเติมในช่องพิมพ์แชท @npcreate แล้ว
+            กรุณา<strong>กดส่ง</strong>ในแอป LINE เพื่อให้ทีม {COMPANY_BRAND_NAME} เห็นแชทใน chat.line.biz
           </p>
-          {handoffWarning && (
-            <p className="contact-success-card__warn" role="status">
-              {handoffWarning}
-            </p>
-          )}
+          <p className="contact-success-card__wait">
+            ถ้าแชทไม่เปิดหรือช่องข้อความว่าง กดปุ่มด้านล่างเพื่อเปิด LINE อีกครั้ง
+          </p>
           <ol className="contact-success-steps">
-            {handoffSteps.map((step) => (
+            {HANDOFF_STEPS.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>
@@ -337,7 +322,7 @@ export function ContactPage() {
                 className="contact-link--primary"
                 onClick={() => reopenLineInquiryHandoff()}
               >
-                {pushedToChat ? 'เปิดแชท LINE อีกครั้ง' : 'เปิด LINE อีกครั้ง'}
+                เปิด LINE และส่งข้อความ
               </button>
             )}
             <Link to={loginPathForAudience('client')} className="contact-link--ghost">
@@ -370,7 +355,7 @@ export function ContactPage() {
             ติดต่อ<span className="contact-hero__accent">ทีมงาน</span>
           </h1>
           <p className="contact-hero__lead">
-            เชื่อมต่อ LINE Login ก่อน กรอกข้อมูล แล้วกดส่ง — ระบบจะเปิด LINE และส่งข้อความอัตโนมัติ
+            เชื่อมต่อ LINE Login ก่อน กรอกข้อมูล แล้วกดส่ง — เปิด LINE พร้อมข้อความในช่องพิมพ์ แล้วกดส่งในแอป
           </p>
           <ul className="contact-hero__list">
             {HERO_POINTS.map((point) => (
@@ -506,10 +491,10 @@ export function ContactPage() {
                 className="contact-submit"
                 disabled={saving || !lineLoginReady}
               >
-                {saving ? 'กำลังส่ง...' : 'ส่งและเปิด LINE'}
+                {saving ? 'กำลังส่ง...' : 'ส่งและเปิด LINE (กดส่งในแอป)'}
               </button>
               <p className="contact-form-note">
-                บันทึก Lead แล้วเปิด LINE @npcreate — ส่งข้อความอัตโนมัติเมื่อเป็นเพื่อน OA แล้ว
+                บันทึก Lead แล้วเปิดแชท @npcreate — ข้อความพร้อมในช่องพิมพ์ กดส่งใน LINE เพื่อให้ทีมเห็น
               </p>
             </div>
           </form>
