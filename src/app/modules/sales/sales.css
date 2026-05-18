@@ -416,6 +416,22 @@
   }
 }
 
+.qt-line-staff__head {
+  margin-bottom: 0.75rem;
+}
+
+.qt-line-staff__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.qt-line-staff__hint {
+  margin-top: 0.65rem;
+  font-size: 0.88rem;
+}
+
 @media print {
   @page {
     size: A4;

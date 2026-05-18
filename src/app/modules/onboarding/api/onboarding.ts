@@ -72,6 +72,7 @@ function buildMockDetailFromCustomer(c: {
       progress: 0,
       has_form: false,
       client_submitted: false,
+      has_portal: false,
     },
     form: null,
     checklist: defaultChecklist(c.id),
@@ -110,13 +111,19 @@ export async function listOnboardingCustomers(): Promise<OnboardingCustomer[]> {
 
   const db = supabase
 
-  const { data, error } = await db
-    .from('customers')
-    .select('id, brand_name, status, ready_for_ads, account_owner_id, ads_owner_id, contract_end')
-    .in('status', ['pending', 'active'])
-    .order('brand_name')
+  const [{ data, error }, { data: portalLinks, error: portalErr }] = await Promise.all([
+    db
+      .from('customers')
+      .select('id, brand_name, status, ready_for_ads, account_owner_id, ads_owner_id, contract_end')
+      .in('status', ['pending', 'active'])
+      .order('brand_name'),
+    db.from('client_customer_access').select('customer_id'),
+  ])
 
   if (error) throw new Error(error.message)
+  if (portalErr) throw new Error(portalErr.message)
+
+  const linkedCustomers = new Set((portalLinks ?? []).map((r) => r.customer_id as string))
 
   const rows = await Promise.all(
     (data ?? []).map(async (c) => {
@@ -158,6 +165,7 @@ export async function listOnboardingCustomers(): Promise<OnboardingCustomer[]> {
         progress: calcProgress(items),
         has_form: Boolean(formRow),
         client_submitted: Boolean(formRow?.client_submitted_at),
+        has_portal: linkedCustomers.has(customerId),
       }
     }),
   )
@@ -231,6 +239,12 @@ export async function getOnboardingDetail(customerId: string): Promise<Onboardin
 
   const readyFromChecklist = computeReadyForAdsFromChecklist(checklistSummary)
 
+  const { data: portalLink } = await supabase
+    .from('client_customer_access')
+    .select('customer_id')
+    .eq('customer_id', customerId)
+    .maybeSingle()
+
   return {
     customer: {
       id: customer.id as string,
@@ -243,6 +257,7 @@ export async function getOnboardingDetail(customerId: string): Promise<Onboardin
       progress: calcProgress(checklistSummary),
       has_form: Boolean(form),
       client_submitted: Boolean((form as { client_submitted_at?: string | null } | null)?.client_submitted_at),
+      has_portal: Boolean(portalLink),
     },
     form: (form as OnboardingForm) ?? null,
     checklist: items,

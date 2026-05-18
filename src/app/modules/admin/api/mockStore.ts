@@ -132,6 +132,7 @@ export const mockAdminApi = {
         contact_name: 'คุณลูกค้า',
         status: 'active',
         has_portal: false,
+        line_user_id: null,
       },
     ]
   },

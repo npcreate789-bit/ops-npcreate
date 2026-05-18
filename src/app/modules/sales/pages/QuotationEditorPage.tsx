@@ -23,6 +23,7 @@ import { printDocument } from '../../../../shared/print/printDocument'
 import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import { QuotationPublicLink } from '../components/QuotationPublicLink'
 import { QuotationNextStepsPanel } from '../components/QuotationNextStepsPanel'
+import { QuotationLineStaffPanel } from '../components/QuotationLineStaffPanel'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../sales.css'
@@ -177,6 +178,64 @@ export function QuotationEditorPage() {
       )}
 
       {!isNew && initial && <QuotationNextStepsPanel quotation={initial} />}
+
+      {!isNew && initial && (
+        <QuotationLineStaffPanel
+          quotation={initial}
+          brandName={leadBrandName ?? 'ลูกค้า'}
+          leadServiceCodes={leadServiceCodes}
+          lineUserId={leadForBanner?.line_user_id}
+          packages={packages}
+          saved
+        />
+      )}
+
+      {isNew && (leadBrandName || leadIdParam) && (
+        <QuotationLineStaffPanel
+          quotation={{
+            id: 'new',
+            quotation_number: 'ฉบับร่าง',
+            lead_id: leadIdParam,
+            customer_id: null,
+            owner_id: ownerId,
+            status: 'draft',
+            subtotal: 0,
+            discount: 0,
+            vat_rate: 7,
+            vat_amount: 0,
+            total: 0,
+            contract_months: suggestedPackage ? 3 : null,
+            terms: null,
+            notes: null,
+            sent_at: null,
+            viewed_at: null,
+            accepted_at: null,
+            paid_at: null,
+            public_token: null,
+            created_at: '',
+            updated_at: '',
+            items: suggestedPackage
+              ? [
+                  {
+                    id: 'draft',
+                    quotation_id: 'new',
+                    package_id: suggestedPackage.id,
+                    description: suggestedPackage.name,
+                    quantity: 1,
+                    unit_price: suggestedPackage.base_price,
+                    line_total: suggestedPackage.base_price,
+                    sort_order: 0,
+                  },
+                ]
+              : [],
+          }}
+          brandName={leadBrandName ?? 'ลูกค้า'}
+          leadServiceCodes={leadServiceCodes}
+          lineUserId={leadForBanner?.line_user_id}
+          packages={packages}
+          saved={false}
+        />
+      )}
 
       {!isNew && initial && (
         <section className="card card--wide no-print">

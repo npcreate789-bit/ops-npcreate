@@ -1,4 +1,5 @@
 import { bangkokTodayIsoDate } from '../../../shared/dates/bangkok'
+import { adminClientWizardPath } from '../../../shared/line/staffLineMessaging'
 import type { Payment, PaymentStatus } from './types'
 
 export const FINANCE_PIPELINE_STAGES: { status: PaymentStatus; label: string; owner: string }[] =
@@ -49,10 +50,15 @@ export function buildPaymentNextSteps(payment: Payment): FinanceNextStep[] {
       break
     case 'paid':
       steps.push({
+        label: 'สร้างบัญชีลูกค้า (พอร์ทัล)',
+        path: adminClientWizardPath(payment.customer_id),
+        detail: 'หลังยืนยันชำระ — เปิดบัญชีและส่งรหัสทาง LINE',
+        primary: true,
+      })
+      steps.push({
         label: 'รับบรีฟลูกค้า',
         path: `/app/onboarding/${payment.customer_id}`,
         detail: 'Account ตรวจ checklist',
-        primary: true,
       })
       steps.push({
         label: 'Client Workspace',

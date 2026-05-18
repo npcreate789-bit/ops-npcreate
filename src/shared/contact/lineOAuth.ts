@@ -1,7 +1,9 @@
 import {
   buildLineOAuthState,
+  getLineOAuthDisabledReason,
   lineOAuthCallbackUrl,
   LINE_CHANNEL_ID,
+  lineOAuthDisabledHint,
   persistLineConnection,
 } from './channelConnectConfig'
 
@@ -17,8 +19,11 @@ export interface LineOAuthCallbackParams {
 /** เริ่ม LINE Login — redirect ไป LINE แล้วกลับผ่าน edge function */
 export function startLineLogin(): void {
   const redirectUri = lineOAuthCallbackUrl()
-  if (!redirectUri || !LINE_CHANNEL_ID) {
-    throw new Error('LINE Login ยังไม่ได้ตั้งค่า')
+  const disabled = getLineOAuthDisabledReason()
+  if (!redirectUri || !LINE_CHANNEL_ID || disabled) {
+    throw new Error(
+      disabled ? lineOAuthDisabledHint(disabled) : 'LINE Login ยังไม่ได้ตั้งค่า',
+    )
   }
 
   const state = buildLineOAuthState()

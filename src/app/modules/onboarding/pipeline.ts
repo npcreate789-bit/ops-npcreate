@@ -1,3 +1,4 @@
+import { adminClientWizardPath } from '../../../shared/line/staffLineMessaging'
 import type { OnboardingCustomer, OnboardingDetail } from './types'
 
 export type OnboardingStage = 'awaiting_brief' | 'in_review' | 'ready'
@@ -42,6 +43,10 @@ export function getOnboardingStage(row: Pick<OnboardingCustomer, 'has_form' | 'r
   return 'in_review'
 }
 
+function needsPortalAccount(customer: Pick<OnboardingCustomer, 'status' | 'has_portal'>): boolean {
+  return customer.status === 'pending' || !customer.has_portal
+}
+
 export function buildOnboardingNextSteps(
   detail: OnboardingDetail,
   opts?: { clientSubmitted?: boolean },
@@ -50,6 +55,18 @@ export function buildOnboardingNextSteps(
   const id = customer.id
   const stage = getOnboardingStage(customer)
   const steps: OnboardingNextStep[] = []
+
+  if (needsPortalAccount(customer)) {
+    steps.push({
+      label: 'สร้างบัญชีลูกค้า (พอร์ทัล)',
+      path: adminClientWizardPath(id),
+      detail:
+        customer.status === 'pending'
+          ? 'สถานะรอเปิดใช้งาน — เปิดบัญชี Client Workspace แล้วส่งข้อมูลทาง LINE'
+          : 'ยังไม่มีบัญชีพอร์ทัล — Admin สร้างและส่งรหัสเข้าใช้',
+      primary: true,
+    })
+  }
 
   switch (stage) {
     case 'awaiting_brief':

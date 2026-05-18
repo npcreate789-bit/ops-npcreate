@@ -1,17 +1,26 @@
+import { getAppOrigin, isLocalDevHost } from '../config/appUrl'
 import { isSupabaseConfigured } from '../supabase/client'
-import { getAppOrigin } from '../config/appUrl'
 
-export const LINE_CHANNEL_ID =
-  (import.meta.env.VITE_LINE_CHANNEL_ID as string | undefined)?.trim() || ''
+/** Vite inlines `import.meta.env.VITE_*` at build time — empty/missing → '' */
+function resolveViteEnv(value: string | undefined): string {
+  if (value == null) return ''
+  const trimmed = String(value).trim()
+  if (!trimmed || trimmed === 'undefined' || trimmed === 'null') return ''
+  return trimmed
+}
 
-export const LINE_OA_ID =
-  (import.meta.env.VITE_LINE_OA_ID as string | undefined)?.trim() || '@npcreate'
+export const LINE_CHANNEL_ID = resolveViteEnv(import.meta.env.VITE_LINE_CHANNEL_ID)
 
-export const FACEBOOK_APP_ID =
-  (import.meta.env.VITE_FACEBOOK_APP_ID as string | undefined)?.trim() || ''
+export const LINE_OA_ID = resolveViteEnv(import.meta.env.VITE_LINE_OA_ID) || '@npcreate'
 
-export const FACEBOOK_PAGE_ID =
-  (import.meta.env.VITE_FACEBOOK_PAGE_ID as string | undefined)?.trim() || ''
+export const FACEBOOK_APP_ID = resolveViteEnv(import.meta.env.VITE_FACEBOOK_APP_ID)
+
+export const FACEBOOK_PAGE_ID = resolveViteEnv(import.meta.env.VITE_FACEBOOK_PAGE_ID)
+
+export type LineOAuthDisabledReason =
+  | 'missing_channel_id'
+  | 'missing_supabase'
+  | 'missing_callback_url'
 
 const LINE_OAUTH_STATE_KEY = 'npc_contact_line_oauth_state'
 const LINE_USER_KEY = 'npc_contact_line_user_id'
@@ -20,7 +29,34 @@ const FB_PSID_KEY = 'npc_contact_facebook_psid'
 const FB_NAME_KEY = 'npc_contact_facebook_name'
 
 export function isLineOAuthConfigured(): boolean {
-  return Boolean(LINE_CHANNEL_ID && isSupabaseConfigured)
+  return getLineOAuthDisabledReason() === null
+}
+
+export function getLineOAuthDisabledReason(): LineOAuthDisabledReason | null {
+  if (!isSupabaseConfigured) return 'missing_supabase'
+  if (!LINE_CHANNEL_ID) return 'missing_channel_id'
+  if (!lineOAuthCallbackUrl()) return 'missing_callback_url'
+  return null
+}
+
+/** ข้อความเมื่อ LINE Login ปิด — แยกสาเหตุสำหรับ dev vs production */
+export function lineOAuthDisabledHint(reason: LineOAuthDisabledReason): string {
+  switch (reason) {
+    case 'missing_supabase':
+      return isLocalDevHost()
+        ? 'ตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ใน .env.local แล้วรีสตาร์ท npm run dev'
+        : 'ระบบยังไม่เชื่อมต่อฐานข้อมูล — ระบุ LINE ID ด้านล่างหรือเพิ่มเพื่อน OA'
+    case 'missing_callback_url':
+      return isLocalDevHost()
+        ? 'ตั้งค่า VITE_SUPABASE_URL ใน .env.local (ใช้สร้าง URL callback ของ LINE Login) แล้วรีสตาร์ท dev server'
+        : 'การเชื่อมต่อ LINE Login ยังไม่พร้อมบนระบบนี้ — ระบุ LINE ID ด้านล่างหรือเพิ่มเพื่อน OA'
+    case 'missing_channel_id':
+    default:
+      if (isLocalDevHost()) {
+        return 'LINE Login ยังไม่เปิดในเครื่องนี้ — ใส่ VITE_LINE_CHANNEL_ID ใน .env.local แล้วรีสตาร์ท npm run dev (production ตั้งบน Vercel แล้ว redeploy)'
+      }
+      return 'การเชื่อมต่อ LINE Login ยังไม่พร้อมบนระบบนี้ — ระบุ LINE ID ด้านล่างหรือเพิ่มเพื่อน OA'
+  }
 }
 
 export function isFacebookLoginConfigured(): boolean {
@@ -32,8 +68,8 @@ export function isFacebookChatConfigured(): boolean {
 }
 
 export function lineOAuthCallbackUrl(): string | null {
-  const base = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim()
-  if (!base) return null
+  const base = resolveViteEnv(import.meta.env.VITE_SUPABASE_URL)
+  if (!base || base.includes('xxxxxxxx')) return null
   return `${base.replace(/\/$/, '')}/functions/v1/line-oauth-callback`
 }
 

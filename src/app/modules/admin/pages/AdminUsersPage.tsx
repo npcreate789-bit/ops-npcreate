@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canManageAdminUsers } from '../../../../shared/auth/access'
 import { ROLE_LABELS, type AppRole } from '../../../../shared/types/roles'
@@ -40,6 +40,8 @@ import '../admin.css'
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function AdminUsersPage() {
+  const [searchParams] = useSearchParams()
+  const presetCustomerId = searchParams.get('customerId')
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const canManage = canManageAdminUsers(roles) || !configured
@@ -68,6 +70,12 @@ export function AdminUsersPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!presetCustomerId) return
+    const el = document.getElementById('admin-create-client')
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [presetCustomerId, loading])
 
   useEffect(() => {
     listCustomersForSelect()
@@ -242,6 +250,7 @@ export function AdminUsersPage() {
         <CreateClientAccountWizard
           creatorRoles={roles}
           configured={configured}
+          initialCustomerId={presetCustomerId}
           onCreated={() => void load()}
         />
       </section>

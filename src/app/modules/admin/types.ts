@@ -34,6 +34,7 @@ export interface ClientWizardCustomer {
   contact_name: string | null
   status: string
   has_portal: boolean
+  line_user_id: string | null
 }
 
 export interface CreateClientInput {

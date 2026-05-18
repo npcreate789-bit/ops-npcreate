@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { appUrl } from '../../../../shared/config/appUrl'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { normalizeLoginId, validateLoginId } from '../../../../shared/auth/loginId'
+import {
+  buildClientPortalCredentialsMessage,
+  deliverLineMessageToCustomer,
+} from '../../../../shared/line/staffLineMessaging'
 import { checkLoginIdAvailable } from '../api/createEmployee'
 import { createClientPortalUser, listCustomersForClientWizard } from '../api/clientWizard'
 import { canCreateEmployeeUser } from '../access'
@@ -12,16 +17,14 @@ import '../admin.css'
 interface CreateClientAccountWizardProps {
   creatorRoles: AppRole[]
   configured: boolean
+  initialCustomerId?: string | null
   onCreated: () => void
-}
-
-function copyText(text: string) {
-  void navigator.clipboard?.writeText(text)
 }
 
 export function CreateClientAccountWizard({
   creatorRoles,
   configured,
+  initialCustomerId,
   onCreated,
 }: CreateClientAccountWizardProps) {
   const canCreate = canCreateEmployeeUser(creatorRoles) || !configured
@@ -35,13 +38,23 @@ export function CreateClientAccountWizard({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<CreateClientResult | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [lineFeedback, setLineFeedback] = useState<string | null>(null)
+  const [lineSending, setLineSending] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const presetCustomerId = initialCustomerId ?? searchParams.get('customerId')
 
   useEffect(() => {
     let cancelled = false
     listCustomersForClientWizard()
       .then((rows) => {
-        if (!cancelled) setCustomers(rows)
+        if (!cancelled) {
+          setCustomers(rows)
+          if (presetCustomerId && rows.some((c) => c.id === presetCustomerId && !c.has_portal)) {
+            setCustomerId(presetCustomerId)
+            const picked = rows.find((c) => c.id === presetCustomerId)
+            if (picked?.contact_name) setFullName(picked.contact_name)
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setCustomers([])
@@ -52,7 +65,7 @@ export function CreateClientAccountWizard({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [presetCustomerId])
 
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === customerId) ?? null,
@@ -73,7 +86,12 @@ export function CreateClientAccountWizard({
     setFullName('')
     setError(null)
     setSuccess(null)
-    setCopied(false)
+    setLineFeedback(null)
+    if (searchParams.has('customerId')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('customerId')
+      setSearchParams(next, { replace: true })
+    }
   }
 
   function goStep2() {
@@ -139,15 +157,33 @@ export function CreateClientAccountWizard({
   }
 
   function buildClientMessage(result: CreateClientResult): string {
-    const loginUrl = appUrl(loginPathForAudience('client'))
-    return [
-      `บัญชีพื้นที่ลูกค้า — ${result.brand_name}`,
-      `เข้าสู่ระบบ: ${loginUrl}`,
-      `รหัสผู้ใช้: ${result.login_id}`,
-      `รหัสผ่านชั่วคราว: ${result.temporary_password}`,
-      '',
-      'กรุณาเปลี่ยนรหัสผ่านหลัง login ครั้งแรก',
-    ].join('\n')
+    return buildClientPortalCredentialsMessage({
+      brandName: result.brand_name,
+      loginUrl: appUrl(loginPathForAudience('client')),
+      loginId: result.login_id,
+      temporaryPassword: result.temporary_password,
+    })
+  }
+
+  async function handleSendLine(result: CreateClientResult) {
+    setLineSending(true)
+    setLineFeedback(null)
+    try {
+      const lineUserId =
+        selectedCustomer?.line_user_id ??
+        customers.find((c) => c.id === result.customer_id)?.line_user_id ??
+        null
+      const delivery = await deliverLineMessageToCustomer(lineUserId, buildClientMessage(result))
+      setLineFeedback(
+        delivery.mode === 'push'
+          ? 'ส่งข้อมูลเข้าใช้ทาง LINE แล้ว'
+          : (delivery.message ?? 'คัดลอกข้อความและเปิด LINE แล้ว'),
+      )
+    } catch (err) {
+      setLineFeedback(err instanceof Error ? err.message : 'ส่งข้อมูลทาง LINE ไม่สำเร็จ')
+    } finally {
+      setLineSending(false)
+    }
   }
 
   return (
@@ -302,16 +338,19 @@ export function CreateClientAccountWizard({
               <code className="admin-temp-password-box__secret">{success.temporary_password}</code>
             </dd>
           </dl>
+          {lineFeedback && (
+            <p className="crm-banner crm-banner--ok" role="status">
+              {lineFeedback}
+            </p>
+          )}
           <div className="admin-client-wizard__actions">
             <button
               type="button"
               className="crm-btn crm-btn--primary"
-              onClick={() => {
-                copyText(buildClientMessage(success))
-                setCopied(true)
-              }}
+              disabled={lineSending}
+              onClick={() => void handleSendLine(success)}
             >
-              {copied ? 'คัดลอกแล้ว' : 'คัดลอกข้อความส่งลูกค้า'}
+              {lineSending ? 'กำลังส่ง…' : 'ส่งข้อมูลทางไลน์ให้ลูกค้า'}
             </button>
             <button type="button" className="crm-btn" onClick={resetWizard}>
               สร้างบัญชีถัดไป

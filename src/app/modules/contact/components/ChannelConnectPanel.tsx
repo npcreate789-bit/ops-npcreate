@@ -2,9 +2,11 @@ import { useState } from 'react'
 import {
   clearFacebookConnection,
   clearLineConnection,
+  getLineOAuthDisabledReason,
   isFacebookLoginConfigured,
   isLineOAuthConfigured,
   lineAddFriendUrl,
+  lineOAuthDisabledHint,
 } from '../../../../shared/contact/channelConnectConfig'
 import { loginWithFacebook } from '../../../../shared/contact/facebookSdk'
 import { startLineLogin } from '../../../../shared/contact/lineOAuth'
@@ -68,6 +70,7 @@ export function ChannelConnectPanel({
   if (channel === 'line') {
     const connected = Boolean(lineUserId)
     const oauthReady = isLineOAuthConfigured()
+    const oauthDisabledReason = oauthReady ? null : getLineOAuthDisabledReason()
 
     return (
       <div className="contact-connect">
@@ -117,7 +120,10 @@ export function ChannelConnectPanel({
         ) : (
           <div className="contact-connect__fallback">
             <p className="contact-section__hint">
-              ระบบ LINE Login ยังไม่เปิด — ระบุ LINE ID ด้านล่าง หรือ{' '}
+              {oauthDisabledReason
+                ? lineOAuthDisabledHint(oauthDisabledReason)
+                : 'การเชื่อมต่อ LINE Login ยังไม่พร้อม — ระบุ LINE ID ด้านล่างหรือเพิ่มเพื่อน OA'}
+              {' — '}
               <a href={NPCREATE_LINE_OA_URL} target="_blank" rel="noopener noreferrer">
                 เพิ่มเพื่อน @npcreate
               </a>

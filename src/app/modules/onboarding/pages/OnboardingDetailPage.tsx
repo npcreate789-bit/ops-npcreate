@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { adminClientWizardPath } from '../../../../shared/line/staffLineMessaging'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canViewWorkHub } from '../../../../shared/auth/access'
 import { formatBangkokDate, formatBangkokDateTime } from '../../../../shared/dates/bangkok'
@@ -233,6 +234,16 @@ export function OnboardingDetailPage() {
           </p>
         )}
       </header>
+
+      {(detail.customer.status === 'pending' || !detail.customer.has_portal) && (
+        <p className="crm-banner crm-banner--warn no-print">
+          {detail.customer.status === 'pending' ? 'สถานะรอเปิดใช้งาน' : 'ยังไม่มีบัญชีพอร์ทัล'} —{' '}
+          <Link to={adminClientWizardPath(customerId!)} className="crm-inline-link">
+            สร้างบัญชีลูกค้า (พอร์ทัล) ใน Admin
+          </Link>
+          {' '}แล้วส่งรหัสเข้าใช้ทาง LINE
+        </p>
+      )}
 
       <OnboardingNextStepsPanel
         detail={detail}

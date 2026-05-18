@@ -27,6 +27,13 @@ export function buildQuotationNextSteps(q: Quotation): SalesNextStep[] {
         detail: 'สร้างลิงก์สาธารณะด้านล่าง แล้วตั้งสถานะ "ส่งแล้ว"',
         primary: true,
       })
+      if (q.lead_id) {
+        steps.push({
+          label: 'ติดต่อทาง LINE',
+          path: `/app/sales/quotations/${q.id}`,
+          detail: 'เปิด LINE ส่งข้อมูลอ้างอิง / ใบเสนอราคา',
+        })
+      }
       break
     case 'sent':
     case 'viewed':

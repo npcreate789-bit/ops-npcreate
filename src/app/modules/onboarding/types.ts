@@ -41,6 +41,8 @@ export interface OnboardingCustomer {
   progress: number
   has_form: boolean
   client_submitted: boolean
+  /** มีบัญชี Client Workspace แล้ว */
+  has_portal: boolean
 }
 
 export interface OnboardingDetail {

@@ -12,7 +12,7 @@ export async function listCustomersForClientWizard(): Promise<ClientWizardCustom
   const [{ data: customers, error: cErr }, { data: links, error: lErr }] = await Promise.all([
     supabase
       .from('customers')
-      .select('id, brand_name, contact_name, status')
+      .select('id, brand_name, contact_name, status, lead_id')
       .order('brand_name'),
     supabase.from('client_customer_access').select('customer_id'),
   ])
@@ -21,14 +21,38 @@ export async function listCustomersForClientWizard(): Promise<ClientWizardCustom
   if (lErr) throw new Error(lErr.message)
 
   const linked = new Set((links ?? []).map((row) => row.customer_id as string))
+  const leadIds = [
+    ...new Set(
+      (customers ?? [])
+        .map((row) => row.lead_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ]
 
-  return (customers ?? []).map((row) => ({
-    id: row.id as string,
-    brand_name: row.brand_name as string,
-    contact_name: (row.contact_name as string | null) ?? null,
-    status: row.status as string,
-    has_portal: linked.has(row.id as string),
-  }))
+  const lineByLead = new Map<string, string>()
+  if (leadIds.length > 0) {
+    const { data: leads, error: leadErr } = await supabase
+      .from('leads')
+      .select('id, line_user_id')
+      .in('id', leadIds)
+    if (leadErr) throw new Error(leadErr.message)
+    for (const lead of leads ?? []) {
+      const uid = (lead.line_user_id as string | null)?.trim()
+      if (uid) lineByLead.set(lead.id as string, uid)
+    }
+  }
+
+  return (customers ?? []).map((row) => {
+    const leadId = row.lead_id as string | null
+    return {
+      id: row.id as string,
+      brand_name: row.brand_name as string,
+      contact_name: (row.contact_name as string | null) ?? null,
+      status: row.status as string,
+      has_portal: linked.has(row.id as string),
+      line_user_id: leadId ? (lineByLead.get(leadId) ?? null) : null,
+    }
+  })
 }
 
 export async function createClientPortalUser(
