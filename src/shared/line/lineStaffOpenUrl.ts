@@ -1,4 +1,4 @@
-import { LINE_OA_ID } from '../contact/channelConnectConfig'
+import { lineOaHandleForUrl } from '../contact/channelConnectConfig'
 import { NPCREATE_LINE_OA_URL } from '../crm/preferredContactChannel'
 
 function resolveViteEnv(value: string | undefined): string {
@@ -32,13 +32,9 @@ export function isMobileBrowser(): boolean {
   )
 }
 
-function lineOaHandle(): string {
-  return LINE_OA_ID.startsWith('@') ? LINE_OA_ID : `@${LINE_OA_ID}`
-}
-
 /** ลิงก์ line.me พร้อมข้อความล่วงหน้า (มือถือ / fallback) */
 export function lineOaMessageUrlWithText(text: string): string {
-  const base = `https://line.me/R/oaMessage/${encodeURIComponent(lineOaHandle())}/`
+  const base = `https://line.me/R/oaMessage/${lineOaHandleForUrl()}/`
   return `${base}?text=${encodeURIComponent(text.trim())}`
 }
 

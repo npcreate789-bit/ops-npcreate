@@ -133,10 +133,15 @@ export function lineAddFriendUrl(): string {
   return `https://line.me/R/ti/p/${encodeURIComponent(handle)}`
 }
 
+/** @handle สำหรับ path ของ line.me — ไม่ encode @ (LINE ต้องการ @npcreate ใน path) */
+export function lineOaHandleForUrl(): string {
+  const id = LINE_OA_ID.trim()
+  return id.startsWith('@') ? id : `@${id}`
+}
+
 /** เปิดแชท OA พร้อมข้อความเริ่มต้น (เพิ่มเพื่อน + ทักในครั้งเดียวบนมือถือ) */
 export function lineOaStarterMessageUrl(message = LINE_OA_STARTER_MESSAGE): string {
-  const handle = LINE_OA_ID.startsWith('@') ? LINE_OA_ID : `@${LINE_OA_ID}`
-  const base = `https://line.me/R/oaMessage/${encodeURIComponent(handle)}/`
+  const base = `https://line.me/R/oaMessage/${lineOaHandleForUrl()}/`
   return `${base}?text=${encodeURIComponent(message.trim())}`
 }
 

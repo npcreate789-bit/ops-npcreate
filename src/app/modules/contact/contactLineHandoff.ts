@@ -1,5 +1,4 @@
 import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
-import { isMobileBrowser } from '../../../shared/line/lineStaffOpenUrl'
 
 const PENDING_MESSAGE_KEY = 'npc_contact_handoff_line_message'
 
@@ -36,10 +35,8 @@ export function contactLineHandoffUrl(message: string): string {
 }
 
 /**
- * เปิดแชท LINE @npcreate พร้อมข้อความจากฟอร์ม
- * ใช้ navigation / แท็บใหม่ — ไม่ใช้ iframe (มักถูกบล็อกและไม่ส่งข้อความไป OA)
- *
- * @returns true เมื่อเบราว์เซอร์กำลังออกจากหน้า /contact (มือถือหรือ popup ถูกบล็อก)
+ * เปิดแชท LINE @npcreate พร้อม ?text= จากฟอร์ม แล้วออกจากหน้า /contact
+ * (มือถือ → แอป LINE, เดสก์ท็อป → line.me ในแท็บเดียวกัน)
  */
 export function openLineInquiryAndHandoff(message: string): boolean {
   const trimmed = message.trim()
@@ -47,21 +44,11 @@ export function openLineInquiryAndHandoff(message: string): boolean {
 
   persistContactLineHandoffMessage(trimmed)
   const url = contactLineHandoffUrl(trimmed)
-
-  if (isMobileBrowser()) {
-    window.location.assign(url)
-    return true
-  }
-
-  const popup = window.open(url, '_blank', 'noopener,noreferrer')
-  if (!popup) {
-    window.location.assign(url)
-    return true
-  }
-  return false
+  window.location.assign(url)
+  return true
 }
 
-/** เปิด LINE อีกครั้งจากหน้ารอ handoff (เดสก์ท็อป) */
+/** เปิด LINE อีกครั้ง (กรณีผู้ใช้ยังอยู่บนหน้ารอ) */
 export function reopenLineInquiryHandoff(): void {
   const msg = readContactLineHandoffMessage()
   if (!msg) return
