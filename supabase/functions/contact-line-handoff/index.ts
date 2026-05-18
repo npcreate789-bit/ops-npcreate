@@ -1,5 +1,8 @@
 /**
- * หลัง submit /contact — ส่งข้อความเข้าแชท LINE ของลูกค้า (push) หรือคืน URL เปิดแชท
+ * หลัง submit /contact
+ * - confirmation_only: push ข้อความยืนยันจาก OA (ไม่แทนการให้ลูกค้าส่งรายละเอียดเข้า inbox)
+ * รายละเอียดจากฟอร์มต้องให้ลูกค้ากดส่งผ่าน oaMessage URL ฝั่ง client
+ *
  * Secrets: LINE_MESSAGING_CHANNEL_ACCESS_TOKEN, SUPABASE_SERVICE_ROLE_KEY
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
@@ -12,10 +15,14 @@ const corsHeaders = {
 const LINE_MESSAGING_USER_ID_RE = /^U[0-9a-f]{32}$/i
 const HANDOFF_MAX_AGE_MS = 10 * 60 * 1000
 
+const CONFIRMATION_TEXT =
+  'ขอบคุณที่สนใจบริการ NP Create\n\nเราได้รับข้อมูลจากฟอร์มแล้ว ทีมจะติดต่อกลับทางแชทนี้เร็วๆ นะครับ\n\n(กรุณาส่งข้อความรายละเอียดในแชทนี้ด้วย หากระบบเปิดให้กรอกไว้แล้ว กดส่งได้เลย)'
+
 interface HandoffBody {
   lead_id?: string
   line_user_id?: string
   text?: string
+  mode?: string
 }
 
 function json(body: unknown, status = 200) {
@@ -23,16 +30,6 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
-}
-
-function lineOaHandle(): string {
-  const raw = Deno.env.get('LINE_OA_ID')?.trim() || '@npcreate'
-  return raw.startsWith('@') ? raw : `@${raw}`
-}
-
-function lineOaMessageUrl(message: string): string {
-  const base = `https://line.me/R/oaMessage/${lineOaHandle()}/`
-  return `${base}?${encodeURIComponent(message.trim())}`
 }
 
 async function pushLineText(token: string, to: string, text: string): Promise<boolean> {
@@ -54,6 +51,33 @@ async function pushLineText(token: string, to: string, text: string): Promise<bo
   return true
 }
 
+async function verifyLead(
+  admin: ReturnType<typeof createClient>,
+  leadId: string,
+  lineUserId: string,
+) {
+  const { data: lead, error: leadErr } = await admin
+    .from('leads')
+    .select('id, line_user_id, channel, created_at')
+    .eq('id', leadId)
+    .maybeSingle()
+
+  if (leadErr || !lead) {
+    return { error: json({ error: 'ไม่พบ Lead' }, 404) }
+  }
+
+  if (lead.channel !== 'website' || lead.line_user_id !== lineUserId) {
+    return { error: json({ error: 'ไม่ได้รับอนุญาต' }, 403) }
+  }
+
+  const createdAt = new Date(lead.created_at).getTime()
+  if (Number.isNaN(createdAt) || Date.now() - createdAt > HANDOFF_MAX_AGE_MS) {
+    return { error: json({ error: 'หมดเวลาส่งข้อความ LINE' }, 403) }
+  }
+
+  return { lead }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -67,23 +91,14 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as HandoffBody
     const leadId = body.lead_id?.trim() ?? ''
     const lineUserId = body.line_user_id?.trim() ?? ''
-    const text = body.text?.trim() ?? ''
+    const mode = body.mode?.trim() ?? 'confirmation_only'
 
-    if (!leadId || !lineUserId || !text) {
+    if (!leadId || !lineUserId) {
       return json({ error: 'ข้อมูลไม่ครบ' }, 400)
     }
 
     if (!LINE_MESSAGING_USER_ID_RE.test(lineUserId)) {
-      return json({
-        ok: true,
-        mode: 'open_chat',
-        url: lineOaMessageUrl(text),
-        reason: 'invalid_line_user_id',
-      })
-    }
-
-    if (text.length > 5000) {
-      return json({ error: 'ข้อความยาวเกินไป' }, 400)
+      return json({ ok: true, pushed: false, reason: 'invalid_line_user_id' })
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
@@ -96,43 +111,26 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const { data: lead, error: leadErr } = await admin
-      .from('leads')
-      .select('id, line_user_id, channel, created_at')
-      .eq('id', leadId)
-      .maybeSingle()
-
-    if (leadErr || !lead) {
-      return json({ error: 'ไม่พบ Lead' }, 404)
+    const verified = await verifyLead(admin, leadId, lineUserId)
+    if ('error' in verified && verified.error) {
+      return verified.error
     }
 
-    if (lead.channel !== 'website' || lead.line_user_id !== lineUserId) {
-      return json({ error: 'ไม่ได้รับอนุญาต' }, 403)
-    }
-
-    const createdAt = new Date(lead.created_at).getTime()
-    if (Number.isNaN(createdAt) || Date.now() - createdAt > HANDOFF_MAX_AGE_MS) {
-      return json({ error: 'หมดเวลาส่งข้อความ LINE' }, 403)
-    }
-
-    const chatUrl = lineOaMessageUrl(text)
     const lineToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
-
     if (!lineToken) {
-      return json({ ok: true, mode: 'open_chat', url: chatUrl, reason: 'no_messaging_token' })
+      return json({ ok: true, pushed: false, reason: 'no_messaging_token' })
     }
 
-    const pushed = await pushLineText(lineToken, lineUserId, text)
-    if (pushed) {
-      return json({ ok: true, mode: 'push', url: chatUrl })
+    if (mode === 'confirmation_only') {
+      const pushed = await pushLineText(lineToken, lineUserId, CONFIRMATION_TEXT)
+      return json({
+        ok: true,
+        pushed,
+        reason: pushed ? 'confirmation_pushed' : 'push_failed',
+      })
     }
 
-    return json({
-      ok: true,
-      mode: 'open_chat',
-      url: chatUrl,
-      reason: 'push_failed',
-    })
+    return json({ ok: true, pushed: false, reason: 'unknown_mode' })
   } catch (e) {
     console.error('contact-line-handoff', e)
     return json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' }, 500)

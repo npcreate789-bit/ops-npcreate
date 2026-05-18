@@ -1,57 +1,42 @@
-import { lineOaStarterMessageUrl } from '../../../../shared/contact/channelConnectConfig'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { parseFunctionInvokeError } from '../../../../shared/supabase/parseFunctionInvokeError'
 
-export type ContactLineHandoffMode = 'push' | 'open_chat'
-
-export interface ContactLineHandoffResult {
-  mode: ContactLineHandoffMode
-  url: string
-  pushedToChat: boolean
+export interface ContactLineConfirmationResult {
+  pushed: boolean
+  reason?: string
 }
 
-export async function deliverContactLineHandoff(input: {
+/**
+ * ส่งข้อความยืนยันจาก OA ไปลูกค้า (ไม่แทนที่การกดส่งข้อมูลเข้าแชท)
+ * ล้มเหลวได้ — ไม่ throw
+ */
+export async function deliverContactLineConfirmation(input: {
   leadId: string
   lineUserId: string
-  text: string
-}): Promise<ContactLineHandoffResult> {
-  const url = lineOaStarterMessageUrl(input.text)
-
+  inquiryText: string
+}): Promise<ContactLineConfirmationResult> {
   if (!isSupabaseConfigured || !supabase) {
-    return { mode: 'open_chat', url, pushedToChat: false }
+    return { pushed: false, reason: 'dev_mode' }
   }
 
   const { data, error } = await supabase.functions.invoke('contact-line-handoff', {
     body: {
       lead_id: input.leadId,
       line_user_id: input.lineUserId,
-      text: input.text,
+      text: input.inquiryText,
+      mode: 'confirmation_only',
     },
   })
 
   if (error) {
     const message = await parseFunctionInvokeError(error, data)
     console.warn('contact-line-handoff', message)
-    return { mode: 'open_chat', url, pushedToChat: false }
+    return { pushed: false, reason: message }
   }
 
-  const result = data as {
-    ok?: boolean
-    mode?: ContactLineHandoffMode
-    url?: string
-  } | null
-
-  if (result?.mode === 'push' && result.ok) {
-    return {
-      mode: 'push',
-      url: result.url?.trim() || url,
-      pushedToChat: true,
-    }
-  }
-
+  const result = data as { ok?: boolean; pushed?: boolean; reason?: string } | null
   return {
-    mode: 'open_chat',
-    url: result?.url?.trim() || url,
-    pushedToChat: false,
+    pushed: Boolean(result?.ok && result?.pushed),
+    reason: result?.reason,
   }
 }
