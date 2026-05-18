@@ -1,19 +1,23 @@
-import { NPCREATE_LINE_OA_URL } from '../crm/preferredContactChannel'
 import {
   isMobileBrowser,
   lineOaMessageUrlWithText,
   openStaffLineChat,
   staffLineChatUrl,
+  staffLineOaInboxUrl,
 } from './lineStaffOpenUrl'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
 export {
+  isLineMessagingUserId,
   isValidLineUserId,
   LINE_CHAT_BIZ_ACCOUNT_ID,
   openStaffLineChat,
   staffLineChatUrl,
   staffLineDirectChatHint,
+  staffLineDirectUserChatUrl,
+  staffLineManagerInboxUrl,
+  staffLineOaInboxUrl,
 } from './lineStaffOpenUrl'
 
 export type LineDeliveryMode = 'push' | 'open_oa' | 'copy_only'
@@ -32,8 +36,8 @@ export function lineOaMessageUrl(text?: string, lineUserId?: string | null): str
 export function openLineOaWithText(text: string, lineUserId?: string | null): void {
   const trimmed = text.trim()
   const uid = lineUserId?.trim()
-  if (uid && staffLineChatUrl(uid) !== NPCREATE_LINE_OA_URL) {
-    openStaffLineChat(uid)
+  if (uid && staffLineOaInboxUrl()) {
+    void openStaffLineChat(uid)
     return
   }
   const url = isMobileBrowser()

@@ -146,7 +146,8 @@ export function QuotationLineStaffPanel({
 
       {lineUserId && (
         <p className="crm-preferred-channel__meta">
-          LINE User ID: <strong>{lineUserId}</strong> — ส่ง push ได้เมื่อตั้ง Messaging API
+          LINE User ID: <strong>{lineUserId}</strong> — push ใช้ id นี้; เปิดแชทบน desktop จะเปิดรายการ OA
+          และคัดลอก id ให้ค้นหา (direct .../chat/id ใช้ได้เมื่อลูกค้าทัก OA แล้วและ provider ตรงกัน)
         </p>
       )}
 
@@ -183,7 +184,7 @@ export function QuotationLineStaffPanel({
           type="button"
           className="crm-btn crm-btn--ghost"
           title={staffLineDirectChatHint(lineUserId) ?? undefined}
-          onClick={() => openStaffLineChat(lineUserId)}
+          onClick={() => void openStaffLineChat(lineUserId)}
         >
           {staffOpenChannelLabel('line')}
         </button>
