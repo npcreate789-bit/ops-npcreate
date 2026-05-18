@@ -26,6 +26,8 @@ import {
 import {
   buildContactLineInquiryMessage,
   openLineInquiryAndHandoff,
+  readContactLineHandoffMessage,
+  reopenLineInquiryHandoff,
 } from '../contactLineHandoff'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
@@ -178,9 +180,11 @@ export function ContactPage() {
         company_website: companyWebsite,
       })
       markContactCooldown()
-      openLineInquiryAndHandoff(lineMessage)
-      setHandedOff(true)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      const leavingPage = openLineInquiryAndHandoff(lineMessage)
+      if (!leavingPage) {
+        setHandedOff(true)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'
       setFormError(friendlyContactSubmitError(raw))
@@ -191,6 +195,7 @@ export function ContactPage() {
   }
 
   if (handedOff) {
+    const canReopenLine = Boolean(readContactLineHandoffMessage())
     return (
       <div className="contact-page contact-page--success">
         <div className="contact-page__bg" aria-hidden />
@@ -200,11 +205,11 @@ export function ContactPage() {
           </div>
           <h2>เปิด LINE เพื่อส่งข้อความ</h2>
           <p>
-            บันทึกข้อมูลในระบบแล้ว — กรุณากดส่งข้อความในแชท LINE @npcreate
-            ทีม {COMPANY_BRAND_NAME} จะติดต่อกลับต่อจากนั้น
+            บันทึกข้อมูลในระบบแล้ว — กรุณา<strong>กดส่ง</strong>ข้อความในแชท LINE @npcreate
+            (ข้อความถูกเติมไว้แล้ว) ทีม {COMPANY_BRAND_NAME} จะเห็นในแชท OA หลังคุณกดส่ง
           </p>
           <p className="contact-success-card__wait muted">
-            รอดำเนินการ Flow ถัดไป — หากแท็บนี้ยังเปิดอยู่ สามารถปิดได้แล้วไปคุยใน LINE
+            รอดำเนินการ Flow ถัดไป — หาก LINE ยังไม่เปิด กดปุ่มด้านล่างอีกครั้ง
           </p>
           <ol className="contact-success-steps">
             {HANDOFF_STEPS.map((step) => (
@@ -212,7 +217,16 @@ export function ContactPage() {
             ))}
           </ol>
           <div className="contact-success-actions">
-            <Link to={loginPathForAudience('client')} className="contact-link--primary">
+            {canReopenLine && (
+              <button
+                type="button"
+                className="contact-link--primary"
+                onClick={() => reopenLineInquiryHandoff()}
+              >
+                เปิด LINE และส่งข้อความอีกครั้ง
+              </button>
+            )}
+            <Link to={loginPathForAudience('client')} className="contact-link--ghost">
               เข้าสู่ระบบ (ลูกค้าปัจจุบัน)
             </Link>
             <a href="https://npcreate.co.th" className="contact-link--ghost" rel="noreferrer">

@@ -526,9 +526,13 @@
   transition: background 0.15s;
 }
 
-.contact-success-actions a.contact-link--primary {
+.contact-success-actions a.contact-link--primary,
+.contact-success-actions button.contact-link--primary {
   color: #fff;
   background: linear-gradient(135deg, var(--contact-accent), #c1121f);
+  border: none;
+  cursor: pointer;
+  font: inherit;
 }
 
 .contact-success-actions a.contact-link--ghost {
