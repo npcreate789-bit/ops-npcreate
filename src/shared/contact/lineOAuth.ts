@@ -5,11 +5,8 @@ import {
   lineOAuthDisabledHint,
   lineOAuthRedirectUri,
   LINE_CHANNEL_ID,
-  markLineOaContactPending,
   persistLineConnection,
 } from './channelConnectConfig'
-import { openLineUrlInPlace } from './lineInPlaceOpen'
-import { isMobileBrowser } from '../line/lineStaffOpenUrl'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
@@ -71,20 +68,12 @@ export function isLineOAuthInProgress(): boolean {
 }
 
 /**
- * เริ่ม LINE Login
- * - มือถือ: เปิดแอป LINE / access.line.me โดยไม่พาเบราว์เซอร์ออกจาก /contact (ไม่สร้างแท็บใหม่)
- * - เดสก์ท็อป: แทนที่ URL ในแท็บเดิม (replace ไม่ใช่แท็บใหม่)
+ * เริ่ม LINE Login — แท็บเดียว (ทางเลือก A)
+ * /contact → access.line.me → /contact?code=... ในแท็บเดียว ไม่เปิดแท็บเพิ่ม
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
   markLineOAuthInProgress()
-  markLineOaContactPending()
-
-  if (isMobileBrowser()) {
-    openLineUrlInPlace(url)
-    return
-  }
-
   window.location.replace(url)
 }
 
