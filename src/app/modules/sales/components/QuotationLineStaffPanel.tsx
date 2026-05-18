@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { staffOpenChannelLabel } from '../../../../shared/crm/preferredContactChannel'
 import {
-  NPCREATE_LINE_OA_URL,
-  staffOpenChannelLabel,
-} from '../../../../shared/crm/preferredContactChannel'
+  openStaffLineChat,
+  staffLineChatUrl,
+  staffLineDirectChatHint,
+} from '../../../../shared/line/lineStaffOpenUrl'
 import { formatServiceInterests } from '../../../../shared/packages/serviceInterests'
 import {
   buildQuotationReferenceMessage,
@@ -77,7 +79,7 @@ export function QuotationLineStaffPanel({
         const result = await deliverLineMessageToCustomer(lineUserId, text)
         setFeedback(result.message ?? 'ส่ง/เปิด LINE แล้ว')
       } else {
-        openLineOaWithText(text)
+        openLineOaWithText(text, lineUserId)
         setFeedback(
           copied
             ? 'คัดลอกข้อความแล้ว — เปิด LINE OA (วางข้อความส่งลูกค้า)'
@@ -132,7 +134,11 @@ export function QuotationLineStaffPanel({
         <h2 className="crm-section-title">ติดต่อลูกค้าทาง LINE</h2>
         <p className="muted">
           ส่งข้อมูลอ้างอิงก่อนคุย · หลังบันทึกแล้วส่งใบเสนอราคา —{' '}
-          <a href={NPCREATE_LINE_OA_URL} target="_blank" rel="noopener noreferrer">
+          <a
+            href={staffLineChatUrl(lineUserId)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             @npcreate
           </a>
         </p>
@@ -173,14 +179,14 @@ export function QuotationLineStaffPanel({
         >
           {busy === 'send' ? 'กำลังส่ง…' : 'ส่งใบเสนอราคาทาง LINE'}
         </button>
-        <a
-          href={NPCREATE_LINE_OA_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
           className="crm-btn crm-btn--ghost"
+          title={staffLineDirectChatHint(lineUserId) ?? undefined}
+          onClick={() => openStaffLineChat(lineUserId)}
         >
           {staffOpenChannelLabel('line')}
-        </a>
+        </button>
       </div>
 
       {!saved && (

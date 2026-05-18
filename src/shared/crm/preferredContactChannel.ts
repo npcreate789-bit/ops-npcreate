@@ -1,4 +1,5 @@
 import type { Project } from '../../app/modules/projects/types'
+import { staffLineChatUrl } from '../line/lineStaffOpenUrl'
 
 export type PreferredContactChannel = 'line' | 'facebook'
 
@@ -35,8 +36,12 @@ export function preferredContactChannelLabel(
   return PREFERRED_CONTACT_CHANNEL_OPTIONS.find((o) => o.value === channel)?.label ?? channel
 }
 
-export function openUrlForPreferredChannel(channel: PreferredContactChannel): string {
-  return channel === 'line' ? NPCREATE_LINE_OA_URL : NPCREATE_FACEBOOK_MESSENGER_URL
+export function openUrlForPreferredChannel(
+  channel: PreferredContactChannel,
+  lineUserId?: string | null,
+): string {
+  if (channel === 'line') return staffLineChatUrl(lineUserId)
+  return NPCREATE_FACEBOOK_MESSENGER_URL
 }
 
 export function staffOpenChannelLabel(channel: PreferredContactChannel): string {

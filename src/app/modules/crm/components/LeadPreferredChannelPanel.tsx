@@ -1,7 +1,6 @@
 import type { Lead } from '../types'
 import {
   NPCREATE_FACEBOOK_MESSENGER_URL,
-  NPCREATE_LINE_OA_URL,
   openUrlForPreferredChannel,
   preferredContactChannelLabel,
   staffOpenChannelLabel,
@@ -31,7 +30,7 @@ export function LeadPreferredChannelPanel({
 
   const ch = channel as PreferredContactChannel
   const label = preferredContactChannelLabel(ch)
-  const openHref = openUrlForPreferredChannel(ch)
+  const openHref = openUrlForPreferredChannel(ch, lead.line_user_id)
 
   return (
     <section
@@ -106,8 +105,8 @@ export function LeadPreferredChannelPanel({
       {ch === 'line' && variant === 'default' && (
         <p className="crm-preferred-channel__footnote muted">
           OA:{' '}
-          <a href={NPCREATE_LINE_OA_URL} target="_blank" rel="noopener noreferrer">
-            {NPCREATE_LINE_OA_URL.replace(/^https?:\/\//, '')}
+          <a href={openHref} target="_blank" rel="noopener noreferrer">
+            {openHref.replace(/^https?:\/\//, '')}
           </a>
         </p>
       )}

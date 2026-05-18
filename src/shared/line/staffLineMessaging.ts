@@ -1,7 +1,20 @@
-import { LINE_OA_ID } from '../contact/channelConnectConfig'
 import { NPCREATE_LINE_OA_URL } from '../crm/preferredContactChannel'
+import {
+  isMobileBrowser,
+  lineOaMessageUrlWithText,
+  openStaffLineChat,
+  staffLineChatUrl,
+} from './lineStaffOpenUrl'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
+
+export {
+  isValidLineUserId,
+  LINE_CHAT_BIZ_ACCOUNT_ID,
+  openStaffLineChat,
+  staffLineChatUrl,
+  staffLineDirectChatHint,
+} from './lineStaffOpenUrl'
 
 export type LineDeliveryMode = 'push' | 'open_oa' | 'copy_only'
 
@@ -11,18 +24,21 @@ export interface LineSendResult {
 }
 
 /** ลิงก์เปิดแชท OA — ใส่ข้อความล่วงหน้าได้ (MVP เมื่อไม่มี Messaging API) */
-export function lineOaMessageUrl(text?: string): string {
-  const handle = LINE_OA_ID.startsWith('@') ? LINE_OA_ID : `@${LINE_OA_ID}`
-  const base = `https://line.me/R/oaMessage/${encodeURIComponent(handle)}/`
-  const trimmed = text?.trim()
-  if (!trimmed) return NPCREATE_LINE_OA_URL
-  return `${base}?text=${encodeURIComponent(trimmed)}`
+export function lineOaMessageUrl(text?: string, lineUserId?: string | null): string {
+  return staffLineChatUrl(lineUserId, text ? { text } : undefined)
 }
 
-/** เปิด LINE OA พร้อมข้อความ (query `text` — รองรับบาง client) */
-export function openLineOaWithText(text: string): void {
-  const handle = LINE_OA_ID.startsWith('@') ? LINE_OA_ID : `@${LINE_OA_ID}`
-  const url = `https://line.me/R/oaMessage/${encodeURIComponent(handle)}/?text=${encodeURIComponent(text.trim())}`
+/** เปิด LINE — แชทตรงลูกค้าบน desktop เมื่อมี line_user_id, ไม่เช่นนั้น OA + text */
+export function openLineOaWithText(text: string, lineUserId?: string | null): void {
+  const trimmed = text.trim()
+  const uid = lineUserId?.trim()
+  if (uid && staffLineChatUrl(uid) !== NPCREATE_LINE_OA_URL) {
+    openStaffLineChat(uid)
+    return
+  }
+  const url = isMobileBrowser()
+    ? lineOaMessageUrlWithText(trimmed)
+    : staffLineChatUrl(null, { text: trimmed })
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
@@ -119,7 +135,7 @@ export async function sendLinePushMessage(
 
   if (!isSupabaseConfigured || !supabase) {
     await copyTextToClipboard(text)
-    openLineOaWithText(text)
+    openLineOaWithText(text, to)
     return { mode: 'open_oa', message: 'โหมดพัฒนา — เปิด LINE และคัดลอกข้อความแล้ว' }
   }
 
@@ -135,7 +151,7 @@ export async function sendLinePushMessage(
       message.includes('deploy')
     ) {
       await copyTextToClipboard(text)
-      openLineOaWithText(text)
+      openLineOaWithText(text, to)
       return { mode: 'open_oa', message: 'ยังไม่ได้ตั้ง Messaging API — เปิด LINE และคัดลอกข้อความแล้ว' }
     }
     throw new Error(message)
@@ -145,7 +161,7 @@ export async function sendLinePushMessage(
   if (result && typeof result === 'object' && result.error) {
     if (result.error.includes('not configured') || result.error.includes('LINE_MESSAGING')) {
       await copyTextToClipboard(text)
-      openLineOaWithText(text)
+      openLineOaWithText(text, to)
       return { mode: 'open_oa', message: 'ยังไม่ได้ตั้ง Messaging API — เปิด LINE และคัดลอกข้อความแล้ว' }
     }
     throw new Error(result.error)
@@ -163,7 +179,7 @@ export async function deliverLineMessageToCustomer(
     return sendLinePushMessage(lineUserId, text)
   }
   const copied = await copyTextToClipboard(text)
-  openLineOaWithText(text)
+  openLineOaWithText(text, lineUserId)
   return {
     mode: copied ? 'open_oa' : 'copy_only',
     message: copied
