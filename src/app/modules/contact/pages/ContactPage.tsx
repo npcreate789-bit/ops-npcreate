@@ -38,8 +38,12 @@ import { submitPublicInquiry } from '../api/submitInquiry'
 import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
 import {
   applyLineOAuthCallbackFromUrl,
+  clearLineOAuthBroadcastResult,
   completeLineOAuthFromCallback,
+  readLineOAuthBroadcastResult,
   stripLineOAuthParamsFromUrl,
+  subscribeLineOAuthBroadcast,
+  type LineOAuthBroadcastPayload,
 } from '../../../../shared/contact/lineOAuth'
 import '../contact.css'
 
@@ -93,6 +97,25 @@ export function ContactPage() {
   const [handedOff, setHandedOff] = useState(false)
 
   const lineLoginReady = isContactLineLoginReady(lineUserId)
+
+  useEffect(() => {
+    function applyBroadcast(payload: LineOAuthBroadcastPayload) {
+      if (payload.type === 'success') {
+        setLineUserId(payload.userId)
+        setLineDisplayName(payload.displayName)
+        setChannelConnectError(null)
+        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+      } else {
+        setChannelConnectError(payload.error)
+      }
+      clearLineOAuthBroadcastResult()
+    }
+
+    const pending = readLineOAuthBroadcastResult()
+    if (pending) applyBroadcast(pending)
+
+    return subscribeLineOAuthBroadcast(applyBroadcast)
+  }, [])
 
   useEffect(() => {
     const storedLine = readLineConnection()

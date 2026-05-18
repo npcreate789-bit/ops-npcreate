@@ -7,11 +7,18 @@ import {
   LINE_CHANNEL_ID,
   persistLineConnection,
 } from './channelConnectConfig'
+import {
+  clearLineOAuthKeeperTab,
+  markLineOAuthKeeperTab,
+  publishLineOAuthResult,
+  tryCloseLineOAuthCallbackTab,
+} from './lineOAuthBroadcast'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
 const LINE_AUTH_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const LINE_OAUTH_IN_PROGRESS_KEY = 'npc_contact_line_oauth_in_progress'
+const LINE_OAUTH_POPUP_NAME = 'npc_line_oauth'
 
 export interface LineOAuthCallbackParams {
   line_user_id?: string
@@ -67,18 +74,47 @@ export function isLineOAuthInProgress(): boolean {
   }
 }
 
+function applyOAuthSuccess(userId: string, displayName: string | null): void {
+  persistLineConnection(userId, displayName ?? undefined)
+  publishLineOAuthResult({
+    type: 'success',
+    userId,
+    displayName,
+    at: Date.now(),
+  })
+  clearLineOAuthInProgress()
+  clearLineOAuthKeeperTab()
+}
+
+function applyOAuthError(message: string): void {
+  publishLineOAuthResult({
+    type: 'error',
+    error: message,
+    at: Date.now(),
+  })
+  clearLineOAuthInProgress()
+}
+
 /**
- * เริ่ม LINE Login — แท็บเดียว (ทางเลือก A)
- * /contact → access.line.me → /contact?code=... ในแท็บเดียว ไม่เปิดแท็บเพิ่ม
+ * แท็บ /contact เดิมค้างอยู่ — เปิด OAuth ในแท็บ/หน้าต่างอื่น
+ * แท็บ callback ส่งผลกลับมาที่นี่ผ่าน BroadcastChannel
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
   markLineOAuthInProgress()
+  markLineOAuthKeeperTab()
+
+  const popup = window.open(url, LINE_OAUTH_POPUP_NAME)
+  if (popup) {
+    return
+  }
+
+  clearLineOAuthKeeperTab()
   window.location.replace(url)
 }
 
 /**
- * แลก code บน /contact (redirect_uri = /contact) แล้วบันทึก LINE user
+ * แลก code บน /contact (มักเป็นแท็บใหม่ที่ LINE เปิด)
  */
 export async function completeLineOAuthFromCallback(
   searchParams: URLSearchParams,
@@ -87,8 +123,10 @@ export async function completeLineOAuthFromCallback(
 > {
   const oauthError = searchParams.get('error')
   if (oauthError) {
-    clearLineOAuthInProgress()
-    return { ok: false, error: mapLineOAuthError(oauthError) }
+    const message = mapLineOAuthError(oauthError)
+    applyOAuthError(message)
+    tryCloseLineOAuthCallbackTab()
+    return { ok: false, error: message }
   }
 
   const code = searchParams.get('code')?.trim()
@@ -97,13 +135,17 @@ export async function completeLineOAuthFromCallback(
 
   const storedState = consumeStoredLineOAuthState()
   if (!storedState || storedState !== stateParam) {
-    clearLineOAuthInProgress()
-    return { ok: false, error: 'เซสชัน LINE Login หมดอายุ — กรุณากดเชื่อมต่อใหม่' }
+    const message = 'เซสชัน LINE Login หมดอายุ — กรุณากดเชื่อมต่อใหม่'
+    applyOAuthError(message)
+    tryCloseLineOAuthCallbackTab()
+    return { ok: false, error: message }
   }
 
   if (!isSupabaseConfigured || !supabase) {
-    clearLineOAuthInProgress()
-    return { ok: false, error: 'ระบบยังไม่พร้อม — ลองใหม่ภายหลัง' }
+    const message = 'ระบบยังไม่พร้อม — ลองใหม่ภายหลัง'
+    applyOAuthError(message)
+    tryCloseLineOAuthCallbackTab()
+    return { ok: false, error: message }
   }
 
   const { data, error } = await supabase.functions.invoke('line-oauth-callback', {
@@ -115,9 +157,11 @@ export async function completeLineOAuthFromCallback(
   })
 
   if (error) {
-    clearLineOAuthInProgress()
     const message = await parseFunctionInvokeError(error, data)
-    return { ok: false, error: message || 'เชื่อมต่อ LINE ไม่สำเร็จ' }
+    const friendly = message || 'เชื่อมต่อ LINE ไม่สำเร็จ'
+    applyOAuthError(friendly)
+    tryCloseLineOAuthCallbackTab()
+    return { ok: false, error: friendly }
   }
 
   const result = data as {
@@ -128,19 +172,21 @@ export async function completeLineOAuthFromCallback(
   } | null
 
   if (!result?.ok || !result.user_id) {
-    clearLineOAuthInProgress()
-    return {
-      ok: false,
-      error: mapLineOAuthError(result?.error ?? 'token_exchange_failed'),
-    }
+    const message = mapLineOAuthError(result?.error ?? 'token_exchange_failed')
+    applyOAuthError(message)
+    tryCloseLineOAuthCallbackTab()
+    return { ok: false, error: message }
   }
 
-  persistLineConnection(result.user_id, result.display_name ?? undefined)
-  clearLineOAuthInProgress()
+  const displayName = result.display_name ?? null
+  applyOAuthSuccess(result.user_id, displayName)
+  stripLineOAuthParamsFromUrl()
+  tryCloseLineOAuthCallbackTab()
+
   return {
     ok: true,
     userId: result.user_id,
-    displayName: result.display_name ?? null,
+    displayName,
   }
 }
 
@@ -150,21 +196,25 @@ export function applyLineOAuthCallbackFromUrl(
 ): { ok: true; userId: string; displayName: string | null } | { ok: false; error: string } | null {
   const error = searchParams.get('line_error')
   if (error) {
-    clearLineOAuthInProgress()
-    return { ok: false, error: mapLineOAuthError(error) }
+    const message = mapLineOAuthError(error)
+    applyOAuthError(message)
+    tryCloseLineOAuthCallbackTab()
+    return { ok: false, error: message }
   }
 
   if (searchParams.get('line_connected') !== '1') return null
 
   const userId = searchParams.get('line_user_id')?.trim()
   if (!userId) {
-    clearLineOAuthInProgress()
-    return { ok: false, error: 'ไม่พบ LINE user ID — ลองเชื่อมต่อใหม่' }
+    const message = 'ไม่พบ LINE user ID — ลองเชื่อมต่อใหม่'
+    applyOAuthError(message)
+    return { ok: false, error: message }
   }
 
   const displayName = searchParams.get('line_name')?.trim() || null
-  persistLineConnection(userId, displayName ?? undefined)
-  clearLineOAuthInProgress()
+  applyOAuthSuccess(userId, displayName)
+  stripLineOAuthParamsFromUrl()
+  tryCloseLineOAuthCallbackTab()
   return { ok: true, userId, displayName }
 }
 
@@ -206,3 +256,11 @@ export function stripLineOAuthParamsFromUrl(): void {
     window.history.replaceState({}, '', url.pathname + url.search + url.hash)
   }
 }
+
+export type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
+export {
+  clearLineOAuthBroadcastResult,
+  isLineOAuthKeeperTab,
+  readLineOAuthBroadcastResult,
+  subscribeLineOAuthBroadcast,
+} from './lineOAuthBroadcast'

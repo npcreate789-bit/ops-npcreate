@@ -4,7 +4,11 @@ import {
   isLineOAuthConfigured,
   lineOAuthDisabledHint,
 } from '../../../../shared/contact/channelConnectConfig'
-import { startLineLogin } from '../../../../shared/contact/lineOAuth'
+import {
+  isLineOAuthInProgress,
+  isLineOAuthKeeperTab,
+  startLineLogin,
+} from '../../../../shared/contact/lineOAuth'
 
 interface ContactLineLoginStepProps {
   lineUserId: string | null
@@ -22,6 +26,7 @@ export function ContactLineLoginStep({
   const oauthReady = isLineOAuthConfigured()
   const oauthDisabledReason = oauthReady ? null : getLineOAuthDisabledReason()
   const connected = Boolean(lineUserId)
+  const waitingOnKeeperTab = isLineOAuthKeeperTab() && isLineOAuthInProgress() && !connected
 
   function handleLineLogin() {
     try {
@@ -64,9 +69,16 @@ export function ContactLineLoginStep({
             </div>
           </div>
         ) : oauthReady ? (
-          <button type="button" className="contact-connect__primary" onClick={handleLineLogin}>
-            เชื่อมต่อ LINE Login
-          </button>
+          <>
+            <button type="button" className="contact-connect__primary" onClick={handleLineLogin}>
+              {waitingOnKeeperTab ? 'กำลังเชื่อมต่อ LINE...' : 'เชื่อมต่อ LINE Login'}
+            </button>
+            {waitingOnKeeperTab && (
+              <p className="contact-section__hint contact-section__hint--muted">
+                ยืนยันในแอป LINE แล้วกลับมาแท็บนี้ — ไม่ต้องเปิดแท็บใหม่
+              </p>
+            )}
+          </>
         ) : (
           <p className="contact-field-error">
             {oauthDisabledReason
