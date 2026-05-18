@@ -2,6 +2,9 @@ import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectC
 
 const PENDING_MESSAGE_KEY = 'npc_contact_handoff_line_message'
 
+/** รอ fallback UI ถ้าเบราว์เซอร์ไม่ออกจากหน้า */
+export const LINE_HANDOFF_FALLBACK_UI_MS = 900
+
 export function buildContactLineInquiryMessage(input: {
   contactName: string
   phone: string
@@ -34,23 +37,36 @@ export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
 }
 
-/**
- * เปิดแชท LINE @npcreate พร้อม ?text= จากฟอร์ม แล้วออกจากหน้า /contact
- * (มือถือ → แอป LINE, เดสก์ท็อป → line.me ในแท็บเดียวกัน)
- */
-export function openLineInquiryAndHandoff(message: string): boolean {
+/** เปิดแชท LINE @npcreate พร้อมข้อความ (เรียกทันทีหลังกดส่ง — ยังอยู่ใน user gesture chain) */
+export function navigateToLineHandoff(message?: string): void {
+  const trimmed = (message ?? readContactLineHandoffMessage() ?? '').trim()
+  if (!trimmed) return
+
+  const url = contactLineHandoffUrl(trimmed)
+
+  try {
+    const link = document.createElement('a')
+    link.href = url
+    link.rel = 'noopener noreferrer'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } catch {
+    /* ignore */
+  }
+  window.location.assign(url)
+}
+
+/** บันทึกข้อความก่อนเปิด LINE */
+export function prepareLineInquiryHandoff(message: string): boolean {
   const trimmed = message.trim()
   if (!trimmed) return false
-
   persistContactLineHandoffMessage(trimmed)
-  const url = contactLineHandoffUrl(trimmed)
-  window.location.assign(url)
   return true
 }
 
-/** เปิด LINE อีกครั้ง (กรณีผู้ใช้ยังอยู่บนหน้ารอ) */
+/** เปิด LINE อีกครั้งจากหน้ารอ handoff */
 export function reopenLineInquiryHandoff(): void {
-  const msg = readContactLineHandoffMessage()
-  if (!msg) return
-  openLineInquiryAndHandoff(msg)
+  navigateToLineHandoff()
 }

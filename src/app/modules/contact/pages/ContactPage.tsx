@@ -25,7 +25,9 @@ import {
 } from '../contactFormUtils'
 import {
   buildContactLineInquiryMessage,
-  openLineInquiryAndHandoff,
+  LINE_HANDOFF_FALLBACK_UI_MS,
+  navigateToLineHandoff,
+  prepareLineInquiryHandoff,
   readContactLineHandoffMessage,
   reopenLineInquiryHandoff,
 } from '../contactLineHandoff'
@@ -180,17 +182,22 @@ export function ContactPage() {
         company_website: companyWebsite,
       })
       markContactCooldown()
-      const leavingPage = openLineInquiryAndHandoff(lineMessage)
-      if (!leavingPage) {
-        setHandedOff(true)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+      if (!prepareLineInquiryHandoff(lineMessage)) {
+        throw new Error('ไม่สามารถเตรียมข้อความ LINE ได้')
       }
+      setSaving(false)
+      navigateToLineHandoff(lineMessage)
+      window.setTimeout(() => {
+        if (window.location.pathname.includes('/contact')) {
+          setHandedOff(true)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+      }, LINE_HANDOFF_FALLBACK_UI_MS)
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'
       setFormError(friendlyContactSubmitError(raw))
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } finally {
       setSaving(false)
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
 
@@ -209,7 +216,7 @@ export function ContactPage() {
             (ข้อความถูกเติมไว้แล้ว) ทีม {COMPANY_BRAND_NAME} จะเห็นในแชท OA หลังคุณกดส่ง
           </p>
           <p className="contact-success-card__wait">
-            รอดำเนินการ Flow ถัดไป — หาก LINE ยังไม่เปิด กดปุ่มด้านล่างอีกครั้ง
+            กำลังเปิดแชท LINE พร้อมข้อความที่กรอกไว้… หากไม่เปิดอัตโนมัติ กดปุ่มด้านล่าง
           </p>
           <ol className="contact-success-steps">
             {HANDOFF_STEPS.map((step) => (

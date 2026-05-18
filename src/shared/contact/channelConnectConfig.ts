@@ -139,10 +139,13 @@ export function lineOaHandleForUrl(): string {
   return id.startsWith('@') ? id : `@${id}`
 }
 
-/** เปิดแชท OA พร้อมข้อความเริ่มต้น (เพิ่มเพื่อน + ทักในครั้งเดียวบนมือถือ) */
+/**
+ * เปิดแชท OA พร้อมข้อความในช่องพิมพ์
+ * รูปแบบ LINE: https://line.me/R/oaMessage/@id/?{ข้อความที่ encode แล้ว} (ไม่ใช้ ?text=)
+ */
 export function lineOaStarterMessageUrl(message = LINE_OA_STARTER_MESSAGE): string {
   const base = `https://line.me/R/oaMessage/${lineOaHandleForUrl()}/`
-  return `${base}?text=${encodeURIComponent(message.trim())}`
+  return `${base}?${encodeURIComponent(message.trim())}`
 }
 
 export function markLineOaContactStepDone(): void {

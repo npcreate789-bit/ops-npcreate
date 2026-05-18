@@ -1,4 +1,4 @@
-import { lineOaHandleForUrl } from '../contact/channelConnectConfig'
+import { lineOaStarterMessageUrl } from '../contact/channelConnectConfig'
 import { NPCREATE_LINE_OA_URL } from '../crm/preferredContactChannel'
 
 function resolveViteEnv(value: string | undefined): string {
@@ -34,8 +34,7 @@ export function isMobileBrowser(): boolean {
 
 /** ลิงก์ line.me พร้อมข้อความล่วงหน้า (มือถือ / fallback) */
 export function lineOaMessageUrlWithText(text: string): string {
-  const base = `https://line.me/R/oaMessage/${lineOaHandleForUrl()}/`
-  return `${base}?text=${encodeURIComponent(text.trim())}`
+  return lineOaStarterMessageUrl(text)
 }
 
 /** รายการแชท OA บน chat.line.biz (ไม่ระบุลูกค้า — ไม่ 404 จาก user id ผิดช่องทาง) */
