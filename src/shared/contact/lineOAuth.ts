@@ -9,16 +9,20 @@ import {
 } from './channelConnectConfig'
 import {
   clearLineOAuthKeeperTab,
+  closeLineOAuthPopupWindow,
+  LINE_OAUTH_POPUP_WINDOW_NAME,
   markLineOAuthKeeperTab,
   publishLineOAuthResult,
   tryCloseLineOAuthCallbackTab,
 } from './lineOAuthBroadcast'
+import { isLineContactMobileDevice } from './lineInPlaceOpen'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
 const LINE_AUTH_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const LINE_OAUTH_IN_PROGRESS_KEY = 'npc_contact_line_oauth_in_progress'
-const LINE_OAUTH_POPUP_NAME = 'npc_line_oauth'
+
+let lineOAuthPopupRef: Window | null = null
 
 export interface LineOAuthCallbackParams {
   line_user_id?: string
@@ -104,13 +108,36 @@ export function startLineLogin(): void {
   markLineOAuthInProgress()
   markLineOAuthKeeperTab()
 
-  const popup = window.open(url, LINE_OAUTH_POPUP_NAME)
+  closeLineOAuthPopupWindow(lineOAuthPopupRef)
+  lineOAuthPopupRef = null
+
+  const popup = window.open(url, LINE_OAUTH_POPUP_WINDOW_NAME)
+
   if (popup) {
+    lineOAuthPopupRef = popup
+    if (isLineContactMobileDevice()) {
+      try {
+        popup.focus()
+      } catch {
+        /* ignore */
+      }
+    }
     return
   }
 
   clearLineOAuthKeeperTab()
   window.location.replace(url)
+}
+
+/** เรียกจากแท็บ /contact เดิมเมื่อได้ผล OAuth หรือผู้ใช้กลับจากแอป LINE */
+export function cleanupLineOAuthAfterKeeperReturn(): void {
+  closeLineOAuthPopupWindow(lineOAuthPopupRef)
+  lineOAuthPopupRef = null
+  try {
+    window.focus()
+  } catch {
+    /* ignore */
+  }
 }
 
 /**
@@ -260,6 +287,7 @@ export function stripLineOAuthParamsFromUrl(): void {
 export type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
 export {
   clearLineOAuthBroadcastResult,
+  closeLineOAuthPopupWindow,
   isLineOAuthKeeperTab,
   readLineOAuthBroadcastResult,
   subscribeLineOAuthBroadcast,

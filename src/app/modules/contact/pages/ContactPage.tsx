@@ -38,8 +38,11 @@ import { submitPublicInquiry } from '../api/submitInquiry'
 import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
 import {
   applyLineOAuthCallbackFromUrl,
+  cleanupLineOAuthAfterKeeperReturn,
   clearLineOAuthBroadcastResult,
+  clearLineOAuthInProgress,
   completeLineOAuthFromCallback,
+  isLineOAuthKeeperTab,
   readLineOAuthBroadcastResult,
   stripLineOAuthParamsFromUrl,
   subscribeLineOAuthBroadcast,
@@ -109,12 +112,41 @@ export function ContactPage() {
         setChannelConnectError(payload.error)
       }
       clearLineOAuthBroadcastResult()
+      clearLineOAuthInProgress()
+      if (isLineOAuthKeeperTab()) {
+        cleanupLineOAuthAfterKeeperReturn()
+      }
     }
 
     const pending = readLineOAuthBroadcastResult()
     if (pending) applyBroadcast(pending)
 
     return subscribeLineOAuthBroadcast(applyBroadcast)
+  }, [])
+
+  useEffect(() => {
+    if (!isLineOAuthKeeperTab()) return
+
+    function onKeeperVisible() {
+      if (document.visibilityState !== 'visible') return
+      const pending = readLineOAuthBroadcastResult()
+      if (pending) {
+        if (pending.type === 'success') {
+          setLineUserId(pending.userId)
+          setLineDisplayName(pending.displayName)
+          setChannelConnectError(null)
+          setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+        } else {
+          setChannelConnectError(pending.error)
+        }
+        clearLineOAuthBroadcastResult()
+        clearLineOAuthInProgress()
+      }
+      cleanupLineOAuthAfterKeeperReturn()
+    }
+
+    document.addEventListener('visibilitychange', onKeeperVisible)
+    return () => document.removeEventListener('visibilitychange', onKeeperVisible)
   }, [])
 
   useEffect(() => {

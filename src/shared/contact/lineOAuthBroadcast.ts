@@ -1,6 +1,8 @@
 /** ส่งผล LINE Login จากแท็บ callback กลับแท็บ /contact เดิม */
 export const LINE_OAUTH_BROADCAST_CHANNEL = 'npc_contact_line_oauth'
 export const LINE_OAUTH_RESULT_LS_KEY = 'npc_contact_line_oauth_result'
+/** ชื่อหน้าต่างจาก window.open — ใช้ปิดแท็บ access.line.me ที่ค้าง */
+export const LINE_OAUTH_POPUP_WINDOW_NAME = 'npc_line_oauth'
 const LINE_OAUTH_KEEPER_TAB_KEY = 'npc_contact_line_oauth_keeper'
 const RESULT_MAX_AGE_MS = 5 * 60 * 1000
 
@@ -41,6 +43,24 @@ export function clearLineOAuthKeeperTab(): void {
   }
 }
 
+/** ปิดแท็บ/หน้าต่าง OAuth ที่ค้างบน access.line.me (มักไม่ได้รับ redirect บนมือถือ) */
+export function closeLineOAuthPopupWindow(popupRef?: Window | null): void {
+  try {
+    popupRef?.close()
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const named = window.open('', LINE_OAUTH_POPUP_WINDOW_NAME)
+    if (named && named !== window && !named.closed) {
+      named.close()
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function publishLineOAuthResult(payload: LineOAuthBroadcastPayload): void {
   try {
     localStorage.setItem(LINE_OAUTH_RESULT_LS_KEY, JSON.stringify(payload))
@@ -63,6 +83,8 @@ export function publishLineOAuthResult(payload: LineOAuthBroadcastPayload): void
       /* ignore */
     }
   }
+
+  closeLineOAuthPopupWindow()
 }
 
 export function readLineOAuthBroadcastResult(): LineOAuthBroadcastPayload | null {
@@ -127,11 +149,27 @@ export function subscribeLineOAuthBroadcast(
 /** แท็บที่ LINE เปิดกลับมาพร้อม ?code= — ปิดหลังส่งผลไปแท็บเดิมแล้ว */
 export function tryCloseLineOAuthCallbackTab(): void {
   if (isLineOAuthKeeperTab()) return
+
+  closeLineOAuthPopupWindow()
+
   window.setTimeout(() => {
     try {
       window.close()
     } catch {
       /* ignore */
     }
+
+    window.setTimeout(() => {
+      if (typeof document === 'undefined') return
+      if (!document.hidden) return
+      try {
+        const path = window.location.pathname
+        if (path === '/contact' || path.endsWith('/contact')) {
+          document.title = 'เชื่อมต่อ LINE แล้ว — กลับแท็บ /contact'
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 300)
   }, 400)
 }
