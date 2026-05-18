@@ -1,5 +1,4 @@
 import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
-import { openLineUrlInPlace } from '../../../shared/contact/lineInPlaceOpen'
 import { isMobileBrowser } from '../../../shared/line/lineStaffOpenUrl'
 
 export interface ContactHandoffState {
@@ -25,21 +24,38 @@ export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
 }
 
+function lineSchemeUrl(httpsUrl: string): string | null {
+  try {
+    const parsed = new URL(httpsUrl)
+    if (!parsed.pathname.includes('/oaMessage/')) return null
+    return `line:/${parsed.pathname}${parsed.search}`
+  } catch {
+    return null
+  }
+}
+
 /**
  * เปิดแชท LINE @npcreate พร้อมข้อความจากฟอร์ม
- * ใช้เฉพาะ https://line.me/R/oaMessage/ — ไม่ใช้ line:// (deprecated, ทำให้ LINE แจ้ง "ไม่สามารถเชื่อมต่อได้")
- * มือถือ: เปิดแอปผ่าน universal link โดยไม่พาเบราว์เซอร์ออกจากหน้า success
+ * ลูกค้ากดส่งในแอป → ข้อความเข้า inbox ทีม NP Create
  */
 export function openLineChatForInquiry(chatUrl: string): void {
   const target = chatUrl.trim()
   if (!target) return
 
   if (isMobileBrowser()) {
-    openLineUrlInPlace(target)
-    return
+    const scheme = lineSchemeUrl(target)
+    if (scheme) {
+      window.location.assign(scheme)
+      window.setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.assign(target)
+        }
+      }, 500)
+      return
+    }
   }
 
-  window.open(target, '_blank', 'noopener,noreferrer')
+  window.location.assign(target)
 }
 
 /** @deprecated ใช้ openLineChatForInquiry */
