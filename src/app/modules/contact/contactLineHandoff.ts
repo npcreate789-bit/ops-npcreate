@@ -1,9 +1,5 @@
 import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
-import {
-  openLineHandoffPopup,
-  openLineOaMessageLink,
-  scheduleContactHandoffWindowClose,
-} from '../../../shared/contact/lineOaOpen'
+import { openLineOaMessageLink } from '../../../shared/contact/lineOaOpen'
 
 export interface ContactHandoffState {
   lineMessage: string
@@ -28,28 +24,16 @@ export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
 }
 
-export { openLineHandoffPopup }
-
-/** เปิด LINE ในแท็บแยก — ไม่พา /contact ไป line.me */
-export function openLineChatForInquiry(
-  chatUrl: string,
-  handoffWindow: Window | null = null,
-): void {
-  openLineOaMessageLink(chatUrl, handoffWindow)
+/** เปิดแชท LINE @npcreate — มือถือพยายามเปิดแอปโดยตรง ไม่ค้างหน้า line.me */
+export function openLineChatForInquiry(chatUrl: string): void {
+  openLineOaMessageLink(chatUrl)
 }
 
-/** ปิดแท็บ handoff + ออกจาก /contact หลังเปิด LINE */
-export function finishContactHandoffAfterSubmit(handoffWindow: Window | null): void {
-  scheduleContactHandoffWindowClose(handoffWindow)
-}
-
-/** @deprecated */
+/** @deprecated ใช้ openLineChatForInquiry */
 export function navigateToLineHandoff(url?: string): void {
   if (url) openLineChatForInquiry(url)
 }
 
 export function reopenLineInquiryHandoff(chatUrl: string): void {
-  const win = openLineHandoffPopup()
-  openLineChatForInquiry(chatUrl, win)
-  finishContactHandoffAfterSubmit(win)
+  openLineChatForInquiry(chatUrl)
 }
