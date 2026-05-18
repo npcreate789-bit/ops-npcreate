@@ -37,17 +37,9 @@ import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
 import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
 import {
-  applyLineOAuthBroadcastPayload,
   applyLineOAuthCallbackFromUrl,
-  cleanupLineOAuthAfterKeeperReturn,
-  clearLineOAuthBroadcastResult,
   completeLineOAuthFromCallback,
-  isLineOAuthInProgress,
-  isLineOAuthKeeperTab,
-  readLineOAuthBroadcastResult,
   stripLineOAuthParamsFromUrl,
-  subscribeLineOAuthBroadcast,
-  type LineOAuthBroadcastPayload,
 } from '../../../../shared/contact/lineOAuth'
 import '../contact.css'
 
@@ -99,72 +91,11 @@ export function ContactPage() {
     channelConnect?: string
   }>({})
   const [handedOff, setHandedOff] = useState(false)
+  const [lineOAuthCompleting, setLineOAuthCompleting] = useState(
+    () => searchParams.has('code') || searchParams.has('line_connected'),
+  )
 
   const lineLoginReady = isContactLineLoginReady(lineUserId)
-
-  useEffect(() => {
-    function applyBroadcast(payload: LineOAuthBroadcastPayload) {
-      const result = applyLineOAuthBroadcastPayload(payload)
-      if ('userId' in result) {
-        setLineUserId(result.userId)
-        setLineDisplayName(result.displayName)
-        setChannelConnectError(null)
-        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
-      } else {
-        setChannelConnectError(result.error)
-        setFieldErrors((e) => ({ ...e, channelConnect: result.error }))
-      }
-      clearLineOAuthBroadcastResult()
-      if (isLineOAuthKeeperTab()) {
-        cleanupLineOAuthAfterKeeperReturn()
-      }
-    }
-
-    const pending = readLineOAuthBroadcastResult()
-    if (pending) applyBroadcast(pending)
-
-    return subscribeLineOAuthBroadcast(applyBroadcast)
-  }, [])
-
-  useEffect(() => {
-    if (!isLineOAuthKeeperTab() || !isLineOAuthInProgress()) return
-
-    function syncFromBroadcast() {
-      const pending = readLineOAuthBroadcastResult()
-      if (!pending) return false
-
-      const result = applyLineOAuthBroadcastPayload(pending)
-      if ('userId' in result) {
-        setLineUserId(result.userId)
-        setLineDisplayName(result.displayName)
-        setChannelConnectError(null)
-        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
-      } else {
-        setChannelConnectError(result.error)
-        setFieldErrors((e) => ({ ...e, channelConnect: result.error }))
-      }
-      clearLineOAuthBroadcastResult()
-      cleanupLineOAuthAfterKeeperReturn()
-      return true
-    }
-
-    function onKeeperVisible() {
-      if (document.visibilityState !== 'visible') return
-      syncFromBroadcast()
-    }
-
-    const pollId = window.setInterval(() => {
-      if (syncFromBroadcast()) {
-        window.clearInterval(pollId)
-      }
-    }, 1500)
-
-    document.addEventListener('visibilitychange', onKeeperVisible)
-    return () => {
-      window.clearInterval(pollId)
-      document.removeEventListener('visibilitychange', onKeeperVisible)
-    }
-  }, [])
 
   useEffect(() => {
     const storedLine = readLineConnection()
@@ -176,19 +107,30 @@ export function ContactPage() {
     let cancelled = false
 
     async function finishOAuthReturn() {
-      const fromCode = await completeLineOAuthFromCallback(searchParams)
-      const lineResult = fromCode ?? applyLineOAuthCallbackFromUrl(searchParams)
-      if (!lineResult || cancelled) return
+      const hasOAuthReturn =
+        searchParams.has('code') ||
+        searchParams.has('line_connected') ||
+        searchParams.has('line_error')
+      if (hasOAuthReturn) setLineOAuthCompleting(true)
 
-      if (lineResult.ok) {
-        setLineUserId(lineResult.userId)
-        setLineDisplayName(lineResult.displayName)
-        setChannelConnectError(null)
-        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
-      } else {
-        setChannelConnectError(lineResult.error)
+      try {
+        const fromCode = await completeLineOAuthFromCallback(searchParams)
+        const lineResult = fromCode ?? applyLineOAuthCallbackFromUrl(searchParams)
+        if (!lineResult || cancelled) return
+
+        if (lineResult.ok) {
+          setLineUserId(lineResult.userId)
+          setLineDisplayName(lineResult.displayName)
+          setChannelConnectError(null)
+          setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+        } else {
+          setChannelConnectError(lineResult.error)
+          setFieldErrors((e) => ({ ...e, channelConnect: lineResult.error }))
+        }
+        stripLineOAuthParamsFromUrl()
+      } finally {
+        if (!cancelled) setLineOAuthCompleting(false)
       }
-      stripLineOAuthParamsFromUrl()
     }
 
     void finishOAuthReturn()
@@ -442,6 +384,7 @@ export function ContactPage() {
               <ContactLineLoginStep
                 lineUserId={lineUserId || null}
                 lineDisplayName={lineDisplayName}
+                lineOAuthCompleting={lineOAuthCompleting}
                 onLineDisconnected={() => {
                   setLineUserId('')
                   setLineDisplayName(null)

@@ -8,23 +8,12 @@ import {
   LINE_CHANNEL_ID,
   persistLineConnection,
 } from './channelConnectConfig'
-import {
-  clearLineOAuthKeeperTab,
-  closeLineOAuthPopupWindow,
-  LINE_OAUTH_POPUP_WINDOW_NAME,
-  markLineOAuthKeeperTab,
-  publishLineOAuthResult,
-  tryCloseLineOAuthCallbackTab,
-} from './lineOAuthBroadcast'
 import type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
-import { isLineContactMobileDevice } from './lineInPlaceOpen'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
 const LINE_AUTH_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const LINE_OAUTH_IN_PROGRESS_KEY = 'npc_contact_line_oauth_in_progress'
-
-let lineOAuthPopupRef: Window | null = null
 
 export interface LineOAuthCallbackParams {
   line_user_id?: string
@@ -88,90 +77,24 @@ export function isLineOAuthInProgress(): boolean {
 
 function applyOAuthSuccess(userId: string, displayName: string | null): void {
   persistLineConnection(userId, displayName ?? undefined)
-  publishLineOAuthResult({
-    type: 'success',
-    userId,
-    displayName,
-    at: Date.now(),
-  })
   clearLineOAuthInProgress()
 }
 
-function applyOAuthError(message: string): void {
-  publishLineOAuthResult({
-    type: 'error',
-    error: message,
-    at: Date.now(),
-  })
+function applyOAuthError(): void {
   clearLineOAuthInProgress()
-}
-
-function openLineOAuthInNewTab(url: string): Window | null {
-  if (isLineContactMobileDevice()) {
-    const popup = window.open(url, '_blank')
-    if (popup && popup !== window) {
-      return popup
-    }
-
-    const link = document.createElement('a')
-    link.href = url
-    link.target = '_blank'
-    link.style.display = 'none'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    return null
-  }
-
-  const popup = window.open(url, LINE_OAUTH_POPUP_WINDOW_NAME)
-  if (!popup || popup === window) return null
-  return popup
 }
 
 /**
- * แท็บ /contact เดิมค้างอยู่ — เปิด OAuth ในแท็บ/หน้าต่างอื่น
- * แท็บ callback ส่งผลกลับมาที่นี่ผ่าน BroadcastChannel
+ * LINE Login แท็บเดียว: /contact → access.line.me → /contact?code=...
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
   markLineOAuthInProgress()
-  markLineOAuthKeeperTab()
-
-  closeLineOAuthPopupWindow(lineOAuthPopupRef)
-  lineOAuthPopupRef = null
-
-  const popup = openLineOAuthInNewTab(url)
-  if (popup) {
-    lineOAuthPopupRef = popup
-    try {
-      popup.focus()
-    } catch {
-      /* ignore */
-    }
-    return
-  }
-
-  if (!isLineContactMobileDevice()) {
-    clearLineOAuthKeeperTab()
-    clearLineOAuthInProgress()
-    throw new Error('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป — อนุญาตป๊อปอัปแล้วลองใหม่')
-  }
-}
-
-/** เรียกจากแท็บ keeper หลังได้ผล OAuth สำเร็จเท่านั้น */
-export function cleanupLineOAuthAfterKeeperReturn(): void {
-  closeLineOAuthPopupWindow(lineOAuthPopupRef)
-  lineOAuthPopupRef = null
-  clearLineOAuthKeeperTab()
-  try {
-    window.focus()
-  } catch {
-    /* ignore */
-  }
+  window.location.assign(url)
 }
 
 /**
- * แลก code บน /contact (มักเป็นแท็บใหม่ที่ LINE เปิด)
+ * แลก code บน /contact หลัง LINE redirect กลับมาแท็บเดิม
  */
 export async function completeLineOAuthFromCallback(
   searchParams: URLSearchParams,
@@ -181,8 +104,7 @@ export async function completeLineOAuthFromCallback(
   const oauthError = searchParams.get('error')
   if (oauthError) {
     const message = mapLineOAuthError(oauthError)
-    applyOAuthError(message)
-    tryCloseLineOAuthCallbackTab()
+    applyOAuthError()
     return { ok: false, error: message }
   }
 
@@ -193,15 +115,13 @@ export async function completeLineOAuthFromCallback(
   const storedState = consumeStoredLineOAuthState()
   if (!storedState || storedState !== stateParam) {
     const message = 'เซสชัน LINE Login หมดอายุ — กรุณากดเชื่อมต่อใหม่'
-    applyOAuthError(message)
-    tryCloseLineOAuthCallbackTab()
+    applyOAuthError()
     return { ok: false, error: message }
   }
 
   if (!isSupabaseConfigured || !supabase) {
     const message = 'ระบบยังไม่พร้อม — ลองใหม่ภายหลัง'
-    applyOAuthError(message)
-    tryCloseLineOAuthCallbackTab()
+    applyOAuthError()
     return { ok: false, error: message }
   }
 
@@ -216,8 +136,7 @@ export async function completeLineOAuthFromCallback(
   if (error) {
     const message = await parseFunctionInvokeError(error, data)
     const friendly = message || 'เชื่อมต่อ LINE ไม่สำเร็จ'
-    applyOAuthError(friendly)
-    tryCloseLineOAuthCallbackTab()
+    applyOAuthError()
     return { ok: false, error: friendly }
   }
 
@@ -230,15 +149,13 @@ export async function completeLineOAuthFromCallback(
 
   if (!result?.ok || !result.user_id) {
     const message = mapLineOAuthError(result?.error ?? 'token_exchange_failed')
-    applyOAuthError(message)
-    tryCloseLineOAuthCallbackTab()
+    applyOAuthError()
     return { ok: false, error: message }
   }
 
   const displayName = result.display_name ?? null
   applyOAuthSuccess(result.user_id, displayName)
   stripLineOAuthParamsFromUrl()
-  tryCloseLineOAuthCallbackTab()
 
   return {
     ok: true,
@@ -254,8 +171,7 @@ export function applyLineOAuthCallbackFromUrl(
   const error = searchParams.get('line_error')
   if (error) {
     const message = mapLineOAuthError(error)
-    applyOAuthError(message)
-    tryCloseLineOAuthCallbackTab()
+    applyOAuthError()
     return { ok: false, error: message }
   }
 
@@ -264,14 +180,13 @@ export function applyLineOAuthCallbackFromUrl(
   const userId = searchParams.get('line_user_id')?.trim()
   if (!userId) {
     const message = 'ไม่พบ LINE user ID — ลองเชื่อมต่อใหม่'
-    applyOAuthError(message)
+    applyOAuthError()
     return { ok: false, error: message }
   }
 
   const displayName = searchParams.get('line_name')?.trim() || null
   applyOAuthSuccess(userId, displayName)
   stripLineOAuthParamsFromUrl()
-  tryCloseLineOAuthCallbackTab()
   return { ok: true, userId, displayName }
 }
 
@@ -314,7 +229,7 @@ export function stripLineOAuthParamsFromUrl(): void {
   }
 }
 
-/** นำผล OAuth ไปใช้บนแท็บ keeper (เรียกจาก broadcast / poll) */
+/** @deprecated แท็บเดียว — ใช้ผลจาก completeLineOAuthFromCallback โดยตรง */
 export function applyLineOAuthBroadcastPayload(
   payload: LineOAuthBroadcastPayload,
 ): { userId: string; displayName: string | null } | { error: string } {
@@ -330,8 +245,6 @@ export function applyLineOAuthBroadcastPayload(
 export type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
 export {
   clearLineOAuthBroadcastResult,
-  closeLineOAuthPopupWindow,
-  isLineOAuthKeeperTab,
   readLineOAuthBroadcastResult,
   subscribeLineOAuthBroadcast,
 } from './lineOAuthBroadcast'

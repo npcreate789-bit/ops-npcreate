@@ -5,15 +5,12 @@ import {
   lineOAuthDisabledHint,
   lineOAuthHostMismatchHint,
 } from '../../../../shared/contact/channelConnectConfig'
-import {
-  isLineOAuthInProgress,
-  isLineOAuthKeeperTab,
-  startLineLogin,
-} from '../../../../shared/contact/lineOAuth'
+import { startLineLogin } from '../../../../shared/contact/lineOAuth'
 
 interface ContactLineLoginStepProps {
   lineUserId: string | null
   lineDisplayName: string | null
+  lineOAuthCompleting?: boolean
   onLineDisconnected: () => void
   onLoginError?: (message: string) => void
   error?: string
@@ -22,6 +19,7 @@ interface ContactLineLoginStepProps {
 export function ContactLineLoginStep({
   lineUserId,
   lineDisplayName,
+  lineOAuthCompleting = false,
   onLineDisconnected,
   onLoginError,
   error,
@@ -29,7 +27,6 @@ export function ContactLineLoginStep({
   const oauthReady = isLineOAuthConfigured()
   const oauthDisabledReason = oauthReady ? null : getLineOAuthDisabledReason()
   const connected = Boolean(lineUserId)
-  const waitingOnKeeperTab = isLineOAuthKeeperTab() && isLineOAuthInProgress() && !connected
 
   const hostMismatchHint = lineOAuthHostMismatchHint()
 
@@ -78,12 +75,17 @@ export function ContactLineLoginStep({
           </div>
         ) : oauthReady ? (
           <>
-            <button type="button" className="contact-connect__primary" onClick={handleLineLogin}>
-              {waitingOnKeeperTab ? 'กำลังเชื่อมต่อ LINE...' : 'เชื่อมต่อ LINE Login'}
+            <button
+              type="button"
+              className="contact-connect__primary"
+              onClick={handleLineLogin}
+              disabled={lineOAuthCompleting}
+            >
+              {lineOAuthCompleting ? 'กำลังเชื่อมต่อ LINE...' : 'เชื่อมต่อ LINE Login'}
             </button>
-            {waitingOnKeeperTab && (
+            {lineOAuthCompleting && (
               <p className="contact-section__hint contact-section__hint--muted">
-                ยืนยันในแอป LINE แล้ว<strong>กลับมาแท็บนี้</strong> — หน้านี้จะแสดง「เชื่อมต่อแล้ว」อัตโนมัติ
+                กำลังยืนยันบัญชี LINE...
               </p>
             )}
             {hostMismatchHint && (
