@@ -34,7 +34,6 @@ import { submitPublicInquiry } from '../api/submitInquiry'
 import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
 import {
   applyLineOAuthCallbackFromUrl,
-  finishLineOAuthPopupReturn,
   stripLineOAuthParamsFromUrl,
 } from '../../../../shared/contact/lineOAuth'
 import '../contact.css'
@@ -89,10 +88,6 @@ export function ContactPage() {
     if (storedLine) {
       setLineUserId(storedLine.userId)
       setLineDisplayName(storedLine.displayName)
-    }
-
-    if (finishLineOAuthPopupReturn(searchParams)) {
-      return
     }
 
     const lineResult = applyLineOAuthCallbackFromUrl(searchParams)

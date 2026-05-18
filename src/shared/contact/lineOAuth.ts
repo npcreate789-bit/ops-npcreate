@@ -8,7 +8,7 @@ import {
 } from './channelConnectConfig'
 
 const LINE_AUTH_URL = 'https://access.line.me/oauth2/v2.1/authorize'
-const LINE_LOGIN_POPUP_NAME = 'npcreate_line_login'
+const LINE_OAUTH_IN_PROGRESS_KEY = 'npc_contact_line_oauth_in_progress'
 
 export interface LineOAuthCallbackParams {
   line_user_id?: string
@@ -33,69 +33,45 @@ function buildLineAuthorizeUrl(): string {
     redirect_uri: redirectUri,
     state,
     scope: 'profile openid',
-    bot_prompt: 'aggressive',
+    /** normal = ไม่บังคับ add-OA ระหว่าง login (ลดหน้าต่าง/ขั้นตอนซ้อน) */
+    bot_prompt: 'normal',
   })
 
   return `${LINE_AUTH_URL}?${params.toString()}`
 }
 
-function openLineLoginPopup(url: string): Window | null {
-  const width = 480
-  const height = 700
-  const left = Math.round(window.screenX + (window.outerWidth - width) / 2)
-  const top = Math.round(window.screenY + (window.outerHeight - height) / 2)
-  const features = [
-    'popup=yes',
-    `width=${width}`,
-    `height=${height}`,
-    `left=${left}`,
-    `top=${top}`,
-    'noopener=no',
-    'noreferrer=no',
-  ].join(',')
-
-  const popup = window.open(url, LINE_LOGIN_POPUP_NAME, features)
-  if (!popup) return null
+function markLineOAuthInProgress(): void {
   try {
-    popup.focus()
+    sessionStorage.setItem(LINE_OAUTH_IN_PROGRESS_KEY, String(Date.now()))
   } catch {
     /* ignore */
   }
-  return popup
 }
 
-/** เริ่ม LINE Login — เปิด popup ถ้าได้ (หน้า /contact ค้าง) ไม่ได้จึง redirect เต็มหน้า */
-export function startLineLogin(): void {
-  const url = buildLineAuthorizeUrl()
-  const popup = openLineLoginPopup(url)
-  if (popup) return
-  window.location.assign(url)
-}
-
-function isLineOAuthReturnUrl(searchParams: URLSearchParams): boolean {
-  return (
-    searchParams.get('line_connected') === '1' ||
-    Boolean(searchParams.get('line_error')?.trim())
-  )
-}
-
-/**
- * ถ้า OAuth จบใน popup — ส่ง URL กลับหน้า /contact หลักแล้วปิด popup
- * (ลดแท็บ access.line.me ค้าง)
- */
-export function finishLineOAuthPopupReturn(searchParams: URLSearchParams): boolean {
-  if (typeof window === 'undefined') return false
-  if (!isLineOAuthReturnUrl(searchParams)) return false
-  if (!window.opener || window.opener.closed) return false
-
+export function clearLineOAuthInProgress(): void {
   try {
-    window.opener.location.href = window.location.href
-    window.opener.focus()
-    window.close()
-    return true
+    sessionStorage.removeItem(LINE_OAUTH_IN_PROGRESS_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isLineOAuthInProgress(): boolean {
+  try {
+    return Boolean(sessionStorage.getItem(LINE_OAUTH_IN_PROGRESS_KEY))
   } catch {
     return false
   }
+}
+
+/**
+ * เริ่ม LINE Login — redirect ในแท็บเดียว (ตามแนวทาง LINE Web Login)
+ * ไม่ใช้ popup เพราะจะซ้อนกับปุ่ม «เข้าสู่ระบบด้วยแอป LINE» แล้วกลายนหลายหน้าต่าง
+ */
+export function startLineLogin(): void {
+  const url = buildLineAuthorizeUrl()
+  markLineOAuthInProgress()
+  window.location.assign(url)
 }
 
 /** อ่าน query หลัง redirect กลับจาก edge function */
@@ -104,6 +80,7 @@ export function applyLineOAuthCallbackFromUrl(
 ): { ok: true; userId: string; displayName: string | null } | { ok: false; error: string } | null {
   const error = searchParams.get('line_error')
   if (error) {
+    clearLineOAuthInProgress()
     return { ok: false, error: mapLineOAuthError(error) }
   }
 
@@ -111,11 +88,13 @@ export function applyLineOAuthCallbackFromUrl(
 
   const userId = searchParams.get('line_user_id')?.trim()
   if (!userId) {
+    clearLineOAuthInProgress()
     return { ok: false, error: 'ไม่พบ LINE user ID — ลองเชื่อมต่อใหม่' }
   }
 
   const displayName = searchParams.get('line_name')?.trim() || null
   persistLineConnection(userId, displayName ?? undefined)
+  clearLineOAuthInProgress()
   return { ok: true, userId, displayName }
 }
 
