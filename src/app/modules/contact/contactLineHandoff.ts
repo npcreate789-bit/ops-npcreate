@@ -1,6 +1,5 @@
 import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
-import { openLineUrlInPlace } from '../../../shared/contact/lineInPlaceOpen'
-import { isMobileBrowser } from '../../../shared/line/lineStaffOpenUrl'
+import { openLineOaMessageLink } from '../../../shared/contact/lineOaOpen'
 
 export interface ContactHandoffState {
   lineMessage: string
@@ -25,21 +24,9 @@ export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
 }
 
-/**
- * เปิดแชท LINE @npcreate พร้อมข้อความจากฟอร์ม
- * ใช้เฉพาะ https://line.me/R/oaMessage/ — ไม่ใช้ line:// (deprecated, ทำให้ LINE แจ้ง "ไม่สามารถเชื่อมต่อได้")
- * มือถือ: เปิดแอปผ่าน universal link โดยไม่พาเบราว์เซอร์ออกจากหน้า success
- */
+/** เปิดแชท LINE @npcreate — มือถือพยายามเปิดแอปโดยตรง ไม่ค้างหน้า line.me */
 export function openLineChatForInquiry(chatUrl: string): void {
-  const target = chatUrl.trim()
-  if (!target) return
-
-  if (isMobileBrowser()) {
-    openLineUrlInPlace(target)
-    return
-  }
-
-  window.open(target, '_blank', 'noopener,noreferrer')
+  openLineOaMessageLink(chatUrl)
 }
 
 /** @deprecated ใช้ openLineChatForInquiry */
