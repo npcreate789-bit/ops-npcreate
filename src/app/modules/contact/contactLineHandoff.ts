@@ -1,8 +1,10 @@
 import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
+import { isMobileBrowser } from '../../../shared/line/lineStaffOpenUrl'
 
 const PENDING_MESSAGE_KEY = 'npc_contact_handoff_line_message'
+const PENDING_CHAT_URL_KEY = 'npc_contact_handoff_chat_url'
+const PENDING_PUSHED_KEY = 'npc_contact_handoff_pushed'
 
-/** รอ fallback UI ถ้าเบราว์เซอร์ไม่ออกจากหน้า */
 export const LINE_HANDOFF_FALLBACK_UI_MS = 900
 
 export function buildContactLineInquiryMessage(input: {
@@ -17,12 +19,21 @@ export function buildContactLineInquiryMessage(input: {
   return lines.join('\n')
 }
 
-export function persistContactLineHandoffMessage(message: string): void {
+export function persistContactLineHandoffState(input: {
+  message: string
+  chatUrl: string
+  pushedToChat: boolean
+}): boolean {
+  const trimmed = input.message.trim()
+  if (!trimmed) return false
   try {
-    sessionStorage.setItem(PENDING_MESSAGE_KEY, message.trim())
+    sessionStorage.setItem(PENDING_MESSAGE_KEY, trimmed)
+    sessionStorage.setItem(PENDING_CHAT_URL_KEY, input.chatUrl)
+    sessionStorage.setItem(PENDING_PUSHED_KEY, input.pushedToChat ? '1' : '0')
   } catch {
-    /* ignore */
+    return false
   }
+  return true
 }
 
 export function readContactLineHandoffMessage(): string | null {
@@ -33,40 +44,70 @@ export function readContactLineHandoffMessage(): string | null {
   }
 }
 
+export function readContactLineHandoffChatUrl(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_CHAT_URL_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function wasContactLineHandoffPushed(): boolean {
+  try {
+    return sessionStorage.getItem(PENDING_PUSHED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
 }
 
-/** เปิดแชท LINE @npcreate พร้อมข้อความ (เรียกทันทีหลังกดส่ง — ยังอยู่ใน user gesture chain) */
-export function navigateToLineHandoff(message?: string): void {
-  const trimmed = (message ?? readContactLineHandoffMessage() ?? '').trim()
-  if (!trimmed) return
-
-  const url = contactLineHandoffUrl(trimmed)
-
+function lineSchemeUrl(httpsUrl: string): string | null {
   try {
-    const link = document.createElement('a')
-    link.href = url
-    link.rel = 'noopener noreferrer'
-    link.style.display = 'none'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
+    const parsed = new URL(httpsUrl)
+    if (!parsed.pathname.includes('/oaMessage/')) return null
+    return `line:/${parsed.pathname}${parsed.search}`
   } catch {
-    /* ignore */
+    return null
   }
-  window.location.assign(url)
 }
 
-/** บันทึกข้อความก่อนเปิด LINE */
+/** เปิดแชท LINE @npcreate (มือถือลอง line:// ก่อน แล้ว https) */
+export function navigateToLineHandoff(url?: string): void {
+  const target = (url ?? readContactLineHandoffChatUrl() ?? '').trim()
+  if (!target) {
+    const msg = readContactLineHandoffMessage()
+    if (!msg) return
+    navigateToLineHandoff(contactLineHandoffUrl(msg))
+    return
+  }
+
+  if (isMobileBrowser()) {
+    const scheme = lineSchemeUrl(target)
+    if (scheme) {
+      window.location.assign(scheme)
+      window.setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          window.location.assign(target)
+        }
+      }, 600)
+      return
+    }
+  }
+
+  window.location.assign(target)
+}
+
 export function prepareLineInquiryHandoff(message: string): boolean {
-  const trimmed = message.trim()
-  if (!trimmed) return false
-  persistContactLineHandoffMessage(trimmed)
-  return true
+  return persistContactLineHandoffState({
+    message,
+    chatUrl: contactLineHandoffUrl(message),
+    pushedToChat: false,
+  })
 }
 
-/** เปิด LINE อีกครั้งจากหน้ารอ handoff */
 export function reopenLineInquiryHandoff(): void {
   navigateToLineHandoff()
 }
