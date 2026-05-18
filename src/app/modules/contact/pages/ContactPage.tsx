@@ -18,21 +18,14 @@ import {
   markContactCooldown,
 } from '../contactRateLimit'
 import {
-  NPCREATE_FACEBOOK_MESSENGER_URL,
-  PREFERRED_CONTACT_CHANNEL_OPTIONS,
-  type PreferredContactChannel,
-} from '../../../../shared/crm/preferredContactChannel'
-import { friendlyContactSubmitError, validateContactForm } from '../contactFormUtils'
+  friendlyContactSubmitError,
+  isContactLineReady,
+  validateContactForm,
+} from '../contactFormUtils'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
-import { ChannelConnectPanel } from '../components/ChannelConnectPanel'
 import { LineContactSetupPanel } from '../components/LineContactSetupPanel'
-import { FacebookCustomerChat } from '../components/FacebookCustomerChat'
 import {
-  isFacebookChatConfigured,
-  isFacebookLoginConfigured,
-  isLineOAuthConfigured,
-  readFacebookConnection,
   readLineConnection,
   readLineOaContactStepDone,
 } from '../../../../shared/contact/channelConnectConfig'
@@ -43,51 +36,44 @@ import {
 import '../contact.css'
 
 const HERO_POINTS = [
-  'ทีม Sales รับ Lead อัตโนมัติในระบบ',
-  'กรอกแค่ข้อมูลติดต่อ — รายละเอียดงานทำในขั้นตอนบรีฟภายหลัง',
-  'Account ติดต่อกลับภายใน 1–2 วันทำการ',
+  'เชื่อมต่อ LINE ก่อน แล้วกรอกข้อมูลสั้นๆ',
+  'ทีม Sales รับ Lead ในระบบทันที',
+  'ติดต่อกลับภายใน 1–2 วันทำการ',
 ] as const
 
 const SUCCESS_STEPS = [
-  'ทีม Sales ตรวจสอบและติดต่อกลับทางช่องทางที่คุณเลือก (LINE หรือ Facebook)',
-  'คุยรายละเอียดและเสนอแพ็กเกจนอกระบบ — ใบเสนอราคาส่งเมื่อพร้อม',
-  'หลังชำระและเริ่มงาน ใช้แชทใน Client Workspace และกรอกบรีฟ',
+  'ทีม Sales ติดต่อกลับทาง LINE @npcreate',
+  'คุยรายละเอียดและเสนอแพ็กเกจ — ใบเสนอราคาส่งเมื่อพร้อม',
+  'หลังเริ่มงาน ใช้แชทใน Client Workspace',
 ] as const
 
 export function ContactPage() {
   const [searchParams] = useSearchParams()
   const formRef = useRef<HTMLFormElement>(null)
-  const brandRef = useRef<HTMLInputElement>(null)
+  const contactNameRef = useRef<HTMLInputElement>(null)
   const formReadyAtRef = useRef(Date.now())
 
-  const [brandName, setBrandName] = useState('')
   const [companyWebsite, setCompanyWebsite] = useState('')
   const [contactName, setContactName] = useState('')
   const [phone, setPhone] = useState('')
-  const [preferredChannel, setPreferredChannel] = useState<PreferredContactChannel | ''>('')
-  const [lineId, setLineId] = useState('')
   const [lineUserId, setLineUserId] = useState('')
   const [lineDisplayName, setLineDisplayName] = useState<string | null>(null)
   const [lineOaStepDone, setLineOaStepDone] = useState(false)
-  const [facebook, setFacebook] = useState('')
-  const [facebookPsid, setFacebookPsid] = useState('')
-  const [facebookName, setFacebookName] = useState<string | null>(null)
   const [channelConnectError, setChannelConnectError] = useState<string | null>(null)
-  const [successChannel, setSuccessChannel] = useState<PreferredContactChannel | null>(null)
   const [businessType, setBusinessType] = useState('')
   const [services, setServices] = useState<string[]>([])
   const [serviceOptions, setServiceOptions] = useState<ServicePackageOption[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
-  const [budget, setBudget] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<{
-    brand?: string
-    preferredChannel?: string
-    lineId?: string
+    contactName?: string
+    phone?: string
     channelConnect?: string
   }>({})
   const [done, setDone] = useState(false)
+
+  const lineReady = isContactLineReady({ lineOaStepDone, lineUserId })
 
   useEffect(() => {
     setLineOaStepDone(readLineOaContactStepDone())
@@ -96,16 +82,10 @@ export function ContactPage() {
       setLineUserId(storedLine.userId)
       setLineDisplayName(storedLine.displayName)
     }
-    const storedFb = readFacebookConnection()
-    if (storedFb) {
-      setFacebookPsid(storedFb.psid)
-      setFacebookName(storedFb.name)
-    }
 
     const lineResult = applyLineOAuthCallbackFromUrl(searchParams)
     if (lineResult) {
       if (lineResult.ok) {
-        setPreferredChannel('line')
         setLineOaStepDone(readLineOaContactStepDone())
         setLineUserId(lineResult.userId)
         setLineDisplayName(lineResult.displayName)
@@ -155,22 +135,20 @@ export function ContactPage() {
     }
 
     const validation = validateContactForm({
-      brandName,
-      preferredChannel,
-      lineId,
+      contactName,
+      phone,
+      businessType,
+      services,
       lineUserId,
       lineOaStepDone,
-      facebook,
-      facebookPsid,
     })
     if (Object.keys(validation).length > 0) {
       setFieldErrors(validation)
       setFormError(null)
-      if (validation.brand) {
-        brandRef.current?.focus()
-        brandRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      } else {
+      if (validation.channelConnect) {
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } else if (validation.contactName) {
+        contactNameRef.current?.focus()
       }
       return
     }
@@ -178,24 +156,18 @@ export function ContactPage() {
     setSaving(true)
     setFormError(null)
     try {
-      const channel = preferredChannel as PreferredContactChannel
+      const name = contactName.trim()
       await submitPublicInquiry({
-        brand_name: brandName,
-        preferred_contact_channel: channel,
-        contact_name: contactName,
-        phone,
-        line_id:
-          channel === 'line' && !lineUserId.trim() ? lineId || undefined : lineId || undefined,
-        line_user_id: channel === 'line' ? lineUserId.trim() || undefined : undefined,
-        facebook,
-        facebook_psid: channel === 'facebook' ? facebookPsid.trim() || undefined : undefined,
+        brand_name: name,
+        preferred_contact_channel: 'line',
+        contact_name: name,
+        phone: phone.trim(),
+        line_user_id: lineUserId.trim(),
         business_type: businessType || undefined,
         services_interested: services,
-        ad_budget_monthly: budget ? Number(budget) : null,
         company_website: companyWebsite,
       })
       markContactCooldown()
-      setSuccessChannel(channel)
       setDone(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
@@ -217,21 +189,13 @@ export function ContactPage() {
           </div>
           <h2>ส่งข้อมูลเรียบร้อย</h2>
           <p>
-            ขอบคุณที่สนใจ {COMPANY_BRAND_NAME} ทีมงานได้รับข้อมูลแล้วและจะติดต่อกลับโดยเร็วที่สุด
+            ขอบคุณที่สนใจ {COMPANY_BRAND_NAME} ทีมงานจะติดต่อกลับทาง LINE @npcreate
           </p>
           <ol className="contact-success-steps">
             {SUCCESS_STEPS.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>
-          {successChannel === 'line' && (
-            <p className="contact-section__hint contact-success-channel-hint">
-              ทีมจะติดต่อกลับทาง LINE @npcreate ตามข้อความ &quot;สนใจบริการ&quot; ที่คุณส่งไว้
-            </p>
-          )}
-          {successChannel === 'facebook' && isFacebookChatConfigured() && (
-            <FacebookCustomerChat autoOpen />
-          )}
           <div className="contact-success-actions">
             <Link to={loginPathForAudience('client')} className="contact-link--primary">
               เข้าสู่ระบบ (ลูกค้าปัจจุบัน)
@@ -263,8 +227,7 @@ export function ContactPage() {
             ติดต่อ<span className="contact-hero__accent">ทีมงาน</span>
           </h1>
           <p className="contact-hero__lead">
-            ฝากข้อมูลติดต่อและบริการที่สนใจ — ข้อมูลเข้าสู่ระบบ NP Create OS ทันที
-            รายละเอียดงานเพิ่มเติมกรอกในขั้นตอนบรีฟหลังเริ่มงานจริง
+            เชื่อมต่อ LINE ก่อน จากนั้นกรอกข้อมูลสั้นๆ — ทีม Sales รับ Lead ในระบบทันที
           </p>
           <ul className="contact-hero__list">
             {HERO_POINTS.map((point) => (
@@ -303,258 +266,119 @@ export function ContactPage() {
               </div>
             )}
 
-            <section className="contact-section" aria-labelledby="contact-sec-brand">
-              <h2 id="contact-sec-brand" className="contact-section__title">
-                ข้อมูลแบรนด์
+            <section className="contact-section" aria-labelledby="contact-sec-line">
+              <h2 id="contact-sec-line" className="contact-section__title">
+                ขั้นที่ 1 — เชื่อมต่อ LINE
               </h2>
-              <ContactInput
-                id="contact-brand"
-                ref={brandRef}
-                label="ชื่อแบรนด์"
-                required
-                error={fieldErrors.brand}
-                value={brandName}
-                onChange={(e) => {
-                  setBrandName(e.target.value)
-                  if (fieldErrors.brand) setFieldErrors({})
+              <LineContactSetupPanel
+                lineUserId={lineUserId || null}
+                lineDisplayName={lineDisplayName}
+                lineOaStepDone={lineOaStepDone}
+                onLineOaStepDone={() => {
+                  setLineOaStepDone(true)
+                  setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
                 }}
-                placeholder="เช่น แบรนด์สกินแคร์ ABC"
-                autoComplete="organization"
+                onLineDisconnected={() => {
+                  setLineUserId('')
+                  setLineDisplayName(null)
+                }}
+                error={fieldErrors.channelConnect ?? channelConnectError ?? undefined}
               />
-              <ContactInput
-                id="contact-name"
-                label="ชื่อผู้ติดต่อ"
-                value={contactName}
-                onChange={(e) => setContactName(e.target.value)}
-                placeholder="ชื่อเล่นหรือชื่อจริง"
-                autoComplete="name"
-              />
-              <ContactInput
-                id="contact-phone"
-                label="เบอร์โทร"
-                type="tel"
-                inputMode="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="0812345678"
-                autoComplete="tel"
-                hint="ใส่เฉพาะตัวเลข ไม่ต้องมีขีด"
-              />
-
-              <div className="contact-section contact-section--channel">
-                <p className="contact-section__label">
-                  ช่องทางติดต่อกลับ <span className="contact-field__req" aria-hidden> *</span>
-                </p>
-                <p className="contact-section__hint">
-                  ทีม NP Create จะตอบกลับทางช่องทางที่เลือก — ระหว่างเสนอราคายังไม่ใช้แชทในระบบ
-                </p>
-                {fieldErrors.preferredChannel && (
-                  <p className="contact-field-error" role="alert">
-                    {fieldErrors.preferredChannel}
-                  </p>
-                )}
-                <div
-                  className="contact-chips contact-chips--channel"
-                  role="radiogroup"
-                  aria-label="ช่องทางติดต่อกลับ"
-                  aria-required
-                >
-                  {PREFERRED_CONTACT_CHANNEL_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={preferredChannel === opt.value}
-                      className={`contact-chip contact-chip--channel${preferredChannel === opt.value ? ' contact-chip--on' : ''}`}
-                      onClick={() => {
-                        setPreferredChannel(opt.value)
-                        if (opt.value !== 'line') {
-                          setLineOaStepDone(false)
-                        } else {
-                          setLineOaStepDone(readLineOaContactStepDone())
-                        }
-                        if (fieldErrors.preferredChannel) {
-                          setFieldErrors((e) => ({ ...e, preferredChannel: undefined }))
-                        }
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                {fieldErrors.channelConnect && (
-                  <p className="contact-field-error" role="alert">
-                    {fieldErrors.channelConnect}
-                  </p>
-                )}
-                {preferredChannel === 'line' && (
-                  <>
-                    <LineContactSetupPanel
-                      lineUserId={lineUserId || null}
-                      lineDisplayName={lineDisplayName}
-                      lineOaStepDone={lineOaStepDone}
-                      onLineOaStepDone={() => {
-                        setLineOaStepDone(true)
-                        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
-                      }}
-                      onLineOaStepReset={() => setLineOaStepDone(false)}
-                      onLineDisconnected={() => {
-                        setLineUserId('')
-                        setLineDisplayName(null)
-                      }}
-                      error={
-                        fieldErrors.channelConnect ??
-                        channelConnectError ??
-                        undefined
-                      }
-                    />
-                    {!isLineOAuthConfigured() && (
-                      <ContactInput
-                        id="contact-line"
-                        label="LINE ID"
-                        required
-                        error={fieldErrors.lineId}
-                        value={lineId}
-                        onChange={(e) => {
-                          setLineId(e.target.value)
-                          if (fieldErrors.lineId) {
-                            setFieldErrors((err) => ({ ...err, lineId: undefined }))
-                          }
-                        }}
-                        placeholder="@brandabc"
-                        hint={
-                          PREFERRED_CONTACT_CHANNEL_OPTIONS.find((o) => o.value === 'line')?.hint
-                        }
-                      />
-                    )}
-                  </>
-                )}
-                {preferredChannel === 'facebook' && (
-                  <>
-                    <ChannelConnectPanel
-                      channel="facebook"
-                      lineUserId={null}
-                      lineDisplayName={null}
-                      facebookPsid={facebookPsid || null}
-                      facebookName={facebookName}
-                      error={channelConnectError ?? undefined}
-                      onLineConnected={() => {}}
-                      onLineDisconnected={() => {}}
-                      onFacebookConnected={(psid, name) => {
-                        setFacebookPsid(psid)
-                        setFacebookName(name)
-                        setChannelConnectError(null)
-                        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
-                      }}
-                      onFacebookDisconnected={() => {
-                        setFacebookPsid('')
-                        setFacebookName(null)
-                      }}
-                    />
-                    {!isFacebookLoginConfigured() && (
-                      <>
-                        <p className="contact-section__hint contact-fb-hint">
-                          ทักเพจ NP Create ได้เลย —{' '}
-                          <a
-                            href={NPCREATE_FACEBOOK_MESSENGER_URL}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            เปิด Messenger
-                          </a>
-                          {' '}หรือระบุลิงก์เพจของคุณด้านล่าง (ไม่บังคับ)
-                        </p>
-                        <ContactInput
-                          id="contact-facebook"
-                          label="Facebook / เพจของคุณ"
-                          value={facebook}
-                          onChange={(e) => setFacebook(e.target.value)}
-                          placeholder="ลิงก์เพจหรือชื่อเพจ (ไม่บังคับ)"
-                        />
-                      </>
-                    )}
-                    {isFacebookLoginConfigured() && (
-                      <ContactInput
-                        id="contact-facebook-optional"
-                        label="ลิงก์เพจของคุณ (ไม่บังคับ)"
-                        value={facebook}
-                        onChange={(e) => setFacebook(e.target.value)}
-                        placeholder="ลิงก์เพจหรือชื่อเพจ"
-                      />
-                    )}
-                  </>
-                )}
-              </div>
-              <ContactSelect
-                id="contact-business"
-                label="ประเภทธุรกิจ"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-              >
-                <option value="">— เลือกประเภท —</option>
-                {BUSINESS_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </ContactSelect>
             </section>
 
-            <section className="contact-section" aria-labelledby="contact-sec-services">
-              <h2 id="contact-sec-services" className="contact-section__title">
-                บริการที่สนใจ
+            <section
+              className={`contact-section${lineReady ? '' : ' contact-section--locked'}`}
+              aria-labelledby="contact-sec-details"
+              aria-disabled={!lineReady}
+            >
+              <h2 id="contact-sec-details" className="contact-section__title">
+                ขั้นที่ 2 — ข้อมูลติดต่อ
               </h2>
-              <p className="contact-section__hint">
-                เลือกได้มากกว่า 1 รายการ — รายการตรงกับแพ็กเกจในระบบ Sales
-              </p>
-              {servicesLoading && (
-                <p className="contact-section__hint muted">กำลังโหลดรายการบริการ...</p>
+              {!lineReady && (
+                <p className="contact-section__lock-hint">
+                  ทำขั้นที่ 1 ให้ครบก่อน — ทัก LINE และเชื่อมต่อ Login
+                </p>
               )}
-              <div className="contact-chips" role="group" aria-label="บริการที่สนใจ">
-                {serviceOptions.map((pkg) => (
-                  <button
-                    key={pkg.code}
-                    type="button"
-                    className={`contact-chip${services.includes(pkg.code) ? ' contact-chip--on' : ''}`}
-                    onClick={() => toggleService(pkg.code)}
-                    aria-pressed={services.includes(pkg.code)}
-                  >
-                    {pkg.name}
-                  </button>
-                ))}
-              </div>
-              <ContactInput
-                id="contact-budget"
-                label="งบประมาณเบื้องต้น (บาท/เดือน)"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value.replace(/\D/g, ''))}
-                placeholder="30000 (ไม่บังคับ)"
-                hint="ช่วยทีม Sales เสนอแพ็กเกจ — ข้ามได้ถ้ายังไม่แน่ใจ"
-              />
+
+              <fieldset className="contact-section__fields" disabled={!lineReady}>
+                <ContactInput
+                  id="contact-name"
+                  ref={contactNameRef}
+                  label="ชื่อผู้ติดต่อ"
+                  required
+                  error={fieldErrors.contactName}
+                  value={contactName}
+                  onChange={(e) => {
+                    setContactName(e.target.value)
+                    if (fieldErrors.contactName) {
+                      setFieldErrors((e) => ({ ...e, contactName: undefined }))
+                    }
+                  }}
+                  placeholder="ชื่อเล่นหรือชื่อจริง"
+                  autoComplete="name"
+                />
+                <ContactInput
+                  id="contact-phone"
+                  label="เบอร์โทร"
+                  required
+                  type="tel"
+                  inputMode="tel"
+                  error={fieldErrors.phone}
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value)
+                    if (fieldErrors.phone) {
+                      setFieldErrors((err) => ({ ...err, phone: undefined }))
+                    }
+                  }}
+                  placeholder="0812345678"
+                  autoComplete="tel"
+                />
+                <ContactSelect
+                  id="contact-business"
+                  label="ประเภทธุรกิจ"
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                >
+                  <option value="">— เลือกประเภท (ไม่บังคับ) —</option>
+                  {BUSINESS_TYPES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </ContactSelect>
+
+                <div className="contact-section__services">
+                  <p className="contact-section__label">บริการที่สนใจ</p>
+                  {servicesLoading && (
+                    <p className="contact-section__hint muted">กำลังโหลด...</p>
+                  )}
+                  <div className="contact-chips" role="group" aria-label="บริการที่สนใจ">
+                    {serviceOptions.map((pkg) => (
+                      <button
+                        key={pkg.code}
+                        type="button"
+                        className={`contact-chip${services.includes(pkg.code) ? ' contact-chip--on' : ''}`}
+                        onClick={() => toggleService(pkg.code)}
+                        aria-pressed={services.includes(pkg.code)}
+                      >
+                        {pkg.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </fieldset>
             </section>
 
             <button
               type="submit"
               className="contact-submit"
-              disabled={
-                saving ||
-                (preferredChannel === 'line' &&
-                  isLineOAuthConfigured() &&
-                  (!lineOaStepDone || !lineUserId.trim()))
-              }
+              disabled={saving || !lineReady}
             >
-              {saving ? 'กำลังส่งข้อมูล...' : 'ส่งข้อมูลติดต่อ'}
+              {saving ? 'กำลังส่ง...' : 'ส่งข้อมูลติดต่อ'}
             </button>
-            {preferredChannel === 'line' && isLineOAuthConfigured() && !lineOaStepDone && (
-              <p className="contact-form-note contact-form-note--warn">
-                ทำขั้นที่ 1–2 ด้านบนก่อน — ทัก &quot;สนใจบริการ&quot; ที่ @npcreate แล้วเชื่อมต่อ LINE Login
-              </p>
-            )}
             <p className="contact-form-note">
-              กดส่งถือว่ายินยอมให้ทีม NP Create ติดต่อกลับตามข้อมูลที่กรอก — รายละเอียดงานเพิ่มเติมกรอกในขั้นตอนบรีฟหลังเริ่มงาน
+              กดส่งถือว่ายินยอมให้ทีม NP Create ติดต่อกลับทาง LINE
             </p>
           </form>
         </div>

@@ -860,6 +860,38 @@
   font-size: 0.8rem;
 }
 
+.contact-line-step__done-inline {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #86efac;
+}
+
+.contact-section--locked .contact-section__fields {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.contact-section__lock-hint {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fcd34d;
+}
+
+.contact-section__fields {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.contact-section__services {
+  margin-top: 0.5rem;
+}
+
 .contact-success-channel-hint {
   margin-top: 1rem;
   text-align: center;
