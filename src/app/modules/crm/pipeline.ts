@@ -1,3 +1,4 @@
+import { preferredContactChannelLabel } from '../../../shared/crm/preferredContactChannel'
 import type { Lead, LeadStatus } from './types'
 
 /** ลำดับ pipeline หลัก (ก่อนปิดการขาย) */
@@ -28,11 +29,22 @@ export function buildLeadNextSteps(lead: Lead): LeadNextStep[] {
     case 'interested':
     case 'scheduled':
     case 'follow_up':
+      if (lead.preferred_contact_channel) {
+        const ch = preferredContactChannelLabel(lead.preferred_contact_channel)
+        steps.push({
+          label: `ติดต่อลูกค้าทาง ${ch}`,
+          path: `/app/crm/${id}`,
+          detail: 'คุยและสรุปความต้องการนอกระบบก่อนส่งใบเสนอราคา',
+          primary: true,
+        })
+      }
       steps.push({
         label: 'สร้างใบเสนอราคา',
         path: `/app/sales/quotations/new?leadId=${id}`,
-        detail: 'ขั้นถัดไปของ Sales',
-        primary: true,
+        detail: lead.preferred_contact_channel
+          ? 'หลังคุยลูกค้าและสรุปความต้องการแล้ว'
+          : 'ขั้นถัดไปของ Sales',
+        primary: !lead.preferred_contact_channel,
       })
       steps.push({
         label: 'งานของฉัน — นัดติดตาม',

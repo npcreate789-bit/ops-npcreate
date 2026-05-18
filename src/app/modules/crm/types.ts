@@ -15,6 +15,9 @@ export type LeadChannel =
   | 'referral'
   | 'other'
 
+/** ช่องทางที่ลูกค้าเลือกให้ทีมติดต่อกลับ (จากฟอร์ม /contact) */
+export type PreferredContactChannel = 'line' | 'facebook'
+
 export interface Lead {
   id: string
   owner_id: string
@@ -31,6 +34,7 @@ export interface Lead {
   services_interested: string[]
   status: LeadStatus
   channel: LeadChannel
+  preferred_contact_channel: PreferredContactChannel | null
   shop_links: string | null
   notes: string | null
   reminder_at: string | null

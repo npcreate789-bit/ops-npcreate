@@ -14,12 +14,20 @@ export function buildInquiryNotificationInput(inquiry: {
   id: string
   brand_name: string
   contact_name?: string | null
+  preferred_contact_channel?: 'line' | 'facebook' | null
   owner_id: string
 }) {
+  const contact = inquiry.contact_name?.trim() || 'ยังไม่ระบุผู้ติดต่อ'
+  const channelSuffix =
+    inquiry.preferred_contact_channel === 'line'
+      ? ' · ติดต่อกลับทาง LINE'
+      : inquiry.preferred_contact_channel === 'facebook'
+        ? ' · ติดต่อกลับทาง Facebook'
+        : ''
   return {
     dedupe_key: inquiryNotificationDedupeKey(inquiry.id),
     title: `คำขอติดต่อ: ${inquiry.brand_name}`,
-    body: inquiry.contact_name?.trim() || 'ยังไม่ระบุผู้ติดต่อ',
+    body: contact + channelSuffix,
     link: `/app/crm/${inquiry.id}`,
     severity: 'info' as const,
     owner_id: inquiry.owner_id,

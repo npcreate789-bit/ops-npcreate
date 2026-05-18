@@ -17,6 +17,11 @@ import {
   getContactCooldownRemainingMs,
   markContactCooldown,
 } from '../contactRateLimit'
+import {
+  NPCREATE_FACEBOOK_MESSENGER_URL,
+  PREFERRED_CONTACT_CHANNEL_OPTIONS,
+  type PreferredContactChannel,
+} from '../../../../shared/crm/preferredContactChannel'
 import { friendlyContactSubmitError, validateContactForm } from '../contactFormUtils'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
@@ -29,9 +34,9 @@ const HERO_POINTS = [
 ] as const
 
 const SUCCESS_STEPS = [
-  'ทีม Sales ตรวจสอบและติดต่อกลับ',
-  'เสนอแพ็กเกจและใบเสนอราคาผ่านระบบ',
-  'หลังเริ่มงาน กรอกบรีฟใน Client Workspace แล้วติดตามความคืบหน้า',
+  'ทีม Sales ตรวจสอบและติดต่อกลับทางช่องทางที่คุณเลือก (LINE หรือ Facebook)',
+  'คุยรายละเอียดและเสนอแพ็กเกจนอกระบบ — ใบเสนอราคาส่งเมื่อพร้อม',
+  'หลังชำระและเริ่มงาน ใช้แชทใน Client Workspace และกรอกบรีฟ',
 ] as const
 
 export function ContactPage() {
@@ -43,6 +48,7 @@ export function ContactPage() {
   const [companyWebsite, setCompanyWebsite] = useState('')
   const [contactName, setContactName] = useState('')
   const [phone, setPhone] = useState('')
+  const [preferredChannel, setPreferredChannel] = useState<PreferredContactChannel | ''>('')
   const [lineId, setLineId] = useState('')
   const [facebook, setFacebook] = useState('')
   const [businessType, setBusinessType] = useState('')
@@ -52,7 +58,11 @@ export function ContactPage() {
   const [budget, setBudget] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<{ brand?: string }>({})
+  const [fieldErrors, setFieldErrors] = useState<{
+    brand?: string
+    preferredChannel?: string
+    lineId?: string
+  }>({})
   const [done, setDone] = useState(false)
 
   useEffect(() => {
@@ -91,12 +101,21 @@ export function ContactPage() {
       return
     }
 
-    const brandErr = validateContactForm(brandName)
-    if (brandErr) {
-      setFieldErrors({ brand: brandErr })
+    const validation = validateContactForm({
+      brandName,
+      preferredChannel,
+      lineId,
+      facebook,
+    })
+    if (Object.keys(validation).length > 0) {
+      setFieldErrors(validation)
       setFormError(null)
-      brandRef.current?.focus()
-      brandRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      if (validation.brand) {
+        brandRef.current?.focus()
+        brandRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } else {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
       return
     }
     setFieldErrors({})
@@ -105,9 +124,10 @@ export function ContactPage() {
     try {
       await submitPublicInquiry({
         brand_name: brandName,
+        preferred_contact_channel: preferredChannel as PreferredContactChannel,
         contact_name: contactName,
         phone,
-        line_id: lineId,
+        line_id: preferredChannel === 'line' ? lineId : lineId || undefined,
         facebook,
         business_type: businessType || undefined,
         services_interested: services,
@@ -240,33 +260,94 @@ export function ContactPage() {
                 placeholder="ชื่อเล่นหรือชื่อจริง"
                 autoComplete="name"
               />
-              <div className="contact-row">
-                <ContactInput
-                  id="contact-phone"
-                  label="เบอร์โทร"
-                  type="tel"
-                  inputMode="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0812345678"
-                  autoComplete="tel"
-                  hint="ใส่เฉพาะตัวเลข ไม่ต้องมีขีด"
-                />
-                <ContactInput
-                  id="contact-line"
-                  label="LINE ID"
-                  value={lineId}
-                  onChange={(e) => setLineId(e.target.value)}
-                  placeholder="@brandabc"
-                />
-              </div>
               <ContactInput
-                id="contact-facebook"
-                label="Facebook / เพจ"
-                value={facebook}
-                onChange={(e) => setFacebook(e.target.value)}
-                placeholder="ลิงก์เพจหรือชื่อเพจ"
+                id="contact-phone"
+                label="เบอร์โทร"
+                type="tel"
+                inputMode="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0812345678"
+                autoComplete="tel"
+                hint="ใส่เฉพาะตัวเลข ไม่ต้องมีขีด"
               />
+
+              <div className="contact-section contact-section--channel">
+                <p className="contact-section__label">
+                  ช่องทางติดต่อกลับ <span className="contact-field__req" aria-hidden> *</span>
+                </p>
+                <p className="contact-section__hint">
+                  ทีม NP Create จะตอบกลับทางช่องทางที่เลือก — ระหว่างเสนอราคายังไม่ใช้แชทในระบบ
+                </p>
+                {fieldErrors.preferredChannel && (
+                  <p className="contact-field-error" role="alert">
+                    {fieldErrors.preferredChannel}
+                  </p>
+                )}
+                <div
+                  className="contact-chips contact-chips--channel"
+                  role="radiogroup"
+                  aria-label="ช่องทางติดต่อกลับ"
+                  aria-required
+                >
+                  {PREFERRED_CONTACT_CHANNEL_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={preferredChannel === opt.value}
+                      className={`contact-chip contact-chip--channel${preferredChannel === opt.value ? ' contact-chip--on' : ''}`}
+                      onClick={() => {
+                        setPreferredChannel(opt.value)
+                        if (fieldErrors.preferredChannel) {
+                          setFieldErrors((e) => ({ ...e, preferredChannel: undefined }))
+                        }
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {preferredChannel === 'line' && (
+                  <ContactInput
+                    id="contact-line"
+                    label="LINE ID"
+                    required
+                    error={fieldErrors.lineId}
+                    value={lineId}
+                    onChange={(e) => {
+                      setLineId(e.target.value)
+                      if (fieldErrors.lineId) {
+                        setFieldErrors((err) => ({ ...err, lineId: undefined }))
+                      }
+                    }}
+                    placeholder="@brandabc"
+                    hint={PREFERRED_CONTACT_CHANNEL_OPTIONS.find((o) => o.value === 'line')?.hint}
+                  />
+                )}
+                {preferredChannel === 'facebook' && (
+                  <>
+                    <p className="contact-section__hint contact-fb-hint">
+                      ทักเพจ NP Create ได้เลย —{' '}
+                      <a
+                        href={NPCREATE_FACEBOOK_MESSENGER_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        เปิด Messenger
+                      </a>
+                      {' '}หรือระบุลิงก์เพจของคุณด้านล่าง (ไม่บังคับ)
+                    </p>
+                    <ContactInput
+                      id="contact-facebook"
+                      label="Facebook / เพจของคุณ"
+                      value={facebook}
+                      onChange={(e) => setFacebook(e.target.value)}
+                      placeholder="ลิงก์เพจหรือชื่อเพจ (ไม่บังคับ)"
+                    />
+                  </>
+                )}
+              </div>
               <ContactSelect
                 id="contact-business"
                 label="ประเภทธุรกิจ"

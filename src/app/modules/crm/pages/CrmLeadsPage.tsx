@@ -10,7 +10,7 @@ import {
 import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
 import { fetchSalesSummary, listLeads } from '../api/leads'
 import type { Lead, LeadFilters, LeadStatus } from '../types'
-import { ACTIVE_STATUSES, channelLabel } from '../constants'
+import { ACTIVE_STATUSES, channelLabel, preferredChannelLabel } from '../constants'
 import { LeadFiltersBar } from '../components/LeadFilters'
 import { LeadStatusBadge } from '../components/LeadStatusBadge'
 import { SalesSummary } from '../components/SalesSummary'
@@ -229,7 +229,8 @@ export function CrmLeadsPage() {
                 <tr>
                   <th>แบรนด์</th>
                   <th>ผู้ติดต่อ</th>
-                  <th>ช่องทาง</th>
+                  <th>ที่มา</th>
+                  <th>ติดต่อกลับ</th>
                   <th>สถานะ</th>
                   <th>Reminder</th>
                   <th>อัปเดต</th>
@@ -256,6 +257,17 @@ export function CrmLeadsPage() {
                       {lead.phone && <span className="crm-sub">{lead.phone}</span>}
                     </td>
                     <td>{channelLabel(lead.channel)}</td>
+                    <td>
+                      {lead.preferred_contact_channel ? (
+                        <span
+                          className={`crm-preferred-pill crm-preferred-pill--${lead.preferred_contact_channel}`}
+                        >
+                          {preferredChannelLabel(lead.preferred_contact_channel)}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td>
                       <LeadStatusBadge status={lead.status} />
                     </td>

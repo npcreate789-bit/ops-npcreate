@@ -5,6 +5,10 @@ import { ProjectChatPanel } from '../../chat/components/ProjectChatPanel'
 import { useChatInbox } from '../../chat/hooks/useChatInbox'
 import type { ChatInboxItem } from '../../chat/types'
 import type { Project } from '../../projects/types'
+import {
+  clientPortalChatGateMessage,
+  isClientPortalChatEnabled,
+} from '../../../../shared/crm/preferredContactChannel'
 import { useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { hasTasksTeamView } from '../../../../shared/auth/access'
@@ -41,7 +45,13 @@ export function ClientChatPage() {
   const location = useLocation()
   const { profile, configured } = useAuth()
   const userId = profile?.id ?? DEV_OWNER
+  const isStaffPreview = ws.canPreview && !ws.isClientOnly
   const canCreateTask = hasTasksTeamView(profile?.roles ?? []) || !configured
+  const chatEnabled = isClientPortalChatEnabled({
+    customerStatus: ws.data?.customer.status,
+    projects: ws.projects,
+    isStaffPreview,
+  })
   const { items: inboxItems, totalUnread } = useChatInbox(userId)
 
   const inboxByProject = useMemo(
@@ -99,7 +109,20 @@ export function ClientChatPage() {
         </section>
       )}
 
-      {customerId && (
+      {customerId && !chatEnabled && (
+        <section className="card card--wide client-placeholder">
+          <h3>แชทในระบบยังไม่เปิด</h3>
+          <p className="muted">{clientPortalChatGateMessage(ws.data?.customer.status ?? null)}</p>
+          {!isStaffPreview && (
+            <p className="muted">
+              หลังชำระเงินและทีมเริ่มโปรเจกต์ คุณจะแชทกับ Account ได้ที่นี่ — ระหว่างนี้ติดต่อทีมทาง
+              LINE หรือ Facebook ตามที่ตกลงไว้
+            </p>
+          )}
+        </section>
+      )}
+
+      {customerId && chatEnabled && (
         <div className="client-chat-page__stage">
           <div className="chat-hub-shell client-chat-shell">
             <ChatInboxList

@@ -38,6 +38,7 @@ function seed(): Lead[] {
       services_interested: ['gmv_max', 'content'],
       status: 'interested',
       channel: 'tiktok',
+      preferred_contact_channel: 'line',
       shop_links: null,
       notes: 'Lead ตัวอย่างสำหรับโหมดพัฒนา',
       reminder_at: null,

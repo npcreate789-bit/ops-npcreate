@@ -1,4 +1,5 @@
-import type { LeadChannel, LeadStatus } from './types'
+import { preferredContactChannelLabel } from '../../../shared/crm/preferredContactChannel'
+import type { LeadChannel, LeadStatus, PreferredContactChannel } from './types'
 
 export const LEAD_STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
   { value: 'interested', label: 'สนใจ' },
@@ -43,4 +44,8 @@ export function statusLabel(status: LeadStatus): string {
 
 export function channelLabel(channel: LeadChannel): string {
   return LEAD_CHANNEL_OPTIONS.find((o) => o.value === channel)?.label ?? channel
+}
+
+export function preferredChannelLabel(channel: PreferredContactChannel | null | undefined): string {
+  return preferredContactChannelLabel(channel ?? undefined)
 }

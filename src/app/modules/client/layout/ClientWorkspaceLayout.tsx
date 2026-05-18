@@ -8,6 +8,7 @@ import {
 import { withClientPreview } from '../clientNav'
 import { ClientPreviewBar } from '../components/ClientPreviewBar'
 import { ClientStaffToolbar } from '../components/ClientStaffToolbar'
+import { isClientPortalChatEnabled } from '../../../../shared/crm/preferredContactChannel'
 import { ClientWorkspaceProvider, useClientWorkspaceContext } from '../context/ClientWorkspaceContext'
 import '../client-workspace.css'
 
@@ -29,6 +30,12 @@ function ClientWorkspaceShell() {
   const previewForNav =
     isStaffPreview && (ws.previewId || customer?.id) ? ws.previewId || customer?.id : undefined
   const showWorkspaceNav = Boolean(customer) || (ws.canPreview && !ws.isClientOnly)
+  const chatEnabled = isClientPortalChatEnabled({
+    customerStatus: customer?.status,
+    projects: ws.projects,
+    isStaffPreview,
+  })
+  const visibleTabs = TABS.filter((tab) => tab.to !== '/app/client/chat' || chatEnabled)
 
   return (
     <div className="client-workspace">
@@ -75,7 +82,7 @@ function ClientWorkspaceShell() {
       {showWorkspaceNav ? (
         <>
           <nav className="client-workspace__nav" aria-label="พื้นที่ลูกค้า">
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <NavLink
                 key={tab.to}
                 to={withClientPreview(tab.to, previewForNav)}

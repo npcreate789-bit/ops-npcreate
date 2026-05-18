@@ -88,7 +88,11 @@ export function formValuesToPayload(
   values: LeadFormValues,
   ownerId: string,
 ): LeadInsert {
-  return { owner_id: ownerId, ...toPayloadFields(values) }
+  return {
+    owner_id: ownerId,
+    preferred_contact_channel: null,
+    ...toPayloadFields(values),
+  }
 }
 
 export function formValuesToUpdate(values: LeadFormValues): LeadUpdate {

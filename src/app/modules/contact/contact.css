@@ -555,3 +555,35 @@
   white-space: nowrap;
   border: 0;
 }
+
+.contact-section--channel {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.contact-section__label {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--npc-text);
+}
+
+.contact-chips--channel {
+  margin-bottom: 0.75rem;
+}
+
+.contact-chip--channel {
+  min-width: 7rem;
+  font-weight: 600;
+}
+
+.contact-field-error {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  color: #fca5a5;
+}
+
+.contact-fb-hint a {
+  color: var(--contact-accent);
+}

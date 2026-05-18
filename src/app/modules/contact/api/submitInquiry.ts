@@ -1,8 +1,10 @@
+import type { PreferredContactChannel } from '../../../../shared/crm/preferredContactChannel'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { mockLeadsApi } from '../../crm/api/mockStore'
 
 export interface PublicInquiryInput {
   brand_name: string
+  preferred_contact_channel: PreferredContactChannel
   contact_name?: string
   phone?: string
   line_id?: string
@@ -34,6 +36,7 @@ async function submitPublicInquiryDevMock(input: PublicInquiryInput): Promise<st
     services_interested: input.services_interested ?? [],
     status: 'interested',
     channel: 'website',
+    preferred_contact_channel: input.preferred_contact_channel,
     shop_links: null,
     notes: null,
   })
@@ -59,6 +62,7 @@ export async function submitPublicInquiry(input: PublicInquiryInput): Promise<st
     p_shop_links: null,
     p_notes: null,
     p_company_website: input.company_website?.trim() || null,
+    p_preferred_contact_channel: input.preferred_contact_channel,
   })
 
   if (error) throw new Error(error.message)

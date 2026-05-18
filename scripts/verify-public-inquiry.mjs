@@ -66,6 +66,8 @@ const { data: leadId, error: submitErr } = await supabase.rpc('submit_public_inq
   p_brand_name: `ทดสอบฟอร์ม ${stamp}`,
   p_contact_name: 'ระบบทดสอบ',
   p_phone: '0800000000',
+  p_line_id: '@verify-test',
+  p_preferred_contact_channel: 'line',
   p_notes: 'auto verify-public-inquiry.mjs',
 })
 

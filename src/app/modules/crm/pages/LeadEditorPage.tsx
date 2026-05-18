@@ -21,6 +21,7 @@ import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
 import { canViewLeadAttachments } from '../access'
 import { LeadAttachmentsSection } from '../components/LeadAttachmentsSection'
 import { LeadNextStepsPanel } from '../components/LeadNextStepsPanel'
+import { LeadPreferredChannelPanel } from '../components/LeadPreferredChannelPanel'
 import {
   LeadForm,
   formValuesToPayload,
@@ -196,6 +197,8 @@ export function LeadEditorPage() {
           ปิดการขายแล้ว — มี Customer ในระบบ · ลูกค้าเข้า Client Workspace ได้หลังได้บัญชี
         </p>
       )}
+
+      {!isNew && initial && <LeadPreferredChannelPanel lead={initial} />}
 
       {!isNew && initial && <LeadNextStepsPanel lead={initial} />}
 

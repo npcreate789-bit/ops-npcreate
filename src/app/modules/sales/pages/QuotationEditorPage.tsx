@@ -7,6 +7,8 @@ import {
   hasDbPrivilegedRole,
 } from '../../../../shared/auth/access'
 import { getLead } from '../../crm/api/leads'
+import { LeadPreferredChannelPanel } from '../../crm/components/LeadPreferredChannelPanel'
+import { needsExternalContactBeforeQuotation } from '../../../../shared/crm/preferredContactChannel'
 import { pickPackageIdForQuotation } from '../../../../shared/packages/serviceInterests'
 import {
   createQuotation,
@@ -45,6 +47,7 @@ export function QuotationEditorPage() {
   const [initial, setInitial] = useState<Quotation | null>(null)
   const [packages, setPackages] = useState<Package[]>([])
   const [leadBrandName, setLeadBrandName] = useState<string | null>(null)
+  const [leadForBanner, setLeadForBanner] = useState<Awaited<ReturnType<typeof getLead>>>(null)
   const [leadServiceCodes, setLeadServiceCodes] = useState<string[]>([])
   const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null)
 
@@ -66,6 +69,7 @@ export function QuotationEditorPage() {
           const lead = await getLead(lid)
           if (!cancelled && lead) {
             setLeadBrandName(lead.brand_name)
+            setLeadForBanner(lead)
             setLeadServiceCodes(lead.services_interested ?? [])
             if (isNew && pkgs.length > 0) {
               const pkgId = pickPackageIdForQuotation(lead.services_interested ?? [], pkgs)
@@ -151,6 +155,14 @@ export function QuotationEditorPage() {
       </header>
 
       {error && <p className="crm-error no-print">{error}</p>}
+
+      {leadForBanner &&
+        needsExternalContactBeforeQuotation(leadForBanner) &&
+        leadForBanner.preferred_contact_channel && (
+          <div className="no-print">
+            <LeadPreferredChannelPanel lead={leadForBanner} variant="quotation" />
+          </div>
+        )}
 
       {readOnly && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner no-print">

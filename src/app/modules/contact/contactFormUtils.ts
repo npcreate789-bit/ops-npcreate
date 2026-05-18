@@ -1,3 +1,12 @@
+import type { PreferredContactChannel } from '../../../shared/crm/preferredContactChannel'
+
+export interface ContactFormFields {
+  brandName: string
+  preferredChannel: PreferredContactChannel | ''
+  lineId: string
+  facebook: string
+}
+
 /** แปลงข้อความ error จาก API ให้ผู้ใช้เข้าใจ */
 export function friendlyContactSubmitError(message: string): string {
   const m = message.toLowerCase()
@@ -19,11 +28,31 @@ export function friendlyContactSubmitError(message: string): string {
   if (m.includes('too long') || m.includes('too many services')) {
     return 'ข้อมูลยาวเกินไป กรุณาตรวจสอบแล้วลองใหม่'
   }
+  if (m.includes('preferred_contact_channel')) {
+    return 'กรุณาเลือกช่องทางติดต่อกลับ (LINE หรือ Facebook)'
+  }
+  if (m.includes('line_id is required')) {
+    return 'กรุณาระบุ LINE ID เมื่อเลือกติดต่อทาง LINE'
+  }
   return message
 }
 
-export function validateContactForm(brandName: string): string | null {
-  if (!brandName.trim()) return 'กรุณาระบุชื่อแบรนด์'
-  if (brandName.trim().length < 2) return 'ชื่อแบรนด์สั้นเกินไป'
-  return null
+export function validateContactForm(fields: ContactFormFields): {
+  brand?: string
+  preferredChannel?: string
+  lineId?: string
+} {
+  const errors: { brand?: string; preferredChannel?: string; lineId?: string } = {}
+  if (!fields.brandName.trim()) {
+    errors.brand = 'กรุณาระบุชื่อแบรนด์'
+  } else if (fields.brandName.trim().length < 2) {
+    errors.brand = 'ชื่อแบรนด์สั้นเกินไป'
+  }
+  if (!fields.preferredChannel) {
+    errors.preferredChannel = 'กรุณาเลือกช่องทางติดต่อกลับ'
+  }
+  if (fields.preferredChannel === 'line' && !fields.lineId.trim()) {
+    errors.lineId = 'กรุณาระบุ LINE ID เพื่อให้ทีมติดต่อกลับ'
+  }
+  return errors
 }
