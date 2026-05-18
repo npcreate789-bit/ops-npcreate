@@ -34,6 +34,26 @@
   gap: 1rem;
 }
 
+.login__portal-badge {
+  align-self: center;
+  margin: 0;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--npc-text-muted);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login--client .login__portal-badge {
+  color: #ffc9cd;
+  background: rgba(230, 57, 70, 0.15);
+  border-color: rgba(230, 57, 70, 0.35);
+}
+
 .login__tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;

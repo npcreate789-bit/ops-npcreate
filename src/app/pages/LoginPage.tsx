@@ -1,5 +1,5 @@
-import { useLayoutEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { SupabaseRequiredGate } from '../../shared/auth/SupabaseRequiredGate'
 import { allowDevAuthBypass, requiresSupabaseInProduction } from '../../shared/supabase/runtime'
@@ -8,9 +8,9 @@ import { COMPANY_ICON_SRC } from '../../shared/company/companyProfile'
 import { normalizeLoginId } from '../../shared/auth/loginId'
 import { primeNotificationSound } from '../modules/notifications/notificationSound'
 import {
-  loginPathForAudience,
-  isClientAppPath,
-  parseLoginAudience,
+  CLIENT_LOGIN_PATH,
+  STAFF_LOGIN_PATH,
+  isClientOnlyAccount,
   resolvePostLoginPath,
   type LoginAudience,
 } from '../../shared/auth/postLoginPath'
@@ -20,67 +20,46 @@ import './LoginPage.css'
 const COPY = {
   client: {
     title: 'พื้นที่ลูกค้า',
-    subtitle: 'ดูรายงาน บรีฟงาน และความคืบหน้าของแบรนด์คุณ',
-    loginLabel: 'รหัสผู้ใช้',
+    subtitle: 'เข้าสู่ระบบลูกค้า NP Create',
     loginPlaceholder: 'เช่น brandabc',
     hintPrimary: 'ใช้รหัสผู้ใช้และรหัสผ่านที่ทีม NP Create แจ้งให้หลังเริ่มสัญญา',
     hintSecondary: 'ยังไม่มีบัญชี?',
     ctaSecondary: 'ส่งคำขอติดต่อทีมงาน',
     ctaSecondaryTo: '/contact',
+    otherPortalLabel: 'ทีมงาน NP Create',
+    otherPortalTo: STAFF_LOGIN_PATH,
   },
   staff: {
     title: 'NP Create OS',
     subtitle: 'เข้าสู่ระบบทีมงานภายใน',
-    loginLabel: 'รหัสผู้ใช้',
     loginPlaceholder: 'เช่น sales01',
     hintPrimary: 'ใช้รหัสผู้ใช้ที่ผู้ดูแลระบบแจ้ง — ไม่ใช่อีเมล',
     hintSecondary: 'ลูกค้าที่มีบัญชีแล้ว?',
     ctaSecondary: 'เข้าสู่พื้นที่ลูกค้า',
-    ctaSecondaryTo: '/login?mode=client',
+    ctaSecondaryTo: CLIENT_LOGIN_PATH,
+    otherPortalLabel: null,
+    otherPortalTo: null,
   },
-} as const satisfies Record<
-  LoginAudience,
-  {
-    title: string
-    subtitle: string
-    loginLabel: string
-    loginPlaceholder: string
-    hintPrimary: string
-    hintSecondary: string
-    ctaSecondary: string
-    ctaSecondaryTo: string
-  }
->
+} as const
 
-export function LoginPage() {
+interface LoginPageProps {
+  audience: LoginAudience
+}
+
+export function LoginPage({ audience }: LoginPageProps) {
   const { signIn, session, profile, loading, configured } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const copy = COPY[audience]
 
   const from =
     (location.state as { from?: { pathname: string } })?.from?.pathname ?? null
-  const modeFromUrl = parseLoginAudience(searchParams.toString())
-  const mode: LoginAudience =
-    from && isClientAppPath(from) ? 'client' : modeFromUrl
-  const copy = COPY[mode]
 
   const [loginId, setLoginId] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-
-  function setMode(next: LoginAudience) {
-    setSearchParams(next === 'client' ? { mode: 'client' } : { mode: 'staff' }, { replace: true })
-    setError(null)
-  }
-
-  useLayoutEffect(() => {
-    if (from && isClientAppPath(from) && searchParams.get('mode') !== 'client') {
-      setSearchParams({ mode: 'client' }, { replace: true })
-    }
-  }, [from, searchParams, setSearchParams])
 
   if (requiresSupabaseInProduction()) {
     return <SupabaseRequiredGate />
@@ -94,12 +73,17 @@ export function LoginPage() {
     if (profile.must_change_password) {
       return <Navigate to="/set-password" replace />
     }
-    return (
-      <Navigate
-        to={resolvePostLoginPath(profile.roles, from)}
-        replace
-      />
-    )
+    let destination = resolvePostLoginPath(profile.roles, from)
+    if (audience === 'client') {
+      if (!isClientOnlyAccount(profile.roles) && profile.roles.includes('client')) {
+        destination = '/app/client'
+      } else if (!destination.startsWith('/app/client')) {
+        destination = '/app/client'
+      }
+    } else if (isClientOnlyAccount(profile.roles)) {
+      return <Navigate to={CLIENT_LOGIN_PATH} replace />
+    }
+    return <Navigate to={destination} replace />
   }
 
   if (session && loading) {
@@ -131,32 +115,24 @@ export function LoginPage() {
     }
 
     const roles = result.profile?.roles ?? []
+    if (audience === 'client' && !roles.includes('client')) {
+      setError('บัญชีนี้ไม่ใช่บัญชีลูกค้า — ทีมงานให้เข้าที่หน้า login ทีมงาน')
+      return
+    }
+    if (audience === 'staff' && isClientOnlyAccount(roles)) {
+      navigate(CLIENT_LOGIN_PATH, { replace: true })
+      return
+    }
+
     navigate(resolvePostLoginPath(roles, from), { replace: true })
   }
 
   return (
-    <div className={`login login--${mode}`}>
+    <div className={`login login--${audience}`}>
       <form className="login__card" onSubmit={handleSubmit} noValidate>
-        <div className="login__tabs" role="tablist" aria-label="ประเภทการเข้าสู่ระบบ">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'client'}
-            className={`login__tab${mode === 'client' ? ' login__tab--active' : ''}`}
-            onClick={() => setMode('client')}
-          >
-            ลูกค้า
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'staff'}
-            className={`login__tab${mode === 'staff' ? ' login__tab--active' : ''}`}
-            onClick={() => setMode('staff')}
-          >
-            ทีมงาน
-          </button>
-        </div>
+        <p className="login__portal-badge" aria-hidden>
+          {audience === 'client' ? 'ลูกค้า' : 'ทีมงาน'}
+        </p>
 
         <div className="login__brand">
           <img
@@ -173,7 +149,7 @@ export function LoginPage() {
 
         <div className="login-field">
           <label className="login-field__label" htmlFor="login-id">
-            {copy.loginLabel}
+            รหัสผู้ใช้
             <span className="login-field__req" aria-hidden>
               {' '}
               *
@@ -240,24 +216,12 @@ export function LoginPage() {
 
         <p className="login__hint login__hint--switch muted">
           {copy.hintSecondary}{' '}
-          {copy.ctaSecondaryTo.startsWith('/login') ? (
-            <button
-              type="button"
-              className="login__link-btn"
-              onClick={() =>
-                setMode(copy.ctaSecondaryTo.includes('client') ? 'client' : 'staff')
-              }
-            >
-              {copy.ctaSecondary}
-            </button>
-          ) : (
-            <Link to={copy.ctaSecondaryTo}>{copy.ctaSecondary}</Link>
-          )}
+          <Link to={copy.ctaSecondaryTo}>{copy.ctaSecondary}</Link>
         </p>
 
-        {mode === 'staff' ? (
+        {copy.otherPortalTo && copy.otherPortalLabel ? (
           <p className="login__hint muted">
-            <Link to={loginPathForAudience('client')}>ลูกค้าเข้าสู่ระบบที่นี่</Link>
+            <Link to={copy.otherPortalTo}>{copy.otherPortalLabel}</Link>
           </p>
         ) : null}
       </form>

@@ -5,6 +5,7 @@ import { RequireModuleAccess } from '../shared/auth/RequireModuleAccess'
 import { AppLayout } from './layout/AppLayout'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { StaffLoginEntry } from './pages/StaffLoginEntry'
 import { RootRedirect } from './pages/RootRedirect'
 import { SetPasswordPage } from './pages/SetPasswordPage'
 import { CrmLeadsPage } from './modules/crm/pages/CrmLeadsPage'
@@ -70,7 +71,9 @@ function Module({ path, element }: { path: string; element: ReactNode }) {
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login" element={<StaffLoginEntry />} />
+      <Route path="/client/login" element={<LoginPage audience="client" />} />
+      <Route path="/login/client" element={<Navigate to="/client/login" replace />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/q/:token" element={<PublicQuotationPage />} />
       <Route
