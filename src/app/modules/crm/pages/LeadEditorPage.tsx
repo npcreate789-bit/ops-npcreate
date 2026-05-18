@@ -198,7 +198,13 @@ export function LeadEditorPage() {
         </p>
       )}
 
-      {!isNew && initial && <LeadPreferredChannelPanel lead={initial} />}
+      {!isNew && initial && (
+        <LeadPreferredChannelPanel
+          lead={initial}
+          readOnly={readOnly}
+          onLeadUpdated={(updated) => setInitial(updated)}
+        />
+      )}
 
       {!isNew && initial && <LeadNextStepsPanel lead={initial} />}
 

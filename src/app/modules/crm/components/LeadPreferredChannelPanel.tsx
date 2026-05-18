@@ -6,6 +6,8 @@ import {
   staffOpenChannelLabel,
   type PreferredContactChannel,
 } from '../../../../shared/crm/preferredContactChannel'
+import { openStaffLineChat } from '../../../../shared/line/staffLineMessaging'
+import { LeadLineOaChatIdField } from './LeadLineOaChatIdField'
 import '../crm.css'
 
 const EXTERNAL_SALES_CHECKLIST = [
@@ -19,18 +21,26 @@ interface LeadPreferredChannelPanelProps {
   lead: Lead
   /** แสดงคำเตือนก่อนส่งใบเสนอราคา */
   variant?: 'default' | 'quotation'
+  readOnly?: boolean
+  onLeadUpdated?: (lead: Lead) => void
 }
 
 export function LeadPreferredChannelPanel({
   lead,
   variant = 'default',
+  readOnly = false,
+  onLeadUpdated,
 }: LeadPreferredChannelPanelProps) {
   const channel = lead.preferred_contact_channel
   if (!channel) return null
 
   const ch = channel as PreferredContactChannel
   const label = preferredContactChannelLabel(ch)
-  const openHref = openUrlForPreferredChannel(ch, lead.line_user_id)
+  const lineIds = {
+    line_user_id: lead.line_user_id,
+    line_oa_chat_user_id: lead.line_oa_chat_user_id,
+  }
+  const openHref = openUrlForPreferredChannel(ch, lineIds)
 
   return (
     <section
@@ -56,18 +66,28 @@ export function LeadPreferredChannelPanel({
       </header>
 
       <div className="crm-preferred-channel__actions">
-        <a
-          href={openHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="crm-btn crm-btn--primary"
-        >
-          {staffOpenChannelLabel(ch)}
-        </a>
-        {ch === 'line' && lead.line_user_id && (
-          <span className="crm-preferred-channel__meta">
-            LINE User ID: <strong>{lead.line_user_id}</strong>
-          </span>
+        {ch === 'line' ? (
+          <button
+            type="button"
+            className="crm-btn crm-btn--primary"
+            onClick={() =>
+              void openStaffLineChat(
+                lineIds.line_oa_chat_user_id ?? lineIds.line_user_id,
+                { mode: lineIds.line_oa_chat_user_id ? 'direct' : 'auto' },
+              )
+            }
+          >
+            {staffOpenChannelLabel(ch)}
+          </button>
+        ) : (
+          <a
+            href={openHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="crm-btn crm-btn--primary"
+          >
+            {staffOpenChannelLabel(ch)}
+          </a>
         )}
         {ch === 'line' && lead.line_id && (
           <span className="crm-preferred-channel__meta">
@@ -93,6 +113,14 @@ export function LeadPreferredChannelPanel({
           </span>
         )}
       </div>
+
+      {ch === 'line' && (
+        <LeadLineOaChatIdField
+          lead={lead}
+          readOnly={readOnly}
+          onSaved={onLeadUpdated}
+        />
+      )}
 
       {variant === 'default' && (
         <ol className="crm-preferred-channel__checklist">

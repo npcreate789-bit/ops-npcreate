@@ -31,6 +31,7 @@ function seed(): Lead[] {
       phone: '0812345678',
       line_id: '@demo',
       line_user_id: null,
+      line_oa_chat_user_id: null,
       facebook: 'facebook.com/demo',
       facebook_psid: null,
       business_type: 'สกินแคร์',

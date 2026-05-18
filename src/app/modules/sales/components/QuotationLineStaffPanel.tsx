@@ -5,6 +5,12 @@ import {
   staffLineChatUrl,
   staffLineDirectChatHint,
 } from '../../../../shared/line/lineStaffOpenUrl'
+import type { LeadLineIds } from '../../../../shared/line/lineUserIdResolution'
+import {
+  lineLoginAndOaIdsMismatch,
+  resolveLineMessagingRecipientId,
+  resolveLineStaffChatOpenUserId,
+} from '../../../../shared/line/lineUserIdResolution'
 import { formatServiceInterests } from '../../../../shared/packages/serviceInterests'
 import {
   buildQuotationReferenceMessage,
@@ -22,7 +28,7 @@ interface QuotationLineStaffPanelProps {
   quotation: Quotation
   brandName: string
   leadServiceCodes?: string[]
-  lineUserId?: string | null
+  lineIds?: LeadLineIds | null
   packages: Package[]
   saved: boolean
 }
@@ -42,10 +48,13 @@ export function QuotationLineStaffPanel({
   quotation,
   brandName,
   leadServiceCodes = [],
-  lineUserId,
+  lineIds,
   packages,
   saved,
 }: QuotationLineStaffPanelProps) {
+  const pushRecipient = resolveLineMessagingRecipientId(lineIds ?? {})
+  const oaOpenId = resolveLineStaffChatOpenUserId(lineIds ?? {})
+  const loginId = lineIds?.line_user_id?.trim()
   const [busy, setBusy] = useState<'ref' | 'send' | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -75,11 +84,11 @@ export function QuotationLineStaffPanel({
     try {
       const text = referenceMessage()
       const copied = await copyTextToClipboard(text)
-      if (lineUserId?.trim()) {
-        const result = await deliverLineMessageToCustomer(lineUserId, text)
+      if (pushRecipient) {
+        const result = await deliverLineMessageToCustomer(lineIds, text)
         setFeedback(result.message ?? 'ส่ง/เปิด LINE แล้ว')
       } else {
-        openLineOaWithText(text, lineUserId)
+        openLineOaWithText(text, oaOpenId ?? loginId)
         setFeedback(
           copied
             ? 'คัดลอกข้อความแล้ว — เปิด LINE OA (วางข้อความส่งลูกค้า)'
@@ -115,7 +124,7 @@ export function QuotationLineStaffPanel({
         totalLabel,
         contractMonths: quotation.contract_months,
       })
-      const result = await deliverLineMessageToCustomer(lineUserId, text)
+      const result = await deliverLineMessageToCustomer(lineIds, text)
       setFeedback(
         result.mode === 'push'
           ? 'ส่งใบเสนอราคาทาง LINE แล้ว'
@@ -135,7 +144,7 @@ export function QuotationLineStaffPanel({
         <p className="muted">
           ส่งข้อมูลอ้างอิงก่อนคุย · หลังบันทึกแล้วส่งใบเสนอราคา —{' '}
           <a
-            href={staffLineChatUrl(lineUserId)}
+            href={staffLineChatUrl(oaOpenId ?? loginId, oaOpenId ? { mode: 'direct' } : undefined)}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -144,10 +153,22 @@ export function QuotationLineStaffPanel({
         </p>
       </header>
 
-      {lineUserId && (
+      {(loginId || oaOpenId) && (
         <p className="crm-preferred-channel__meta">
-          LINE User ID: <strong>{lineUserId}</strong> — push ใช้ id นี้; เปิดแชทบน desktop จะเปิดรายการ OA
-          และคัดลอก id ให้ค้นหา (direct .../chat/id ใช้ได้เมื่อลูกค้าทัก OA แล้วและ provider ตรงกัน)
+          {loginId && (
+            <>
+              LINE Login: <strong>{loginId}</strong>
+              {oaOpenId ? ' · ' : ''}
+            </>
+          )}
+          {oaOpenId && (
+            <>
+              แชท OA: <strong>{oaOpenId}</strong>
+            </>
+          )}
+          {lineIds && lineLoginAndOaIdsMismatch(lineIds) && (
+            <> — ID ไม่ตรงกัน บันทึก ID จาก URL แชท OA ใน CRM</>
+          )}
         </p>
       )}
 
@@ -183,8 +204,12 @@ export function QuotationLineStaffPanel({
         <button
           type="button"
           className="crm-btn crm-btn--ghost"
-          title={staffLineDirectChatHint(lineUserId) ?? undefined}
-          onClick={() => void openStaffLineChat(lineUserId)}
+          title={staffLineDirectChatHint(oaOpenId ?? loginId) ?? undefined}
+          onClick={() =>
+            void openStaffLineChat(oaOpenId ?? loginId, {
+              mode: oaOpenId ? 'direct' : 'auto',
+            })
+          }
         >
           {staffOpenChannelLabel('line')}
         </button>

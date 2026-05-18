@@ -89,7 +89,10 @@ export function ChannelConnectPanel({
               <strong>เชื่อมต่อ LINE แล้ว</strong>
               <p className="contact-connect__meta">
                 {lineDisplayName ? `${lineDisplayName} · ` : ''}
-                ID: {lineUserId}
+                LINE Login ID: {lineUserId}
+              </p>
+              <p className="contact-section__hint">
+                ID นี้ใช้ยืนยันตัวตน — แชทกับ @npcreate ใน OA อาจมีรหัสคนละตัวจนกว่าจะเพิ่มเพื่อนและทัก OA
               </p>
             </div>
             <button

@@ -30,6 +30,7 @@ async function submitPublicInquiryDevMock(input: PublicInquiryInput): Promise<st
     phone: input.phone?.trim() || null,
     line_id: input.line_id?.trim() || null,
     line_user_id: input.line_user_id?.trim() || null,
+    line_oa_chat_user_id: null,
     facebook: input.facebook?.trim() || null,
     facebook_psid: input.facebook_psid?.trim() || null,
     business_type: input.business_type || null,

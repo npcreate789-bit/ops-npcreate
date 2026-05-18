@@ -1,4 +1,6 @@
 import type { Project } from '../../app/modules/projects/types'
+import type { LeadLineIds } from '../line/lineUserIdResolution'
+import { resolveLineStaffChatOpenUserId } from '../line/lineUserIdResolution'
 import { staffLineChatUrl } from '../line/lineStaffOpenUrl'
 
 export type PreferredContactChannel = 'line' | 'facebook'
@@ -36,12 +38,24 @@ export function preferredContactChannelLabel(
   return PREFERRED_CONTACT_CHANNEL_OPTIONS.find((o) => o.value === channel)?.label ?? channel
 }
 
+function normalizeLineStaffIds(
+  lineIds?: string | LeadLineIds | null,
+): LeadLineIds {
+  if (!lineIds) return {}
+  if (typeof lineIds === 'string') return { line_user_id: lineIds }
+  return lineIds
+}
+
+/** ลิงก์เปิดแชท LINE — ใช้ line_oa_chat_user_id สำหรับแชทตรง ถ้ามี */
 export function openUrlForPreferredChannel(
   channel: PreferredContactChannel,
-  lineUserId?: string | null,
+  lineIds?: string | LeadLineIds | null,
 ): string {
-  if (channel === 'line') return staffLineChatUrl(lineUserId)
-  return NPCREATE_FACEBOOK_MESSENGER_URL
+  if (channel !== 'line') return NPCREATE_FACEBOOK_MESSENGER_URL
+  const ids = normalizeLineStaffIds(lineIds)
+  const oaOpenId = resolveLineStaffChatOpenUserId(ids)
+  if (oaOpenId) return staffLineChatUrl(oaOpenId, { mode: 'direct' })
+  return staffLineChatUrl(ids.line_user_id)
 }
 
 export function staffOpenChannelLabel(channel: PreferredContactChannel): string {

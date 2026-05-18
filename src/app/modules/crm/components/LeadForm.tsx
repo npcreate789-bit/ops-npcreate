@@ -71,6 +71,7 @@ function toPayloadFields(values: LeadFormValues) {
     phone: values.phone.trim() || null,
     line_id: values.line_id.trim() || null,
     line_user_id: null,
+    line_oa_chat_user_id: null,
     facebook: values.facebook.trim() || null,
     facebook_psid: null,
     business_type: values.business_type || null,

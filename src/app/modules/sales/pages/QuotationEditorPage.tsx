@@ -184,7 +184,14 @@ export function QuotationEditorPage() {
           quotation={initial}
           brandName={leadBrandName ?? 'ลูกค้า'}
           leadServiceCodes={leadServiceCodes}
-          lineUserId={leadForBanner?.line_user_id}
+          lineIds={
+            leadForBanner
+              ? {
+                  line_user_id: leadForBanner.line_user_id,
+                  line_oa_chat_user_id: leadForBanner.line_oa_chat_user_id,
+                }
+              : null
+          }
           packages={packages}
           saved
         />
@@ -231,7 +238,14 @@ export function QuotationEditorPage() {
           }}
           brandName={leadBrandName ?? 'ลูกค้า'}
           leadServiceCodes={leadServiceCodes}
-          lineUserId={leadForBanner?.line_user_id}
+          lineIds={
+            leadForBanner
+              ? {
+                  line_user_id: leadForBanner.line_user_id,
+                  line_oa_chat_user_id: leadForBanner.line_oa_chat_user_id,
+                }
+              : null
+          }
           packages={packages}
           saved={false}
         />

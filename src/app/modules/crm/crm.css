@@ -705,3 +705,61 @@
   background: rgba(96, 165, 250, 0.12);
   color: #93c5fd;
 }
+
+.crm-line-ids {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--npc-border, rgba(255, 255, 255, 0.08));
+}
+
+.crm-line-ids__row {
+  margin-bottom: 0.75rem;
+}
+
+.crm-line-ids__id {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+
+.crm-line-ids__warn {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: rgba(251, 191, 36, 0.12);
+  color: #fcd34d;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.crm-line-ids__hint {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.crm-line-ids__label {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.35rem;
+}
+
+.crm-line-ids__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.crm-line-ids__controls .crm-input {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+
+.crm-line-ids__ok {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #86efac;
+}
+
+.crm-line-ids__open {
+  margin-top: 0.5rem;
+}

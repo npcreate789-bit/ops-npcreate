@@ -33,11 +33,13 @@ export async function listCustomersForClientWizard(): Promise<ClientWizardCustom
   if (leadIds.length > 0) {
     const { data: leads, error: leadErr } = await supabase
       .from('leads')
-      .select('id, line_user_id')
+      .select('id, line_user_id, line_oa_chat_user_id')
       .in('id', leadIds)
     if (leadErr) throw new Error(leadErr.message)
     for (const lead of leads ?? []) {
-      const uid = (lead.line_user_id as string | null)?.trim()
+      const oa = (lead.line_oa_chat_user_id as string | null)?.trim()
+      const login = (lead.line_user_id as string | null)?.trim()
+      const uid = oa || login
       if (uid) lineByLead.set(lead.id as string, uid)
     }
   }

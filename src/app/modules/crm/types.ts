@@ -26,6 +26,8 @@ export interface Lead {
   phone: string | null
   line_id: string | null
   line_user_id: string | null
+  /** user id จาก URL แชท OA (chat.line.biz/.../chat/U…) */
+  line_oa_chat_user_id: string | null
   facebook: string | null
   facebook_psid: string | null
   business_type: string | null

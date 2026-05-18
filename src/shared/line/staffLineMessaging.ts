@@ -5,6 +5,10 @@ import {
   staffLineChatUrl,
   staffLineOaInboxUrl,
 } from './lineStaffOpenUrl'
+import {
+  type LeadLineIds,
+  resolveLineMessagingRecipientId,
+} from './lineUserIdResolution'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
@@ -174,16 +178,25 @@ export async function sendLinePushMessage(
   return { mode: 'push' }
 }
 
-/** Push ถ้ามี line_user_id + token — ไม่เช่นนั้น copy + เปิด OA */
+function normalizeLineRecipient(
+  lineIds: string | LeadLineIds | null | undefined,
+): string | null {
+  if (!lineIds) return null
+  if (typeof lineIds === 'string') return lineIds.trim() || null
+  return resolveLineMessagingRecipientId(lineIds)
+}
+
+/** Push ถ้ามี user id + token — ใช้แชท OA ก่อน Login id */
 export async function deliverLineMessageToCustomer(
-  lineUserId: string | null | undefined,
+  lineIds: string | LeadLineIds | null | undefined,
   text: string,
 ): Promise<LineSendResult> {
-  if (lineUserId?.trim()) {
-    return sendLinePushMessage(lineUserId, text)
+  const recipient = normalizeLineRecipient(lineIds)
+  if (recipient) {
+    return sendLinePushMessage(recipient, text)
   }
   const copied = await copyTextToClipboard(text)
-  openLineOaWithText(text, lineUserId)
+  openLineOaWithText(text, typeof lineIds === 'string' ? lineIds : lineIds?.line_user_id)
   return {
     mode: copied ? 'open_oa' : 'copy_only',
     message: copied
