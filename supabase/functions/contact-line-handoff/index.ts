@@ -1,6 +1,8 @@
 /**
- * หลัง submit /contact — ส่งข้อความเข้าแชท LINE ของลูกค้า (push) หรือคืน URL เปิดแชท
- * Secrets: LINE_MESSAGING_CHANNEL_ACCESS_TOKEN, SUPABASE_SERVICE_ROLE_KEY
+ * หลัง submit /contact —
+ * 1) push ข้อความถึงลูกค้า (LINE_MESSAGING_CHANNEL_ACCESS_TOKEN)
+ * 2) แจ้งทีม OA อีกชุด (LINE_OA_CHANNEL_ACCESS_TOKEN หรือ LINE_NOTIFY_TOKEN)
+ * Secrets: SUPABASE_SERVICE_ROLE_KEY, LINE_* (ดู .env.example)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 
@@ -18,6 +20,17 @@ interface HandoffBody {
   text?: string
 }
 
+interface LeadRow {
+  id: string
+  brand_name: string | null
+  contact_name: string | null
+  phone: string | null
+  line_user_id: string | null
+  services_interested: string[] | null
+  channel: string
+  created_at: string
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -33,6 +46,41 @@ function lineOaHandle(): string {
 function lineOaMessageUrl(message: string): string {
   const base = `https://line.me/R/oaMessage/${lineOaHandle()}/`
   return `${base}?${encodeURIComponent(message.trim())}`
+}
+
+function appLeadUrl(leadId: string): string {
+  const origin = Deno.env.get('CONTACT_OAUTH_RETURN_ORIGIN')?.trim() ||
+    Deno.env.get('VITE_APP_URL')?.trim() ||
+    'https://app.npcreate.co.th'
+  const base = origin.replace(/\/$/, '')
+  return `${base}/app/crm/leads/${leadId}`
+}
+
+function parseLineUserIds(raw: string | undefined): string[] {
+  if (!raw?.trim()) return []
+  return raw
+    .split(/[,\s;]+/)
+    .map((id) => id.trim())
+    .filter((id) => LINE_MESSAGING_USER_ID_RE.test(id))
+}
+
+function buildOaStaffNotifyMessage(input: {
+  lead: LeadRow
+  customerText: string
+}): string {
+  const services = (input.lead.services_interested ?? []).filter(Boolean)
+  const lines = [
+    `[Lead ใหม่ — /contact]`,
+    `แบรนด์: ${input.lead.brand_name?.trim() || '—'}`,
+    `ชื่อ: ${input.lead.contact_name?.trim() || '—'}`,
+    `โทร: ${input.lead.phone?.trim() || '—'}`,
+    `LINE: ${input.lead.line_user_id?.trim() || '—'}`,
+  ]
+  if (services.length > 0) {
+    lines.push(`บริการ: ${services.join(', ')}`)
+  }
+  lines.push('', '--- ข้อความลูกค้า ---', input.customerText.trim(), '', `CRM: ${appLeadUrl(input.lead.id)}`)
+  return lines.join('\n')
 }
 
 async function pushLineText(
@@ -55,13 +103,50 @@ async function pushLineText(
   if (lineRes.ok) return { ok: true }
 
   const errBody = await lineRes.text()
-  console.error('contact-line-handoff push failed', lineRes.status, errBody)
+  console.error('contact-line-handoff push failed', lineRes.status, to, errBody)
 
   if (lineRes.status === 403 || errBody.includes('not a friend')) {
     return { ok: false, reason: 'not_friend' }
   }
 
   return { ok: false, reason: 'push_failed' }
+}
+
+async function lineNotify(token: string, message: string): Promise<boolean> {
+  const res = await fetch('https://notify-api.line.me/api/notify', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: `Bearer ${token}`,
+    },
+    body: new URLSearchParams({ message }),
+  })
+  if (!res.ok) {
+    const body = await res.text()
+    console.error('contact-line-handoff LINE Notify failed', res.status, body)
+  }
+  return res.ok
+}
+
+/** แจ้งทีม OA — ไม่ทำให้ handoff ลูกค้าล้มเหลว */
+async function notifyLineOaStaff(staffText: string): Promise<boolean> {
+  const notifyToken = Deno.env.get('LINE_NOTIFY_TOKEN')?.trim()
+  if (notifyToken) {
+    return lineNotify(notifyToken, staffText)
+  }
+
+  const oaToken = Deno.env.get('LINE_OA_CHANNEL_ACCESS_TOKEN')?.trim()
+  const staffIds = parseLineUserIds(Deno.env.get('LINE_OA_NOTIFY_USER_IDS'))
+  if (!oaToken || staffIds.length === 0) {
+    return false
+  }
+
+  let anyOk = false
+  for (const staffId of staffIds) {
+    const result = await pushLineText(oaToken, staffId, staffText)
+    if (result.ok) anyOk = true
+  }
+  return anyOk
 }
 
 Deno.serve(async (req) => {
@@ -108,7 +193,7 @@ Deno.serve(async (req) => {
 
     const { data: lead, error: leadErr } = await admin
       .from('leads')
-      .select('id, line_user_id, channel, created_at')
+      .select('id, brand_name, contact_name, phone, line_user_id, services_interested, channel, created_at')
       .eq('id', leadId)
       .maybeSingle()
 
@@ -116,17 +201,26 @@ Deno.serve(async (req) => {
       return json({ error: 'ไม่พบ Lead' }, 404)
     }
 
-    const leadLineId = (lead.line_user_id ?? '').trim()
-    if (lead.channel !== 'website' || leadLineId.toLowerCase() !== lineUserId.toLowerCase()) {
+    const leadRow = lead as LeadRow
+    const leadLineId = (leadRow.line_user_id ?? '').trim()
+    if (leadRow.channel !== 'website' || leadLineId.toLowerCase() !== lineUserId.toLowerCase()) {
       return json({ error: 'ไม่ได้รับอนุญาต' }, 403)
     }
 
-    const createdAt = new Date(lead.created_at).getTime()
+    const createdAt = new Date(leadRow.created_at).getTime()
     if (Number.isNaN(createdAt) || Date.now() - createdAt > HANDOFF_MAX_AGE_MS) {
       return json({ error: 'หมดเวลาส่งข้อความ LINE' }, 403)
     }
 
     const chatUrl = lineOaMessageUrl(text)
+    const staffText = buildOaStaffNotifyMessage({ lead: leadRow, customerText: text })
+
+    try {
+      await notifyLineOaStaff(staffText)
+    } catch (e) {
+      console.error('contact-line-handoff oa notify', e)
+    }
+
     const lineToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
 
     if (!lineToken) {
