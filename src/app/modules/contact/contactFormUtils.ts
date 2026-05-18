@@ -9,6 +9,7 @@ export interface ContactFormFields {
   preferredChannel: PreferredContactChannel | ''
   lineId: string
   lineUserId: string
+  lineOaStepDone: boolean
   facebook: string
   facebookPsid: string
 }
@@ -67,8 +68,11 @@ export function validateContactForm(fields: ContactFormFields): {
     const hasOAuth = isLineOAuthConfigured()
     const connected = Boolean(fields.lineUserId.trim())
     const manualId = Boolean(fields.lineId.trim())
-    if (hasOAuth && !connected && !manualId) {
-      errors.channelConnect = 'กรุณากดเชื่อมต่อ LINE ก่อนส่งข้อมูล'
+    if (!fields.lineOaStepDone) {
+      errors.channelConnect =
+        'กรุณาทักข้อความ "สนใจบริการ" ที่ @npcreate ก่อน (ขั้นตอนที่ 1)'
+    } else if (hasOAuth && !connected) {
+      errors.channelConnect = 'กรุณาเชื่อมต่อ LINE Login ก่อนส่งข้อมูล (ขั้นตอนที่ 2)'
     } else if (!hasOAuth && !manualId) {
       errors.lineId = 'กรุณาระบุ LINE ID เพื่อให้ทีมติดต่อกลับ'
     }

@@ -23,8 +23,12 @@ export type LineOAuthDisabledReason =
   | 'missing_callback_url'
 
 const LINE_OAUTH_STATE_KEY = 'npc_contact_line_oauth_state'
+const LINE_OA_STEP_KEY = 'npc_contact_line_oa_step_done'
 const LINE_USER_KEY = 'npc_contact_line_user_id'
 const LINE_NAME_KEY = 'npc_contact_line_display_name'
+
+/** ข้อความเริ่มต้นเมื่อลูกค้าทัก OA จากฟอร์ม /contact */
+export const LINE_OA_STARTER_MESSAGE = 'สนใจบริการ'
 const FB_PSID_KEY = 'npc_contact_facebook_psid'
 const FB_NAME_KEY = 'npc_contact_facebook_name'
 
@@ -124,4 +128,23 @@ export function clearFacebookConnection() {
 export function lineAddFriendUrl(): string {
   const handle = LINE_OA_ID.startsWith('@') ? LINE_OA_ID : `@${LINE_OA_ID}`
   return `https://line.me/R/ti/p/${encodeURIComponent(handle)}`
+}
+
+/** เปิดแชท OA พร้อมข้อความเริ่มต้น (เพิ่มเพื่อน + ทักในครั้งเดียวบนมือถือ) */
+export function lineOaStarterMessageUrl(message = LINE_OA_STARTER_MESSAGE): string {
+  const handle = LINE_OA_ID.startsWith('@') ? LINE_OA_ID : `@${LINE_OA_ID}`
+  const base = `https://line.me/R/oaMessage/${encodeURIComponent(handle)}/`
+  return `${base}?text=${encodeURIComponent(message.trim())}`
+}
+
+export function markLineOaContactStepDone(): void {
+  sessionStorage.setItem(LINE_OA_STEP_KEY, '1')
+}
+
+export function readLineOaContactStepDone(): boolean {
+  return sessionStorage.getItem(LINE_OA_STEP_KEY) === '1'
+}
+
+export function clearLineOaContactStepDone(): void {
+  sessionStorage.removeItem(LINE_OA_STEP_KEY)
 }

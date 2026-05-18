@@ -26,14 +26,15 @@ import { friendlyContactSubmitError, validateContactForm } from '../contactFormU
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
 import { ChannelConnectPanel } from '../components/ChannelConnectPanel'
+import { LineContactSetupPanel } from '../components/LineContactSetupPanel'
 import { FacebookCustomerChat } from '../components/FacebookCustomerChat'
 import {
   isFacebookChatConfigured,
   isFacebookLoginConfigured,
   isLineOAuthConfigured,
-  lineAddFriendUrl,
   readFacebookConnection,
   readLineConnection,
+  readLineOaContactStepDone,
 } from '../../../../shared/contact/channelConnectConfig'
 import {
   applyLineOAuthCallbackFromUrl,
@@ -67,6 +68,7 @@ export function ContactPage() {
   const [lineId, setLineId] = useState('')
   const [lineUserId, setLineUserId] = useState('')
   const [lineDisplayName, setLineDisplayName] = useState<string | null>(null)
+  const [lineOaStepDone, setLineOaStepDone] = useState(false)
   const [facebook, setFacebook] = useState('')
   const [facebookPsid, setFacebookPsid] = useState('')
   const [facebookName, setFacebookName] = useState<string | null>(null)
@@ -88,6 +90,7 @@ export function ContactPage() {
   const [done, setDone] = useState(false)
 
   useEffect(() => {
+    setLineOaStepDone(readLineOaContactStepDone())
     const storedLine = readLineConnection()
     if (storedLine) {
       setLineUserId(storedLine.userId)
@@ -103,9 +106,11 @@ export function ContactPage() {
     if (lineResult) {
       if (lineResult.ok) {
         setPreferredChannel('line')
+        setLineOaStepDone(readLineOaContactStepDone())
         setLineUserId(lineResult.userId)
         setLineDisplayName(lineResult.displayName)
         setChannelConnectError(null)
+        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
       } else {
         setChannelConnectError(lineResult.error)
       }
@@ -154,6 +159,7 @@ export function ContactPage() {
       preferredChannel,
       lineId,
       lineUserId,
+      lineOaStepDone,
       facebook,
       facebookPsid,
     })
@@ -220,10 +226,7 @@ export function ContactPage() {
           </ol>
           {successChannel === 'line' && (
             <p className="contact-section__hint contact-success-channel-hint">
-              <a href={lineAddFriendUrl()} target="_blank" rel="noopener noreferrer">
-                เพิ่มเพื่อน LINE Official @npcreate
-              </a>
-              {' '}เพื่อรับข้อความจากทีม
+              ทีมจะติดต่อกลับทาง LINE @npcreate ตามข้อความ &quot;สนใจบริการ&quot; ที่คุณส่งไว้
             </p>
           )}
           {successChannel === 'facebook' && isFacebookChatConfigured() && (
@@ -365,6 +368,11 @@ export function ContactPage() {
                       className={`contact-chip contact-chip--channel${preferredChannel === opt.value ? ' contact-chip--on' : ''}`}
                       onClick={() => {
                         setPreferredChannel(opt.value)
+                        if (opt.value !== 'line') {
+                          setLineOaStepDone(false)
+                        } else {
+                          setLineOaStepDone(readLineOaContactStepDone())
+                        }
                         if (fieldErrors.preferredChannel) {
                           setFieldErrors((e) => ({ ...e, preferredChannel: undefined }))
                         }
@@ -381,25 +389,24 @@ export function ContactPage() {
                 )}
                 {preferredChannel === 'line' && (
                   <>
-                    <ChannelConnectPanel
-                      channel="line"
+                    <LineContactSetupPanel
                       lineUserId={lineUserId || null}
                       lineDisplayName={lineDisplayName}
-                      facebookPsid={null}
-                      facebookName={null}
-                      error={channelConnectError ?? undefined}
-                      onLineConnected={(id, name) => {
-                        setLineUserId(id)
-                        setLineDisplayName(name)
-                        setChannelConnectError(null)
-                        setFieldErrors((e) => ({ ...e, channelConnect: undefined, lineId: undefined }))
+                      lineOaStepDone={lineOaStepDone}
+                      onLineOaStepDone={() => {
+                        setLineOaStepDone(true)
+                        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
                       }}
+                      onLineOaStepReset={() => setLineOaStepDone(false)}
                       onLineDisconnected={() => {
                         setLineUserId('')
                         setLineDisplayName(null)
                       }}
-                      onFacebookConnected={() => {}}
-                      onFacebookDisconnected={() => {}}
+                      error={
+                        fieldErrors.channelConnect ??
+                        channelConnectError ??
+                        undefined
+                      }
                     />
                     {!isLineOAuthConfigured() && (
                       <ContactInput
@@ -418,16 +425,6 @@ export function ContactPage() {
                         hint={
                           PREFERRED_CONTACT_CHANNEL_OPTIONS.find((o) => o.value === 'line')?.hint
                         }
-                      />
-                    )}
-                    {isLineOAuthConfigured() && !lineUserId && (
-                      <ContactInput
-                        id="contact-line-optional"
-                        label="LINE ID (สำรอง ไม่บังคับ)"
-                        value={lineId}
-                        onChange={(e) => setLineId(e.target.value)}
-                        placeholder="@brandabc"
-                        hint="ใช้เมื่อไม่สามารถเชื่อมต่อ LINE Login ได้"
                       />
                     )}
                   </>
@@ -539,9 +536,23 @@ export function ContactPage() {
               />
             </section>
 
-            <button type="submit" className="contact-submit" disabled={saving}>
+            <button
+              type="submit"
+              className="contact-submit"
+              disabled={
+                saving ||
+                (preferredChannel === 'line' &&
+                  isLineOAuthConfigured() &&
+                  (!lineOaStepDone || !lineUserId.trim()))
+              }
+            >
               {saving ? 'กำลังส่งข้อมูล...' : 'ส่งข้อมูลติดต่อ'}
             </button>
+            {preferredChannel === 'line' && isLineOAuthConfigured() && !lineOaStepDone && (
+              <p className="contact-form-note contact-form-note--warn">
+                ทำขั้นที่ 1–2 ด้านบนก่อน — ทัก &quot;สนใจบริการ&quot; ที่ @npcreate แล้วเชื่อมต่อ LINE Login
+              </p>
+            )}
             <p className="contact-form-note">
               กดส่งถือว่ายินยอมให้ทีม NP Create ติดต่อกลับตามข้อมูลที่กรอก — รายละเอียดงานเพิ่มเติมกรอกในขั้นตอนบรีฟหลังเริ่มงาน
             </p>

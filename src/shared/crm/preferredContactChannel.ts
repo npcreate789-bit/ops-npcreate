@@ -13,7 +13,7 @@ export const PREFERRED_CONTACT_CHANNEL_OPTIONS: {
   {
     value: 'line',
     label: 'LINE',
-    hint: 'เชื่อมต่อบัญชี LINE แล้วทีม NP Create ทักกลับทาง Official @npcreate',
+    hint: 'ทัก @npcreate ด้วยข้อความ "สนใจบริการ" แล้วเชื่อมต่อ LINE Login',
   },
   {
     value: 'facebook',
