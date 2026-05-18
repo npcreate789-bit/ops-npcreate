@@ -11,7 +11,7 @@ export interface ContactLineHandoffResult {
   reason?: string
 }
 
-const RETRYABLE_REASONS = new Set(['push_failed', 'not_friend'])
+const RETRYABLE_REASONS = new Set(['push_failed', 'not_friend', 'oa_chat_id_mismatch'])
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms))

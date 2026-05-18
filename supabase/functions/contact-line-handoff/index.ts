@@ -1,7 +1,7 @@
 /**
  * หลัง submit /contact —
- * 1) push ข้อความถึงลูกค้า (LINE_MESSAGING_CHANNEL_ACCESS_TOKEN)
- * 2) ส่งชุดข้อความเข้า Line OA — Notify / staff IDs / สรุปในแชทลูกค้า (chat.line.biz)
+ * 1) push ข้อความถึงลูกค้าในแชท OA (chat.line.biz) — ใช้ line_oa_chat_user_id ก่อน LINE Login id
+ * 2) แจ้งทีม OA (Notify / staff / สรุปในแชท)
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 
@@ -25,6 +25,7 @@ interface LeadRow {
   contact_name: string | null
   phone: string | null
   line_user_id: string | null
+  line_oa_chat_user_id: string | null
   services_interested: string[] | null
   channel: string
   created_at: string
@@ -63,9 +64,28 @@ function parseLineUserIds(raw: string | undefined): string[] {
     .filter((id) => LINE_MESSAGING_USER_ID_RE.test(id))
 }
 
+/** ลำดับ push: OA chat id จาก CRM → id จากฟอร์ม → LINE Login ใน lead */
+function resolvePushTargets(lead: LeadRow, requestLineUserId: string): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  const add = (id?: string | null) => {
+    const t = id?.trim()
+    if (!t || !LINE_MESSAGING_USER_ID_RE.test(t)) return
+    const key = t.toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    out.push(t)
+  }
+  add(lead.line_oa_chat_user_id)
+  add(requestLineUserId)
+  add(lead.line_user_id)
+  return out
+}
+
 function buildOaStaffNotifyMessage(input: {
   lead: LeadRow
   customerText: string
+  pushUserId?: string
 }): string {
   const services = (input.lead.services_interested ?? []).filter(Boolean)
   const lines = [
@@ -73,13 +93,30 @@ function buildOaStaffNotifyMessage(input: {
     `แบรนด์: ${input.lead.brand_name?.trim() || '—'}`,
     `ชื่อ: ${input.lead.contact_name?.trim() || '—'}`,
     `โทร: ${input.lead.phone?.trim() || '—'}`,
-    `LINE: ${input.lead.line_user_id?.trim() || '—'}`,
+    `LINE Login: ${input.lead.line_user_id?.trim() || '—'}`,
   ]
+  if (input.lead.line_oa_chat_user_id?.trim()) {
+    lines.push(`แชท OA: ${input.lead.line_oa_chat_user_id.trim()}`)
+  }
+  if (input.pushUserId) {
+    lines.push(`ส่ง push ไปที่: ${input.pushUserId}`)
+  }
   if (services.length > 0) {
     lines.push(`บริการ: ${services.join(', ')}`)
   }
   lines.push('', '--- ข้อความลูกค้า ---', input.customerText.trim(), '', `CRM: ${appLeadUrl(input.lead.id)}`)
   return lines.join('\n')
+}
+
+async function botProfileExists(token: string, userId: string): Promise<boolean> {
+  const res = await fetch(`https://api.line.me/v2/bot/profile/${encodeURIComponent(userId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (res.ok) return true
+  if (res.status !== 404) {
+    console.warn('contact-line-handoff bot profile', userId, res.status, await res.text())
+  }
+  return false
 }
 
 async function pushLineText(
@@ -124,6 +161,33 @@ async function pushLineTextWithRetry(
   return result
 }
 
+type PushAttempt = { ok: boolean; to?: string; reason?: string }
+
+/** Push ไปยัง user id ที่ Messaging API รู้จัก (ปรากฏใน chat.line.biz) */
+async function pushLineTextToTargets(
+  token: string,
+  targets: string[],
+  text: string,
+): Promise<PushAttempt> {
+  if (targets.length === 0) {
+    return { ok: false, reason: 'invalid_line_user_id' }
+  }
+
+  const profileChecks = await Promise.all(
+    targets.map(async (id) => ({ id, ok: await botProfileExists(token, id) })),
+  )
+  const known = profileChecks.filter((p) => p.ok).map((p) => p.id)
+  const tryOrder = known.length > 0 ? known : targets
+
+  for (const to of tryOrder) {
+    const result = await pushLineTextWithRetry(token, to, text)
+    if (result.ok) return { ok: true, to }
+  }
+
+  const last = await pushLineTextWithRetry(token, targets[0], text)
+  return { ok: last.ok, to: last.ok ? targets[0] : undefined, reason: last.reason }
+}
+
 async function lineNotify(token: string, message: string): Promise<boolean> {
   const res = await fetch('https://notify-api.line.me/api/notify', {
     method: 'POST',
@@ -152,12 +216,9 @@ async function notifyLineOaStaffViaIds(oaToken: string, staffText: string): Prom
   return anyOk
 }
 
-/**
- * ส่งชุดข้อความเข้า Line OA — แจ้งทีม (Notify / staff) หรือ push สรุปเข้าแชทกับลูกค้าใน chat.line.biz
- */
 async function deliverLineOaBundle(input: {
-  lineUserId: string
-  customerText: string
+  token: string
+  targets: string[]
   staffText: string
 }): Promise<boolean> {
   const notifyToken = Deno.env.get('LINE_NOTIFY_TOKEN')?.trim()
@@ -166,21 +227,16 @@ async function deliverLineOaBundle(input: {
   }
 
   const oaToken = Deno.env.get('LINE_OA_CHANNEL_ACCESS_TOKEN')?.trim()
-  const messagingToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
-
   if (oaToken && (await notifyLineOaStaffViaIds(oaToken, input.staffText))) {
     return true
   }
 
-  const inboxToken = oaToken || messagingToken
-  if (!inboxToken) return false
+  const inbox = await pushLineTextToTargets(input.token, input.targets, input.staffText)
+  if (inbox.ok) return true
 
-  const inboxPush = await pushLineTextWithRetry(inboxToken, input.lineUserId, input.staffText)
-  if (inboxPush.ok) return true
-
-  if (oaToken && messagingToken && oaToken !== messagingToken) {
-    const viaMessaging = await pushLineTextWithRetry(messagingToken, input.lineUserId, input.staffText)
-    return viaMessaging.ok
+  if (oaToken && oaToken !== input.token) {
+    const alt = await pushLineTextToTargets(oaToken, input.targets, input.staffText)
+    return alt.ok
   }
 
   return false
@@ -231,7 +287,9 @@ Deno.serve(async (req) => {
 
     const { data: lead, error: leadErr } = await admin
       .from('leads')
-      .select('id, brand_name, contact_name, phone, line_user_id, services_interested, channel, created_at')
+      .select(
+        'id, brand_name, contact_name, phone, line_user_id, line_oa_chat_user_id, services_interested, channel, created_at',
+      )
       .eq('id', leadId)
       .maybeSingle()
 
@@ -250,47 +308,85 @@ Deno.serve(async (req) => {
       return json({ error: 'หมดเวลาส่งข้อความ LINE' }, 403)
     }
 
+    const pushTargets = resolvePushTargets(leadRow, lineUserId)
     const chatUrl = lineOaMessageUrl(text)
-    const staffText = buildOaStaffNotifyMessage({ lead: leadRow, customerText: text })
 
     const messagingToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
     const oaToken = Deno.env.get('LINE_OA_CHANNEL_ACCESS_TOKEN')?.trim()
-
-    let oaNotified = false
-    try {
-      oaNotified = await deliverLineOaBundle({ lineUserId, customerText: text, staffText })
-    } catch (e) {
-      console.error('contact-line-handoff oa bundle', e)
-    }
-
     const customerToken = messagingToken || oaToken
+
     if (!customerToken) {
       return json({
         ok: true,
         mode: 'open_chat',
         url: chatUrl,
         reason: 'no_messaging_token',
-        oa_notified: oaNotified,
+        oa_notified: false,
       })
     }
 
-    const customerPush = await pushLineTextWithRetry(customerToken, lineUserId, text)
+    const customerPush = await pushLineTextToTargets(customerToken, pushTargets, text)
+
+    let pushUserId = customerPush.to
+    let staffText = buildOaStaffNotifyMessage({
+      lead: leadRow,
+      customerText: text,
+      pushUserId,
+    })
+
+    let oaNotified = false
+    try {
+      oaNotified = await deliverLineOaBundle({
+        token: customerToken,
+        targets: pushTargets,
+        staffText,
+      })
+    } catch (e) {
+      console.error('contact-line-handoff oa bundle', e)
+    }
 
     if (oaToken && messagingToken && oaToken !== messagingToken) {
-      const oaCustomerPush = await pushLineTextWithRetry(oaToken, lineUserId, text)
-      if (oaCustomerPush.ok) oaNotified = true
+      const oaExtra = await pushLineTextToTargets(oaToken, pushTargets, text)
+      if (oaExtra.ok) {
+        oaNotified = true
+        if (!pushUserId) pushUserId = oaExtra.to
+      }
+    }
+
+    if (customerPush.ok && pushUserId) {
+      const oaId = leadRow.line_oa_chat_user_id?.trim()
+      if (!oaId || oaId.toLowerCase() !== pushUserId.toLowerCase()) {
+        await admin
+          .from('leads')
+          .update({ line_oa_chat_user_id: pushUserId })
+          .eq('id', leadId)
+      }
     }
 
     if (customerPush.ok) {
-      return json({ ok: true, mode: 'push', url: chatUrl, oa_notified: oaNotified })
+      return json({
+        ok: true,
+        mode: 'push',
+        url: chatUrl,
+        oa_notified: oaNotified,
+        push_user_id: pushUserId,
+      })
     }
+
+    const loginKnown = await botProfileExists(customerToken, lineUserId)
+    const reason = loginKnown
+      ? (customerPush.reason ?? 'push_failed')
+      : 'oa_chat_id_mismatch'
 
     return json({
       ok: true,
       mode: 'open_chat',
       url: chatUrl,
-      reason: customerPush.reason ?? 'push_failed',
+      reason,
       oa_notified: oaNotified,
+      push_user_id: pushUserId,
+      line_login_id: lineUserId,
+      line_oa_chat_user_id: leadRow.line_oa_chat_user_id,
     })
   } catch (e) {
     console.error('contact-line-handoff', e)

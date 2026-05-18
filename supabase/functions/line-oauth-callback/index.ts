@@ -131,10 +131,28 @@ async function exchangeCodeForProfile(input: TokenExchangeInput) {
     return { error: 'no_user_id' as const, returnTo: state.r }
   }
 
+  let oaChatReady = false
+  const messagingToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
+  if (messagingToken) {
+    const botProfileRes = await fetch(
+      `https://api.line.me/v2/bot/profile/${encodeURIComponent(profile.userId)}`,
+      { headers: { Authorization: `Bearer ${messagingToken}` } },
+    )
+    oaChatReady = botProfileRes.ok
+    if (!botProfileRes.ok) {
+      console.warn(
+        'line-oauth-callback: LINE Login id not visible to Messaging API (link channels or add OA friend)',
+        profile.userId,
+        botProfileRes.status,
+      )
+    }
+  }
+
   return {
     returnTo: state.r,
     userId: profile.userId,
     displayName: profile.displayName ?? null,
+    oaChatReady,
   }
 }
 
@@ -166,6 +184,7 @@ Deno.serve(async (req) => {
         ok: true,
         user_id: result.userId,
         display_name: result.displayName,
+        oa_chat_ready: result.oaChatReady ?? false,
       })
     } catch (e) {
       console.error('line-oauth-callback POST', e)
