@@ -35,7 +35,7 @@ function seed(): Lead[] {
       ad_budget_daily: 1500,
       ad_budget_monthly: 45000,
       pain_points: 'ROI ต่ำ ยอดไม่โต',
-      services_interested: ['GMV Max', 'ผลิตคอนเทนต์'],
+      services_interested: ['gmv_max', 'content'],
       status: 'interested',
       channel: 'tiktok',
       notes: 'Lead ตัวอย่างสำหรับโหมดพัฒนา',

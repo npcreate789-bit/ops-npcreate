@@ -11,6 +11,12 @@ import {
 } from '../../../../shared/auth/access'
 import { useAcknowledgeLeadNotificationOnView } from '../../notifications/useAcknowledgeLeadNotificationOnView'
 import { isSupabaseConfigured } from '../../../../shared/supabase/client'
+import { listPackages } from '../../sales/api/packages'
+import {
+  formatServiceInterests,
+  optionsFromPackages,
+  type ServicePackageOption,
+} from '../../../../shared/packages/serviceInterests'
 import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
 import { canViewLeadAttachments } from '../access'
 import { LeadAttachmentsSection } from '../components/LeadAttachmentsSection'
@@ -44,6 +50,7 @@ export function LeadEditorPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [initial, setInitial] = useState<Awaited<ReturnType<typeof getLead>>>(null)
+  const [serviceOptions, setServiceOptions] = useState<ServicePackageOption[]>([])
   const acknowledgeLeadNotif =
     (canAccessNotifications(roles) || !configured) && !isNew && !!initial
   useAcknowledgeLeadNotificationOnView(userId, acknowledgeLeadNotif ? id : undefined, true)
@@ -51,6 +58,20 @@ export function LeadEditorPage() {
     (isNew ? canCreate : canEditCrmLead(roles, initial?.owner_id, userId)) ||
     !configured
   const readOnly = !canEdit && configured
+
+  useEffect(() => {
+    let cancelled = false
+    listPackages()
+      .then((pkgs) => {
+        if (!cancelled) setServiceOptions(optionsFromPackages(pkgs))
+      })
+      .catch(() => {
+        if (!cancelled) setServiceOptions([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (isNew) {
@@ -161,6 +182,12 @@ export function LeadEditorPage() {
           >
             สร้างใบเสนอราคา
           </Link>
+          {initial.services_interested.length > 0 && (
+            <span className="crm-sub" style={{ display: 'block', marginTop: '0.5rem' }}>
+              จากความสนใจ: {formatServiceInterests(initial.services_interested, serviceOptions)}
+              — ระบบจะเติมแพ็กเกจในใบเสนอราคาให้อัตโนมัติ
+            </span>
+          )}
         </p>
       )}
 
@@ -175,6 +202,7 @@ export function LeadEditorPage() {
       <section className="card card--wide">
         <LeadForm
           initial={initial}
+          serviceOptions={serviceOptions}
           saving={saving}
           readOnly={readOnly}
           onSubmit={handleSubmit}

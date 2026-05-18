@@ -1,4 +1,8 @@
 import { logAudit } from '../../../../shared/audit/logAudit'
+import {
+  DEFAULT_ACTIVE_SERVICE_PACKAGES,
+  type ServicePackageOption,
+} from '../../../../shared/packages/serviceInterests'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import type { Package, PackageInput, PackageListOptions } from '../types'
 import { mockSalesApi } from './mockStore'
@@ -17,6 +21,24 @@ function mapRow(row: Record<string, unknown>): Package {
 /** แพ็กเกจสำหรับ dropdown ใบเสนอราคา — เฉพาะที่เปิดใช้งาน */
 export async function listPackages(): Promise<Package[]> {
   return listAllPackages({ activeOnly: true })
+}
+
+/** ตัวเลือกบริการสาธารณะ (ฟอร์ม /contact) — ไม่ต้องล็อกอิน */
+export async function listPublicServicePackages(): Promise<ServicePackageOption[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    const rows = await mockSalesApi.listAllPackages({ activeOnly: true })
+    return rows.map((p) => ({ code: p.code, name: p.name }))
+  }
+
+  const { data, error } = await supabase.rpc('list_public_service_packages')
+  if (error) {
+    console.warn('[listPublicServicePackages]', error.message)
+    return DEFAULT_ACTIVE_SERVICE_PACKAGES
+  }
+
+  const rows = (data ?? []) as { code: string; name: string }[]
+  if (rows.length === 0) return DEFAULT_ACTIVE_SERVICE_PACKAGES
+  return rows.map((r) => ({ code: r.code, name: r.name }))
 }
 
 export async function listAllPackages(options: PackageListOptions = {}): Promise<Package[]> {

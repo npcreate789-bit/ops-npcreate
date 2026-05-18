@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { formatServiceInterests } from '../../../../shared/packages/serviceInterests'
 import type { Package, Quotation, QuotationInput, QuotationStatus } from '../types'
 import {
   DEFAULT_TERMS,
@@ -24,8 +25,21 @@ export interface QuotationFormState {
   }[]
 }
 
-function toState(initial?: Quotation | null, leadId?: string): QuotationFormState {
+function defaultItemFromPackage(pkg: Package) {
   return {
+    package_id: pkg.id,
+    description: pkg.name,
+    quantity: '1',
+    unit_price: String(pkg.base_price),
+  }
+}
+
+function toState(
+  initial?: Quotation | null,
+  leadId?: string,
+  suggestedPackage?: Package | null,
+): QuotationFormState {
+  const base = {
     lead_id: initial?.lead_id ?? leadId ?? '',
     status: initial?.status ?? 'draft',
     discount: String(initial?.discount ?? 0),
@@ -33,15 +47,27 @@ function toState(initial?: Quotation | null, leadId?: string): QuotationFormStat
     contract_months: initial?.contract_months ? String(initial.contract_months) : '3',
     terms: initial?.terms ?? DEFAULT_TERMS,
     notes: initial?.notes ?? '',
-    items:
-      initial?.items?.length
-        ? initial.items.map((i) => ({
-            package_id: i.package_id ?? '',
-            description: i.description,
-            quantity: String(i.quantity),
-            unit_price: String(i.unit_price),
-          }))
-        : [{ package_id: '', description: '', quantity: '1', unit_price: '0' }],
+  }
+
+  if (initial?.items?.length) {
+    return {
+      ...base,
+      items: initial.items.map((i) => ({
+        package_id: i.package_id ?? '',
+        description: i.description,
+        quantity: String(i.quantity),
+        unit_price: String(i.unit_price),
+      })),
+    }
+  }
+
+  if (suggestedPackage) {
+    return { ...base, items: [defaultItemFromPackage(suggestedPackage)] }
+  }
+
+  return {
+    ...base,
+    items: [{ package_id: '', description: '', quantity: '1', unit_price: '0' }],
   }
 }
 
@@ -71,6 +97,8 @@ interface QuotationFormProps {
   initial?: Quotation | null
   leadId?: string
   leadBrandName?: string
+  leadServiceCodes?: string[]
+  suggestedPackage?: Package | null
   ownerId: string
   packages: Package[]
   saving?: boolean
@@ -83,6 +111,8 @@ export function QuotationForm({
   initial,
   leadId,
   leadBrandName,
+  leadServiceCodes = [],
+  suggestedPackage,
   ownerId,
   packages,
   saving,
@@ -90,11 +120,28 @@ export function QuotationForm({
   onSubmit,
   onCancel,
 }: QuotationFormProps) {
-  const [state, setState] = useState<QuotationFormState>(() => toState(initial, leadId))
+  const serviceOptions = useMemo(
+    () => packages.filter((p) => p.is_active).map((p) => ({ code: p.code, name: p.name })),
+    [packages],
+  )
+
+  const [state, setState] = useState<QuotationFormState>(() =>
+    toState(initial, leadId, suggestedPackage),
+  )
 
   useEffect(() => {
     if (initial) setState(toState(initial, leadId))
   }, [initial, leadId])
+
+  useEffect(() => {
+    if (initial?.items?.length) return
+    if (!suggestedPackage) return
+    setState((current) => {
+      const first = current.items[0]
+      if (first?.package_id || first?.description.trim()) return current
+      return toState(undefined, leadId, suggestedPackage)
+    })
+  }, [initial, suggestedPackage, leadId])
 
   const totals = useMemo(() => {
     const items = state.items.map((i) => ({
@@ -153,6 +200,20 @@ export function QuotationForm({
       {leadBrandName && (
         <p className="crm-banner crm-banner--warn">
           Lead: <strong>{leadBrandName}</strong>
+          {leadId && (
+            <>
+              {' '}
+              ·{' '}
+              <Link to={`/app/crm/${leadId}`} className="crm-inline-link">
+                เปิด Lead
+              </Link>
+            </>
+          )}
+          {leadServiceCodes.length > 0 && (
+            <span className="crm-sub" style={{ display: 'block', marginTop: '0.35rem' }}>
+              บริการที่สนใจ: {formatServiceInterests(leadServiceCodes, serviceOptions)}
+            </span>
+          )}
         </p>
       )}
 

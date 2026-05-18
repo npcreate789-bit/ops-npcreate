@@ -27,6 +27,7 @@ export interface Lead {
   ad_budget_daily: number | null
   ad_budget_monthly: number | null
   pain_points: string | null
+  /** รหัสแพ็กเกจจากตาราง packages (เช่น gmv_max) — ดู shared/packages/serviceInterests */
   services_interested: string[]
   status: LeadStatus
   channel: LeadChannel

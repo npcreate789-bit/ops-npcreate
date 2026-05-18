@@ -29,17 +29,6 @@ export const BUSINESS_TYPES = [
   'อื่น ๆ',
 ]
 
-export const SERVICE_PACKAGES = [
-  'GMV Max',
-  'คอร์ส GMV Max',
-  'TikTok One / Creator',
-  'ผลิตคอนเทนต์',
-  'Live Commerce',
-  'Private Consulting',
-  'Software / License',
-  'บริการอื่น ๆ',
-]
-
 export const ACTIVE_STATUSES: LeadStatus[] = [
   'interested',
   'scheduled',

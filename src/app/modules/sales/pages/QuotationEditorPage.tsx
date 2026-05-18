@@ -7,6 +7,7 @@ import {
   hasDbPrivilegedRole,
 } from '../../../../shared/auth/access'
 import { getLead } from '../../crm/api/leads'
+import { pickPackageIdForQuotation } from '../../../../shared/packages/serviceInterests'
 import {
   createQuotation,
   deleteQuotation,
@@ -44,6 +45,8 @@ export function QuotationEditorPage() {
   const [initial, setInitial] = useState<Quotation | null>(null)
   const [packages, setPackages] = useState<Package[]>([])
   const [leadBrandName, setLeadBrandName] = useState<string | null>(null)
+  const [leadServiceCodes, setLeadServiceCodes] = useState<string[]>([])
+  const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null)
 
   const canEdit =
     (isNew
@@ -61,7 +64,15 @@ export function QuotationEditorPage() {
         const lid = leadIdParam ?? initial?.lead_id
         if (lid) {
           const lead = await getLead(lid)
-          if (!cancelled && lead) setLeadBrandName(lead.brand_name)
+          if (!cancelled && lead) {
+            setLeadBrandName(lead.brand_name)
+            setLeadServiceCodes(lead.services_interested ?? [])
+            if (isNew && pkgs.length > 0) {
+              const pkgId = pickPackageIdForQuotation(lead.services_interested ?? [], pkgs)
+              const pkg = pkgId ? pkgs.find((p) => p.id === pkgId) ?? null : null
+              setSuggestedPackage(pkg)
+            }
+          }
         }
 
         if (!isNew && id) {
@@ -172,6 +183,8 @@ export function QuotationEditorPage() {
           initial={initial}
           leadId={leadIdParam ?? initial?.lead_id ?? undefined}
           leadBrandName={leadBrandName ?? undefined}
+          leadServiceCodes={leadServiceCodes}
+          suggestedPackage={isNew ? suggestedPackage : null}
           ownerId={ownerId}
           packages={packages}
           saving={saving}

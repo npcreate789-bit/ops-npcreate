@@ -1,14 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import type { Lead, LeadInsert, LeadUpdate } from '../types'
 import {
   datetimeLocalBangkokToIso,
   isoToDatetimeLocalBangkok,
 } from '../../../../shared/dates/bangkok'
+import type { ServicePackageOption } from '../../../../shared/packages/serviceInterests'
+import { normalizeServiceInterestCodes } from '../../../../shared/packages/serviceInterests'
 import {
   BUSINESS_TYPES,
   LEAD_CHANNEL_OPTIONS,
   LEAD_STATUS_OPTIONS,
-  SERVICE_PACKAGES,
 } from '../constants'
 import '../crm.css'
 
@@ -29,7 +31,10 @@ export interface LeadFormValues {
   reminder_at: string
 }
 
-function toFormValues(lead?: Lead | null): LeadFormValues {
+function toFormValues(
+  lead: Lead | null | undefined,
+  serviceOptions: ServicePackageOption[],
+): LeadFormValues {
   return {
     brand_name: lead?.brand_name ?? '',
     contact_name: lead?.contact_name ?? '',
@@ -40,7 +45,10 @@ function toFormValues(lead?: Lead | null): LeadFormValues {
     ad_budget_daily: lead?.ad_budget_daily?.toString() ?? '',
     ad_budget_monthly: lead?.ad_budget_monthly?.toString() ?? '',
     pain_points: lead?.pain_points ?? '',
-    services_interested: lead?.services_interested ?? [],
+    services_interested: normalizeServiceInterestCodes(
+      lead?.services_interested ?? [],
+      serviceOptions,
+    ),
     status: lead?.status ?? 'interested',
     channel: lead?.channel ?? 'other',
     notes: lead?.notes ?? '',
@@ -80,6 +88,7 @@ export function formValuesToUpdate(values: LeadFormValues): LeadUpdate {
 
 interface LeadFormProps {
   initial?: Lead | null
+  serviceOptions: ServicePackageOption[]
   saving?: boolean
   readOnly?: boolean
   onSubmit: (values: LeadFormValues) => void | Promise<void>
@@ -88,24 +97,27 @@ interface LeadFormProps {
 
 export function LeadForm({
   initial,
+  serviceOptions,
   saving,
   readOnly = false,
   onSubmit,
   onCancel,
 }: LeadFormProps) {
-  const [values, setValues] = useState<LeadFormValues>(() => toFormValues(initial))
+  const [values, setValues] = useState<LeadFormValues>(() =>
+    toFormValues(initial, serviceOptions),
+  )
 
   useEffect(() => {
-    if (initial) setValues(toFormValues(initial))
-  }, [initial])
+    if (initial) setValues(toFormValues(initial, serviceOptions))
+  }, [initial, serviceOptions])
 
-  function toggleService(pkg: string) {
+  function toggleService(code: string) {
     if (readOnly) return
     setValues((v) => ({
       ...v,
-      services_interested: v.services_interested.includes(pkg)
-        ? v.services_interested.filter((s) => s !== pkg)
-        : [...v.services_interested, pkg],
+      services_interested: v.services_interested.includes(code)
+        ? v.services_interested.filter((s) => s !== code)
+        : [...v.services_interested, code],
     }))
   }
 
@@ -238,19 +250,27 @@ export function LeadForm({
         </label>
         <label className="crm-form__full">
           บริการที่สนใจ
+          <span className="crm-sub">
+            รหัสแพ็กเกจจาก{' '}
+            <Link to="/app/sales/packages" className="crm-inline-link">
+              จัดการแพ็กเกจบริการ
+            </Link>
+            — ตรงกับฟอร์มติดต่อและใบเสนอราคา
+          </span>
           <div className="crm-chips">
-            {SERVICE_PACKAGES.map((pkg) => (
+            {serviceOptions.map((pkg) => (
               <button
-                key={pkg}
+                key={pkg.code}
                 type="button"
                 className={
-                  values.services_interested.includes(pkg)
+                  values.services_interested.includes(pkg.code)
                     ? 'crm-chip crm-chip--on'
                     : 'crm-chip'
                 }
-                onClick={() => toggleService(pkg)}
+                onClick={() => toggleService(pkg.code)}
+                title={pkg.code}
               >
-                {pkg}
+                {pkg.name}
               </button>
             ))}
           </div>

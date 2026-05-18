@@ -1,6 +1,8 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { BUSINESS_TYPES, SERVICE_PACKAGES } from '../../crm/constants'
+import { BUSINESS_TYPES } from '../../crm/constants'
+import { listPublicServicePackages } from '../../sales/api/packages'
+import type { ServicePackageOption } from '../../../../shared/packages/serviceInterests'
 import { isLocalDevHost } from '../../../../shared/config/appUrl'
 import {
   COMPANY_BRAND_NAME,
@@ -45,6 +47,8 @@ export function ContactPage() {
   const [facebook, setFacebook] = useState('')
   const [businessType, setBusinessType] = useState('')
   const [services, setServices] = useState<string[]>([])
+  const [serviceOptions, setServiceOptions] = useState<ServicePackageOption[]>([])
+  const [servicesLoading, setServicesLoading] = useState(true)
   const [painPoints, setPainPoints] = useState('')
   const [budget, setBudget] = useState('')
   const [shopLinks, setShopLinks] = useState('')
@@ -54,9 +58,23 @@ export function ContactPage() {
   const [fieldErrors, setFieldErrors] = useState<{ brand?: string }>({})
   const [done, setDone] = useState(false)
 
-  function toggleService(pkg: string) {
+  useEffect(() => {
+    let cancelled = false
+    listPublicServicePackages()
+      .then((opts) => {
+        if (!cancelled) setServiceOptions(opts)
+      })
+      .finally(() => {
+        if (!cancelled) setServicesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  function toggleService(code: string) {
     setServices((prev) =>
-      prev.includes(pkg) ? prev.filter((s) => s !== pkg) : [...prev, pkg],
+      prev.includes(code) ? prev.filter((s) => s !== code) : [...prev, code],
     )
   }
 
@@ -274,17 +292,22 @@ export function ContactPage() {
               <h2 id="contact-sec-services" className="contact-section__title">
                 บริการที่สนใจ
               </h2>
-              <p className="contact-section__hint">เลือกได้มากกว่า 1 รายการ</p>
+              <p className="contact-section__hint">
+                เลือกได้มากกว่า 1 รายการ — รายการตรงกับแพ็กเกจในระบบ Sales
+              </p>
+              {servicesLoading && (
+                <p className="contact-section__hint muted">กำลังโหลดรายการบริการ...</p>
+              )}
               <div className="contact-chips" role="group" aria-label="บริการที่สนใจ">
-                {SERVICE_PACKAGES.map((pkg) => (
+                {serviceOptions.map((pkg) => (
                   <button
-                    key={pkg}
+                    key={pkg.code}
                     type="button"
-                    className={`contact-chip${services.includes(pkg) ? ' contact-chip--on' : ''}`}
-                    onClick={() => toggleService(pkg)}
-                    aria-pressed={services.includes(pkg)}
+                    className={`contact-chip${services.includes(pkg.code) ? ' contact-chip--on' : ''}`}
+                    onClick={() => toggleService(pkg.code)}
+                    aria-pressed={services.includes(pkg.code)}
                   >
-                    {pkg}
+                    {pkg.name}
                   </button>
                 ))}
               </div>

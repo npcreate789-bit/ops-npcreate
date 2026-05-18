@@ -57,7 +57,10 @@ export function PackagesListPage() {
             ← กลับขาย / ใบเสนอราคา
           </Link>
           <h1>จัดการแพ็กเกจบริการ</h1>
-          <p className="muted">ข้อมูลบริการสำหรับเลือกในใบเสนอราคา — ราคาฐานจะเติมอัตโนมัติเมื่อเลือกแพ็กเกจ</p>
+          <p className="muted">
+            แหล่งความจริงเดียวสำหรับฟอร์มติดต่อ (/contact), CRM (บริการที่สนใจ) และใบเสนอราคา —
+            รหัส (code) ต้องคงที่ ชื่อ (name) แสดงให้ลูกค้าและทีม
+          </p>
         </div>
         <div className="sales-page__header-actions">
           {canManage && (

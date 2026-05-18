@@ -60,7 +60,9 @@ export function PackageForm({
               setForm((f) => ({ ...f, code: e.target.value.toLowerCase().replace(/\s/g, '_') }))
             }
           />
-          <span className="crm-sub">เช่น gmv_max — ใช้ในระบบ ไม่ซ้ำกัน</span>
+          <span className="crm-sub">
+            เช่น gmv_max — ใช้ใน /contact, CRM (บริการที่สนใจ) และใบเสนอราคา ไม่ซ้ำกัน
+          </span>
         </label>
         <label>
           ชื่อแพ็กเกจ *
