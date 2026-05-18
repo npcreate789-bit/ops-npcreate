@@ -12,6 +12,7 @@
     "setup:step1": "node scripts/setup-step1.mjs",
     "supabase:login": "npx supabase login",
     "functions:deploy": "node scripts/deploy-create-employee.mjs",
+    "functions:deploy:line-oauth": "npx supabase functions deploy line-oauth-callback",
     "db:push": "npx supabase db push",
     "db:verify-inquiry": "node scripts/verify-public-inquiry.mjs",
     "db:verify-inquiry:submit": "node scripts/verify-public-inquiry.mjs --submit",

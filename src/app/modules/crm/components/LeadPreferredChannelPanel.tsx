@@ -65,9 +65,19 @@ export function LeadPreferredChannelPanel({
         >
           {staffOpenChannelLabel(ch)}
         </a>
+        {ch === 'line' && lead.line_user_id && (
+          <span className="crm-preferred-channel__meta">
+            LINE User ID: <strong>{lead.line_user_id}</strong>
+          </span>
+        )}
         {ch === 'line' && lead.line_id && (
           <span className="crm-preferred-channel__meta">
             LINE ID ลูกค้า: <strong>{lead.line_id}</strong>
+          </span>
+        )}
+        {ch === 'facebook' && lead.facebook_psid && (
+          <span className="crm-preferred-channel__meta">
+            Facebook ID: <strong>{lead.facebook_psid}</strong>
           </span>
         )}
         {ch === 'facebook' && lead.facebook && (

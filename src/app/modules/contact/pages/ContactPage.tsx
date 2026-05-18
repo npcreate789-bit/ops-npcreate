@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { BUSINESS_TYPES } from '../../crm/constants'
 import { listPublicServicePackages } from '../../sales/api/packages'
 import type { ServicePackageOption } from '../../../../shared/packages/serviceInterests'
@@ -25,6 +25,20 @@ import {
 import { friendlyContactSubmitError, validateContactForm } from '../contactFormUtils'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
+import { ChannelConnectPanel } from '../components/ChannelConnectPanel'
+import { FacebookCustomerChat } from '../components/FacebookCustomerChat'
+import {
+  isFacebookChatConfigured,
+  isFacebookLoginConfigured,
+  isLineOAuthConfigured,
+  lineAddFriendUrl,
+  readFacebookConnection,
+  readLineConnection,
+} from '../../../../shared/contact/channelConnectConfig'
+import {
+  applyLineOAuthCallbackFromUrl,
+  stripLineOAuthParamsFromUrl,
+} from '../../../../shared/contact/lineOAuth'
 import '../contact.css'
 
 const HERO_POINTS = [
@@ -40,6 +54,7 @@ const SUCCESS_STEPS = [
 ] as const
 
 export function ContactPage() {
+  const [searchParams] = useSearchParams()
   const formRef = useRef<HTMLFormElement>(null)
   const brandRef = useRef<HTMLInputElement>(null)
   const formReadyAtRef = useRef(Date.now())
@@ -50,7 +65,13 @@ export function ContactPage() {
   const [phone, setPhone] = useState('')
   const [preferredChannel, setPreferredChannel] = useState<PreferredContactChannel | ''>('')
   const [lineId, setLineId] = useState('')
+  const [lineUserId, setLineUserId] = useState('')
+  const [lineDisplayName, setLineDisplayName] = useState<string | null>(null)
   const [facebook, setFacebook] = useState('')
+  const [facebookPsid, setFacebookPsid] = useState('')
+  const [facebookName, setFacebookName] = useState<string | null>(null)
+  const [channelConnectError, setChannelConnectError] = useState<string | null>(null)
+  const [successChannel, setSuccessChannel] = useState<PreferredContactChannel | null>(null)
   const [businessType, setBusinessType] = useState('')
   const [services, setServices] = useState<string[]>([])
   const [serviceOptions, setServiceOptions] = useState<ServicePackageOption[]>([])
@@ -62,8 +83,35 @@ export function ContactPage() {
     brand?: string
     preferredChannel?: string
     lineId?: string
+    channelConnect?: string
   }>({})
   const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    const storedLine = readLineConnection()
+    if (storedLine) {
+      setLineUserId(storedLine.userId)
+      setLineDisplayName(storedLine.displayName)
+    }
+    const storedFb = readFacebookConnection()
+    if (storedFb) {
+      setFacebookPsid(storedFb.psid)
+      setFacebookName(storedFb.name)
+    }
+
+    const lineResult = applyLineOAuthCallbackFromUrl(searchParams)
+    if (lineResult) {
+      if (lineResult.ok) {
+        setPreferredChannel('line')
+        setLineUserId(lineResult.userId)
+        setLineDisplayName(lineResult.displayName)
+        setChannelConnectError(null)
+      } else {
+        setChannelConnectError(lineResult.error)
+      }
+      stripLineOAuthParamsFromUrl()
+    }
+  }, [searchParams])
 
   useEffect(() => {
     let cancelled = false
@@ -105,7 +153,9 @@ export function ContactPage() {
       brandName,
       preferredChannel,
       lineId,
+      lineUserId,
       facebook,
+      facebookPsid,
     })
     if (Object.keys(validation).length > 0) {
       setFieldErrors(validation)
@@ -122,19 +172,24 @@ export function ContactPage() {
     setSaving(true)
     setFormError(null)
     try {
+      const channel = preferredChannel as PreferredContactChannel
       await submitPublicInquiry({
         brand_name: brandName,
-        preferred_contact_channel: preferredChannel as PreferredContactChannel,
+        preferred_contact_channel: channel,
         contact_name: contactName,
         phone,
-        line_id: preferredChannel === 'line' ? lineId : lineId || undefined,
+        line_id:
+          channel === 'line' && !lineUserId.trim() ? lineId || undefined : lineId || undefined,
+        line_user_id: channel === 'line' ? lineUserId.trim() || undefined : undefined,
         facebook,
+        facebook_psid: channel === 'facebook' ? facebookPsid.trim() || undefined : undefined,
         business_type: businessType || undefined,
         services_interested: services,
         ad_budget_monthly: budget ? Number(budget) : null,
         company_website: companyWebsite,
       })
       markContactCooldown()
+      setSuccessChannel(channel)
       setDone(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
@@ -163,6 +218,17 @@ export function ContactPage() {
               <li key={step}>{step}</li>
             ))}
           </ol>
+          {successChannel === 'line' && (
+            <p className="contact-section__hint contact-success-channel-hint">
+              <a href={lineAddFriendUrl()} target="_blank" rel="noopener noreferrer">
+                เพิ่มเพื่อน LINE Official @npcreate
+              </a>
+              {' '}เพื่อรับข้อความจากทีม
+            </p>
+          )}
+          {successChannel === 'facebook' && isFacebookChatConfigured() && (
+            <FacebookCustomerChat autoOpen />
+          )}
           <div className="contact-success-actions">
             <Link to={loginPathForAudience('client')} className="contact-link--primary">
               เข้าสู่ระบบ (ลูกค้าปัจจุบัน)
@@ -308,43 +374,117 @@ export function ContactPage() {
                     </button>
                   ))}
                 </div>
+                {fieldErrors.channelConnect && (
+                  <p className="contact-field-error" role="alert">
+                    {fieldErrors.channelConnect}
+                  </p>
+                )}
                 {preferredChannel === 'line' && (
-                  <ContactInput
-                    id="contact-line"
-                    label="LINE ID"
-                    required
-                    error={fieldErrors.lineId}
-                    value={lineId}
-                    onChange={(e) => {
-                      setLineId(e.target.value)
-                      if (fieldErrors.lineId) {
-                        setFieldErrors((err) => ({ ...err, lineId: undefined }))
-                      }
-                    }}
-                    placeholder="@brandabc"
-                    hint={PREFERRED_CONTACT_CHANNEL_OPTIONS.find((o) => o.value === 'line')?.hint}
-                  />
+                  <>
+                    <ChannelConnectPanel
+                      channel="line"
+                      lineUserId={lineUserId || null}
+                      lineDisplayName={lineDisplayName}
+                      facebookPsid={null}
+                      facebookName={null}
+                      error={channelConnectError ?? undefined}
+                      onLineConnected={(id, name) => {
+                        setLineUserId(id)
+                        setLineDisplayName(name)
+                        setChannelConnectError(null)
+                        setFieldErrors((e) => ({ ...e, channelConnect: undefined, lineId: undefined }))
+                      }}
+                      onLineDisconnected={() => {
+                        setLineUserId('')
+                        setLineDisplayName(null)
+                      }}
+                      onFacebookConnected={() => {}}
+                      onFacebookDisconnected={() => {}}
+                    />
+                    {!isLineOAuthConfigured() && (
+                      <ContactInput
+                        id="contact-line"
+                        label="LINE ID"
+                        required
+                        error={fieldErrors.lineId}
+                        value={lineId}
+                        onChange={(e) => {
+                          setLineId(e.target.value)
+                          if (fieldErrors.lineId) {
+                            setFieldErrors((err) => ({ ...err, lineId: undefined }))
+                          }
+                        }}
+                        placeholder="@brandabc"
+                        hint={
+                          PREFERRED_CONTACT_CHANNEL_OPTIONS.find((o) => o.value === 'line')?.hint
+                        }
+                      />
+                    )}
+                    {isLineOAuthConfigured() && !lineUserId && (
+                      <ContactInput
+                        id="contact-line-optional"
+                        label="LINE ID (สำรอง ไม่บังคับ)"
+                        value={lineId}
+                        onChange={(e) => setLineId(e.target.value)}
+                        placeholder="@brandabc"
+                        hint="ใช้เมื่อไม่สามารถเชื่อมต่อ LINE Login ได้"
+                      />
+                    )}
+                  </>
                 )}
                 {preferredChannel === 'facebook' && (
                   <>
-                    <p className="contact-section__hint contact-fb-hint">
-                      ทักเพจ NP Create ได้เลย —{' '}
-                      <a
-                        href={NPCREATE_FACEBOOK_MESSENGER_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        เปิด Messenger
-                      </a>
-                      {' '}หรือระบุลิงก์เพจของคุณด้านล่าง (ไม่บังคับ)
-                    </p>
-                    <ContactInput
-                      id="contact-facebook"
-                      label="Facebook / เพจของคุณ"
-                      value={facebook}
-                      onChange={(e) => setFacebook(e.target.value)}
-                      placeholder="ลิงก์เพจหรือชื่อเพจ (ไม่บังคับ)"
+                    <ChannelConnectPanel
+                      channel="facebook"
+                      lineUserId={null}
+                      lineDisplayName={null}
+                      facebookPsid={facebookPsid || null}
+                      facebookName={facebookName}
+                      error={channelConnectError ?? undefined}
+                      onLineConnected={() => {}}
+                      onLineDisconnected={() => {}}
+                      onFacebookConnected={(psid, name) => {
+                        setFacebookPsid(psid)
+                        setFacebookName(name)
+                        setChannelConnectError(null)
+                        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+                      }}
+                      onFacebookDisconnected={() => {
+                        setFacebookPsid('')
+                        setFacebookName(null)
+                      }}
                     />
+                    {!isFacebookLoginConfigured() && (
+                      <>
+                        <p className="contact-section__hint contact-fb-hint">
+                          ทักเพจ NP Create ได้เลย —{' '}
+                          <a
+                            href={NPCREATE_FACEBOOK_MESSENGER_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            เปิด Messenger
+                          </a>
+                          {' '}หรือระบุลิงก์เพจของคุณด้านล่าง (ไม่บังคับ)
+                        </p>
+                        <ContactInput
+                          id="contact-facebook"
+                          label="Facebook / เพจของคุณ"
+                          value={facebook}
+                          onChange={(e) => setFacebook(e.target.value)}
+                          placeholder="ลิงก์เพจหรือชื่อเพจ (ไม่บังคับ)"
+                        />
+                      </>
+                    )}
+                    {isFacebookLoginConfigured() && (
+                      <ContactInput
+                        id="contact-facebook-optional"
+                        label="ลิงก์เพจของคุณ (ไม่บังคับ)"
+                        value={facebook}
+                        onChange={(e) => setFacebook(e.target.value)}
+                        placeholder="ลิงก์เพจหรือชื่อเพจ"
+                      />
+                    )}
                   </>
                 )}
               </div>

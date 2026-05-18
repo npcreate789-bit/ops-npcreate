@@ -8,7 +8,9 @@ export interface PublicInquiryInput {
   contact_name?: string
   phone?: string
   line_id?: string
+  line_user_id?: string
   facebook?: string
+  facebook_psid?: string
   business_type?: string
   services_interested?: string[]
   ad_budget_monthly?: number | null
@@ -27,7 +29,9 @@ async function submitPublicInquiryDevMock(input: PublicInquiryInput): Promise<st
     contact_name: input.contact_name?.trim() || null,
     phone: input.phone?.trim() || null,
     line_id: input.line_id?.trim() || null,
+    line_user_id: input.line_user_id?.trim() || null,
     facebook: input.facebook?.trim() || null,
+    facebook_psid: input.facebook_psid?.trim() || null,
     business_type: input.business_type || null,
     ad_budget_daily: null,
     ad_budget_monthly: input.ad_budget_monthly ?? null,
@@ -63,6 +67,8 @@ export async function submitPublicInquiry(input: PublicInquiryInput): Promise<st
     p_notes: null,
     p_company_website: input.company_website?.trim() || null,
     p_preferred_contact_channel: input.preferred_contact_channel,
+    p_line_user_id: input.line_user_id?.trim() || null,
+    p_facebook_psid: input.facebook_psid?.trim() || null,
   })
 
   if (error) throw new Error(error.message)

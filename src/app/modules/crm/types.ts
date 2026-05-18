@@ -25,7 +25,9 @@ export interface Lead {
   contact_name: string | null
   phone: string | null
   line_id: string | null
+  line_user_id: string | null
   facebook: string | null
+  facebook_psid: string | null
   business_type: string | null
   ad_budget_daily: number | null
   ad_budget_monthly: number | null

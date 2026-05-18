@@ -43,7 +43,11 @@ if (fnErr) {
     console.error('❌ RPC submit_public_inquiry ยังไม่มี — รัน: npm run db:push (หลัง supabase login)')
     process.exit(1)
   }
-  if (msg.includes('brand_name is required') || msg.includes('rate_limit')) {
+  if (
+    msg.includes('brand_name is required') ||
+    msg.includes('preferred_contact_channel is required') ||
+    msg.includes('rate_limit')
+  ) {
     if (!doSubmit) {
       console.log('✅ RPC submit_public_inquiry พร้อมใช้งาน')
       console.log('   ทดสอบส่งจริง: node scripts/verify-public-inquiry.mjs --submit')
@@ -67,6 +71,7 @@ const { data: leadId, error: submitErr } = await supabase.rpc('submit_public_inq
   p_contact_name: 'ระบบทดสอบ',
   p_phone: '0800000000',
   p_line_id: '@verify-test',
+  p_line_user_id: 'U_verify_line_oauth_test',
   p_preferred_contact_channel: 'line',
   p_notes: 'auto verify-public-inquiry.mjs',
 })

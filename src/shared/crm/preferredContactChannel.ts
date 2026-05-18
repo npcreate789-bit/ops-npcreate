@@ -10,12 +10,12 @@ export const PREFERRED_CONTACT_CHANNEL_OPTIONS: {
   {
     value: 'line',
     label: 'LINE',
-    hint: 'ทีม NP Create จะติดต่อกลับทาง LINE Official (@NP Create) — กรุณาระบุ LINE ID',
+    hint: 'เชื่อมต่อบัญชี LINE แล้วทีม NP Create ทักกลับทาง Official @npcreate',
   },
   {
     value: 'facebook',
     label: 'Facebook',
-    hint: 'ทีมจะติดต่อกลับทางข้อความเพจ NP Create — คุณสามารถทักเพจได้เลย',
+    hint: 'เชื่อมต่อ Facebook แล้วทีมทักกลับทาง Messenger เพจ NP Create',
   },
 ]
 
