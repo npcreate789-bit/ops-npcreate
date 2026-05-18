@@ -23,9 +23,7 @@ import {
   validateContactDetails,
   validateLineLogin,
 } from '../contactFormUtils'
-import { deliverContactLineHandoff } from '../api/contactLineHandoffApi'
 import {
-  buildContactLineInquiryMessage,
   buildContactLineOaPrefillMessage,
   contactLineHandoffUrl,
   openContactLineHandoffAfterSubmit,
@@ -232,12 +230,6 @@ export function ContactPage() {
     try {
       const name = contactName.trim()
       const labels = serviceLabelsForCodes(services, serviceOptions)
-      const lineMessage = buildContactLineInquiryMessage({
-        contactName: name,
-        phone: phone.trim(),
-        serviceLabels: labels,
-      })
-
       const leadId = await submitPublicInquiry({
         brand_name: name,
         preferred_contact_channel: 'line',
@@ -249,7 +241,12 @@ export function ContactPage() {
       })
       markContactCooldown()
 
-      const oaPrefill = buildContactLineOaPrefillMessage(leadId)
+      const oaPrefill = buildContactLineOaPrefillMessage({
+        leadId,
+        contactName: name,
+        phone: phone.trim(),
+        serviceLabels: labels,
+      })
       const chatUrl = contactLineHandoffUrl(oaPrefill)
 
       if (
@@ -270,23 +267,6 @@ export function ContactPage() {
         takeContactHandoffSuccessPending()
         tryShowHandoffSuccess()
       }
-
-      void deliverContactLineHandoff({
-        leadId,
-        lineUserId: lineUserId.trim(),
-        text: lineMessage,
-      })
-        .then((handoff) => {
-          persistContactLineHandoffState({
-            message: oaPrefill,
-            chatUrl,
-            pushedToChat: handoff.pushedToChat,
-            failReason: handoff.pushedToChat ? undefined : handoff.reason,
-          })
-        })
-        .catch(() => {
-          /* เปิด LINE + กดส่งในแอปเป็นหลัก — push เป็นตัวเสริม */
-        })
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'
       setFormError(friendlyContactSubmitError(raw))

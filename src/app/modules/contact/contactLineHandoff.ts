@@ -25,12 +25,22 @@ export function buildContactLineInquiryMessage(input: {
 }
 
 export function contactCrmLeadUrl(leadId: string): string {
-  return appUrl(`/app/crm/leads/${leadId}`)
+  return appUrl(`/app/crm/${leadId}`)
 }
 
 /** ข้อความในช่องพิมพ์เมื่อเปิด LINE (oaMessage) */
-export function buildContactLineOaPrefillMessage(leadId: string): string {
-  return `CRM:${contactCrmLeadUrl(leadId)}`
+export function buildContactLineOaPrefillMessage(input: {
+  leadId: string
+  contactName: string
+  phone: string
+  serviceLabels: string[]
+}): string {
+  const inquiry = buildContactLineInquiryMessage({
+    contactName: input.contactName,
+    phone: input.phone,
+    serviceLabels: input.serviceLabels,
+  })
+  return ['--- ข้อความลูกค้า ---', inquiry, `CRM:  ${contactCrmLeadUrl(input.leadId)}`].join('\n')
 }
 
 export function persistContactLineHandoffState(input: {
