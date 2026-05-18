@@ -575,6 +575,40 @@
   font-size: 0.72rem;
 }
 
+.crm-form__optional {
+  margin: 0.5rem 0 0;
+  grid-column: 1 / -1;
+  border-radius: 10px;
+  border: 1px dashed var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.crm-form__optional-summary {
+  padding: 0.75rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--npc-text-muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.crm-form__optional-summary::-webkit-details-marker {
+  display: none;
+}
+
+.crm-form__optional-summary::before {
+  content: '▸ ';
+  color: var(--npc-accent);
+}
+
+.crm-form__optional[open] .crm-form__optional-summary::before {
+  content: '▾ ';
+}
+
+.crm-form__optional-body {
+  padding: 0 1rem 1rem;
+}
+
 @media (max-width: 720px) {
   .crm-form__grid {
     grid-template-columns: 1fr;

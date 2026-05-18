@@ -27,6 +27,7 @@ export interface LeadFormValues {
   services_interested: string[]
   status: Lead['status']
   channel: Lead['channel']
+  shop_links: string
   notes: string
   reminder_at: string
 }
@@ -51,9 +52,16 @@ function toFormValues(
     ),
     status: lead?.status ?? 'interested',
     channel: lead?.channel ?? 'other',
+    shop_links: lead?.shop_links ?? '',
     notes: lead?.notes ?? '',
     reminder_at: isoToDatetimeLocalBangkok(lead?.reminder_at),
   }
+}
+
+function hasLeadDetailContent(values: LeadFormValues): boolean {
+  return Boolean(
+    values.pain_points.trim() || values.shop_links.trim() || values.notes.trim(),
+  )
 }
 
 function toPayloadFields(values: LeadFormValues) {
@@ -70,6 +78,7 @@ function toPayloadFields(values: LeadFormValues) {
     services_interested: values.services_interested,
     status: values.status,
     channel: values.channel,
+    shop_links: values.shop_links.trim() || null,
     notes: values.notes.trim() || null,
     reminder_at: datetimeLocalBangkokToIso(values.reminder_at),
   }
@@ -106,9 +115,16 @@ export function LeadForm({
   const [values, setValues] = useState<LeadFormValues>(() =>
     toFormValues(initial, serviceOptions),
   )
+  const [detailOpen, setDetailOpen] = useState(() =>
+    hasLeadDetailContent(toFormValues(initial, serviceOptions)),
+  )
 
   useEffect(() => {
-    if (initial) setValues(toFormValues(initial, serviceOptions))
+    if (initial) {
+      const next = toFormValues(initial, serviceOptions)
+      setValues(next)
+      if (hasLeadDetailContent(next)) setDetailOpen(true)
+    }
   }, [initial, serviceOptions])
 
   function toggleService(code: string) {
@@ -240,15 +256,6 @@ export function LeadForm({
           />
         </label>
         <label className="crm-form__full">
-          ปัญหา / Pain points
-          <textarea
-            rows={2}
-            value={values.pain_points}
-            onChange={(e) => setValues({ ...values, pain_points: e.target.value })}
-            className="crm-input"
-          />
-        </label>
-        <label className="crm-form__full">
           บริการที่สนใจ
           <span className="crm-sub">
             รหัสแพ็กเกจจาก{' '}
@@ -275,15 +282,50 @@ export function LeadForm({
             ))}
           </div>
         </label>
-        <label className="crm-form__full">
-          บันทึกเพิ่มเติม
-          <textarea
-            rows={3}
-            value={values.notes}
-            onChange={(e) => setValues({ ...values, notes: e.target.value })}
-            className="crm-input"
-          />
-        </label>
+      </fieldset>
+
+      <details
+        className="crm-form__optional crm-form__full"
+        open={detailOpen}
+        onToggle={(e) => setDetailOpen(e.currentTarget.open)}
+      >
+        <summary className="crm-form__optional-summary">
+          รายละเอียดเพิ่มเติม (ไม่บังคับ)
+        </summary>
+        <div className="crm-form__optional-body crm-form__grid">
+          <label className="crm-form__full">
+            ปัญหา / Pain points
+            <span className="crm-sub">กรอกหลังคุยลูกค้า หรือจากบรีฟใน Client Workspace</span>
+            <textarea
+              rows={2}
+              value={values.pain_points}
+              onChange={(e) => setValues({ ...values, pain_points: e.target.value })}
+              className="crm-input"
+            />
+          </label>
+          <label className="crm-form__full">
+            ลิงก์ร้าน / TikTok Shop / เพจ
+            <textarea
+              rows={2}
+              value={values.shop_links}
+              onChange={(e) => setValues({ ...values, shop_links: e.target.value })}
+              className="crm-input"
+              placeholder="วางลิงก์ได้หลายบรรทัด"
+            />
+          </label>
+          <label className="crm-form__full">
+            บันทึกเพิ่มเติม
+            <textarea
+              rows={3}
+              value={values.notes}
+              onChange={(e) => setValues({ ...values, notes: e.target.value })}
+              className="crm-input"
+            />
+          </label>
+        </div>
+      </details>
+
+      <fieldset disabled={readOnly} className="crm-form__grid">
         <label>
           Reminder ติดตาม
           <input

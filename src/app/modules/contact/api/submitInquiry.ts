@@ -9,10 +9,7 @@ export interface PublicInquiryInput {
   facebook?: string
   business_type?: string
   services_interested?: string[]
-  pain_points?: string
   ad_budget_monthly?: number | null
-  shop_links?: string
-  notes?: string
   /** honeypot — ต้องว่างเสมอ */
   company_website?: string
 }
@@ -33,14 +30,12 @@ async function submitPublicInquiryDevMock(input: PublicInquiryInput): Promise<st
     ad_budget_daily: null,
     ad_budget_monthly: input.ad_budget_monthly ?? null,
     reminder_at: null,
-    pain_points: input.pain_points?.trim() || null,
+    pain_points: null,
     services_interested: input.services_interested ?? [],
     status: 'interested',
     channel: 'website',
-    notes:
-      [input.notes?.trim(), input.shop_links?.trim() ? `ลิงก์ร้าน:\n${input.shop_links.trim()}` : '']
-        .filter(Boolean)
-        .join('\n\n') || null,
+    shop_links: null,
+    notes: null,
   })
 
   return lead.id
@@ -59,10 +54,10 @@ export async function submitPublicInquiry(input: PublicInquiryInput): Promise<st
     p_facebook: input.facebook?.trim() || null,
     p_business_type: input.business_type || null,
     p_services_interested: input.services_interested ?? [],
-    p_pain_points: input.pain_points?.trim() || null,
+    p_pain_points: null,
     p_ad_budget_monthly: input.ad_budget_monthly ?? null,
-    p_shop_links: input.shop_links?.trim() || null,
-    p_notes: input.notes?.trim() || null,
+    p_shop_links: null,
+    p_notes: null,
     p_company_website: input.company_website?.trim() || null,
   })
 

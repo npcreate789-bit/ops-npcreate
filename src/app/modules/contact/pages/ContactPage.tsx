@@ -9,7 +9,7 @@ import {
   COMPANY_ICON_SRC,
   COMPANY_TAGLINE_EN,
 } from '../../../../shared/company/companyProfile'
-import { ContactInput, ContactSelect, ContactTextarea } from '../components/ContactField'
+import { ContactInput, ContactSelect } from '../components/ContactField'
 import {
   contactCooldownMessage,
   contactFormTooFastMessage,
@@ -24,14 +24,14 @@ import '../contact.css'
 
 const HERO_POINTS = [
   'ทีม Sales รับ Lead อัตโนมัติในระบบ',
-  'ไม่ต้องกรอกข้อมูลซ้ำเมื่อเริ่มงานจริง',
+  'กรอกแค่ข้อมูลติดต่อ — รายละเอียดงานทำในขั้นตอนบรีฟภายหลัง',
   'Account ติดต่อกลับภายใน 1–2 วันทำการ',
 ] as const
 
 const SUCCESS_STEPS = [
   'ทีม Sales ตรวจสอบและติดต่อกลับ',
   'เสนอแพ็กเกจและใบเสนอราคาผ่านระบบ',
-  'หลังเริ่มงาน ใช้ Client Workspace ติดตามความคืบหน้า',
+  'หลังเริ่มงาน กรอกบรีฟใน Client Workspace แล้วติดตามความคืบหน้า',
 ] as const
 
 export function ContactPage() {
@@ -49,10 +49,7 @@ export function ContactPage() {
   const [services, setServices] = useState<string[]>([])
   const [serviceOptions, setServiceOptions] = useState<ServicePackageOption[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
-  const [painPoints, setPainPoints] = useState('')
   const [budget, setBudget] = useState('')
-  const [shopLinks, setShopLinks] = useState('')
-  const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<{ brand?: string }>({})
@@ -114,10 +111,7 @@ export function ContactPage() {
         facebook,
         business_type: businessType || undefined,
         services_interested: services,
-        pain_points: painPoints,
         ad_budget_monthly: budget ? Number(budget) : null,
-        shop_links: shopLinks,
-        notes,
         company_website: companyWebsite,
       })
       markContactCooldown()
@@ -180,8 +174,8 @@ export function ContactPage() {
             ติดต่อ<span className="contact-hero__accent">ทีมงาน</span>
           </h1>
           <p className="contact-hero__lead">
-            บอกความต้องการของแบรนด์ครั้งเดียว — ข้อมูลเข้าสู่ระบบ NP Create OS ทันที
-            ทีม Sales พร้อมเสนอแพ็กเกจที่เหมาะกับธุรกิจคุณ
+            ฝากข้อมูลติดต่อและบริการที่สนใจ — ข้อมูลเข้าสู่ระบบ NP Create OS ทันที
+            รายละเอียดงานเพิ่มเติมกรอกในขั้นตอนบรีฟหลังเริ่มงานจริง
           </p>
           <ul className="contact-hero__list">
             {HERO_POINTS.map((point) => (
@@ -311,20 +305,6 @@ export function ContactPage() {
                   </button>
                 ))}
               </div>
-            </section>
-
-            <section className="contact-section" aria-labelledby="contact-sec-detail">
-              <h2 id="contact-sec-detail" className="contact-section__title">
-                รายละเอียดงาน
-              </h2>
-              <ContactTextarea
-                id="contact-goals"
-                label="ปัญหาหลัก / เป้าหมาย"
-                rows={3}
-                value={painPoints}
-                onChange={(e) => setPainPoints(e.target.value)}
-                placeholder="เช่น ยอดขายติด, อยากทำ GMV Max, ต้องการคอนเทนต์สำหรับยิงแอด"
-              />
               <ContactInput
                 id="contact-budget"
                 label="งบประมาณเบื้องต้น (บาท/เดือน)"
@@ -333,23 +313,8 @@ export function ContactPage() {
                 pattern="[0-9]*"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value.replace(/\D/g, ''))}
-                placeholder="30000"
-              />
-              <ContactTextarea
-                id="contact-links"
-                label="ลิงก์ร้าน / TikTok Shop / เพจ"
-                rows={2}
-                value={shopLinks}
-                onChange={(e) => setShopLinks(e.target.value)}
-                placeholder="วางลิงก์ได้หลายบรรทัด"
-              />
-              <ContactTextarea
-                id="contact-notes"
-                label="หมายเหตุเพิ่มเติม"
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="ข้อมูลอื่นที่อยากให้ทีมทราบ"
+                placeholder="30000 (ไม่บังคับ)"
+                hint="ช่วยทีม Sales เสนอแพ็กเกจ — ข้ามได้ถ้ายังไม่แน่ใจ"
               />
             </section>
 
@@ -357,7 +322,7 @@ export function ContactPage() {
               {saving ? 'กำลังส่งข้อมูล...' : 'ส่งข้อมูลติดต่อ'}
             </button>
             <p className="contact-form-note">
-              กดส่งถือว่ายินยอมให้ทีม NP Create ติดต่อกลับตามข้อมูลที่กรอก
+              กดส่งถือว่ายินยอมให้ทีม NP Create ติดต่อกลับตามข้อมูลที่กรอก — รายละเอียดงานเพิ่มเติมกรอกในขั้นตอนบรีฟหลังเริ่มงาน
             </p>
           </form>
         </div>

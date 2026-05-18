@@ -31,6 +31,7 @@ export interface Lead {
   services_interested: string[]
   status: LeadStatus
   channel: LeadChannel
+  shop_links: string | null
   notes: string | null
   reminder_at: string | null
   customer_id: string | null

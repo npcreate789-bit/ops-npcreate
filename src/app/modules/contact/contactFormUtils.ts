@@ -17,7 +17,7 @@ export function friendlyContactSubmitError(message: string): string {
     return 'ส่งข้อมูลบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่'
   }
   if (m.includes('too long') || m.includes('too many services')) {
-    return 'ข้อมูลยาวเกินไป กรุณาย่อรายละเอียดแล้วลองใหม่'
+    return 'ข้อมูลยาวเกินไป กรุณาตรวจสอบแล้วลองใหม่'
   }
   return message
 }
