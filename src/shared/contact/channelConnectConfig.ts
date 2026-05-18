@@ -24,6 +24,8 @@ export type LineOAuthDisabledReason =
 
 const LINE_OAUTH_STATE_KEY = 'npc_contact_line_oauth_state'
 const LINE_OA_STEP_KEY = 'npc_contact_line_oa_step_done'
+const LINE_OA_PENDING_KEY = 'npc_contact_line_oa_pending'
+const LINE_OA_PENDING_MAX_MS = 30 * 60 * 1000
 const LINE_USER_KEY = 'npc_contact_line_user_id'
 const LINE_NAME_KEY = 'npc_contact_line_display_name'
 
@@ -147,4 +149,44 @@ export function readLineOaContactStepDone(): boolean {
 
 export function clearLineOaContactStepDone(): void {
   sessionStorage.removeItem(LINE_OA_STEP_KEY)
+  sessionStorage.removeItem(LINE_OA_PENDING_KEY)
+}
+
+/** ก่อนเปิด LINE — ใช้ตรวจเมื่อผู้ใช้กลับมาที่แท็บ /contact (ไม่เปิดแท็บใหม่) */
+export function markLineOaContactPending(): void {
+  sessionStorage.setItem(LINE_OA_PENDING_KEY, String(Date.now()))
+}
+
+function readLineOaContactPendingAt(): number | null {
+  const raw = sessionStorage.getItem(LINE_OA_PENDING_KEY)
+  if (!raw) return null
+  const at = Number(raw)
+  if (!Number.isFinite(at)) {
+    sessionStorage.removeItem(LINE_OA_PENDING_KEY)
+    return null
+  }
+  if (Date.now() - at > LINE_OA_PENDING_MAX_MS) {
+    sessionStorage.removeItem(LINE_OA_PENDING_KEY)
+    return null
+  }
+  return at
+}
+
+/** ผู้ใช้กลับมาหลังเปิด LINE ในหน้าเดียวกัน — คืน true ครั้งเดียว */
+export function takeLineOaContactPendingReturn(): boolean {
+  const at = readLineOaContactPendingAt()
+  if (at == null) return false
+  sessionStorage.removeItem(LINE_OA_PENDING_KEY)
+  return true
+}
+
+/** เปิด LINE OA ในแท็บเดียวกัน (มือถือ → แอป LINE แล้วกลับมาแท็บเดิม) */
+export function openLineOaStarterMessageFromContact(message = LINE_OA_STARTER_MESSAGE): void {
+  markLineOaContactPending()
+  window.location.assign(lineOaStarterMessageUrl(message))
+}
+
+export function openLineAddFriendFromContact(): void {
+  markLineOaContactPending()
+  window.location.assign(lineAddFriendUrl())
 }

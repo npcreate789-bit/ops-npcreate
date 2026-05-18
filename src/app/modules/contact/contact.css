@@ -670,6 +670,34 @@
   line-height: 1.5;
 }
 
+.contact-line-flow__return-banner {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  background: rgba(6, 199, 85, 0.12);
+  border: 1px solid rgba(6, 199, 85, 0.35);
+  color: #bbf7d0;
+}
+
+.contact-line-flow__return-banner .contact-connect__secondary {
+  margin-left: 0.35rem;
+  margin-top: 0;
+  display: inline;
+  vertical-align: baseline;
+}
+
+.contact-line-flow__inline-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--contact-accent);
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .contact-line-steps {
   margin: 0;
   padding: 0;

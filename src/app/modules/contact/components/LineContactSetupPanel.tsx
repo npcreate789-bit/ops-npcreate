@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import {
   clearLineConnection,
   clearLineOaContactStepDone,
@@ -5,10 +6,11 @@ import {
   isLineOAuthConfigured,
   LINE_OA_ID,
   LINE_OA_STARTER_MESSAGE,
-  lineAddFriendUrl,
   lineOAuthDisabledHint,
-  lineOaStarterMessageUrl,
   markLineOaContactStepDone,
+  openLineAddFriendFromContact,
+  openLineOaStarterMessageFromContact,
+  takeLineOaContactPendingReturn,
 } from '../../../../shared/contact/channelConnectConfig'
 import { startLineLogin } from '../../../../shared/contact/lineOAuth'
 
@@ -31,23 +33,55 @@ export function LineContactSetupPanel({
   onLineDisconnected,
   error,
 }: LineContactSetupPanelProps) {
+  const step2Ref = useRef<HTMLLIElement>(null)
+  const [returnedFromLine, setReturnedFromLine] = useState(false)
+
   const oauthReady = isLineOAuthConfigured()
   const oauthDisabledReason = oauthReady ? null : getLineOAuthDisabledReason()
   const loginConnected = Boolean(lineUserId)
   const oaHandle = LINE_OA_ID.startsWith('@') ? LINE_OA_ID : `@${LINE_OA_ID}`
 
+  function completeOaStepFromReturn() {
+    markLineOaContactStepDone()
+    onLineOaStepDone()
+    setReturnedFromLine(true)
+    window.requestAnimationFrame(() => {
+      step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
+
+  useEffect(() => {
+    function handleReturnToContact() {
+      if (document.visibilityState !== 'visible') return
+      if (!takeLineOaContactPendingReturn()) return
+      if (lineOaStepDone) return
+      completeOaStepFromReturn()
+    }
+
+    handleReturnToContact()
+    document.addEventListener('visibilitychange', handleReturnToContact)
+    window.addEventListener('pageshow', handleReturnToContact)
+    return () => {
+      document.removeEventListener('visibilitychange', handleReturnToContact)
+      window.removeEventListener('pageshow', handleReturnToContact)
+    }
+  }, [lineOaStepDone, onLineOaStepDone])
+
   function handleOpenStarterMessage() {
-    window.open(lineOaStarterMessageUrl(), '_blank', 'noopener,noreferrer')
+    openLineOaStarterMessageFromContact()
   }
 
   function handleConfirmOaStep() {
     markLineOaContactStepDone()
     onLineOaStepDone()
+    setReturnedFromLine(false)
+    step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
   function handleResetOaStep() {
     clearLineOaContactStepDone()
     onLineOaStepReset()
+    setReturnedFromLine(false)
   }
 
   function handleLineLogin() {
@@ -66,12 +100,22 @@ export function LineContactSetupPanel({
   return (
     <div className="contact-line-flow" aria-label="ขั้นตอนเชื่อมต่อ LINE">
       <p className="contact-line-flow__intro">
-        ทำตาม 2 ขั้นตอนนี้เพื่อให้ทีม NP Create เปิดแชทและติดต่อกลับได้ถูกต้อง
+        ทำตาม 2 ขั้นตอนในหน้านี้ — เปิด LINE แล้วกลับมาแท็บเดิม ระบบจะพาไปขั้นถัดไปให้อัตโนมัติ
       </p>
 
       {error && (
         <p className="contact-field-error" role="alert">
           {error}
+        </p>
+      )}
+
+      {returnedFromLine && lineOaStepDone && !loginConnected && (
+        <p className="contact-line-flow__return-banner" role="status">
+          กลับมาที่แบบฟอร์มแล้ว — ทำขั้นที่ 2 เชื่อมต่อ LINE Login ด้านล่าง
+          {' '}
+          <button type="button" className="contact-connect__secondary" onClick={handleResetOaStep}>
+            ยังไม่ได้ทัก LINE
+          </button>
         </p>
       )}
 
@@ -86,9 +130,8 @@ export function LineContactSetupPanel({
             <div>
               <h3 className="contact-line-step__title">ทัก {oaHandle} บน LINE</h3>
               <p className="contact-line-step__desc">
-                กดปุ่มด้านล่างเพื่อเพิ่มเพื่อน (ถ้ายังไม่ได้เพิ่ม) และส่งข้อความ{' '}
-                <strong>&quot;{LINE_OA_STARTER_MESSAGE}&quot;</strong> — ทีมจะได้รับแชทและบันทึก ID
-                เพื่อติดต่อกลับ
+                กดปุ่มด้านล่าง — เปิด LINE ในแท็บเดียวกัน (ไม่เปิดแท็บใหม่) ส่งข้อความ{' '}
+                <strong>&quot;{LINE_OA_STARTER_MESSAGE}&quot;</strong> แล้วสลับกลับมาที่หน้านี้
               </p>
             </div>
           </div>
@@ -103,10 +146,14 @@ export function LineContactSetupPanel({
                 เปิด LINE และส่งข้อความ &quot;{LINE_OA_STARTER_MESSAGE}&quot;
               </button>
               <p className="contact-section__hint">
-                บนมือถือจะเปิดแอป LINE โดยตรง ·{' '}
-                <a href={lineAddFriendUrl()} target="_blank" rel="noopener noreferrer">
+                บนมือถือจะเปิดแอป LINE — กลับมาที่เบราว์เซอร์แท็บเดิมเมื่อส่งเสร็จ ·{' '}
+                <button
+                  type="button"
+                  className="contact-line-flow__inline-link"
+                  onClick={() => openLineAddFriendFromContact()}
+                >
                   เพิ่มเพื่อนอย่างเดียว
-                </a>
+                </button>
               </p>
               <button
                 type="button"
@@ -127,6 +174,7 @@ export function LineContactSetupPanel({
         </li>
 
         <li
+          ref={step2Ref}
           className={`contact-line-step${
             loginConnected
               ? ' contact-line-step--done'
@@ -177,7 +225,7 @@ export function LineContactSetupPanel({
                 เชื่อมต่อ LINE Login
               </button>
               <p className="contact-section__hint">
-                หน้าต่าง LINE จะเปิดให้ลงชื่อเข้าใช้ แล้วกลับมาที่หน้านี้อัตโนมัติ
+                เปิดในหน้าเดียวกัน แล้วกลับมาที่แบบฟอร์มอัตโนมัติเมื่อลงชื่อเข้าใช้เสร็จ
               </p>
             </div>
           ) : (
