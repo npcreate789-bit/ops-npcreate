@@ -36,8 +36,6 @@ function buildLineAuthorizeUrl(): string {
     redirect_uri: redirectUri,
     state,
     scope: 'profile openid',
-    /** บังคับหน้า login — ลด auto login ค้างบน access.line.me */
-    prompt: 'login',
     bot_prompt: 'normal',
     ui_locales: 'th',
   })
