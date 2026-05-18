@@ -670,6 +670,62 @@
   line-height: 1.5;
 }
 
+.contact-line-flow__wait-banner {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  background: rgba(96, 165, 250, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  color: #bfdbfe;
+}
+
+.contact-line-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.contact-line-qr__img {
+  display: block;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.contact-line-qr__hint {
+  margin: 0;
+  text-align: center;
+  max-width: 16rem;
+}
+
+.contact-line-step__secondary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-line-step__copy {
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.contact-line-step__copy:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .contact-line-flow__return-banner {
   margin: 0 0 0.85rem;
   padding: 0.65rem 0.85rem;

@@ -1,4 +1,5 @@
 import { getAppOrigin, isLocalDevHost } from '../config/appUrl'
+import { openLineUrlInPlace } from './lineInPlaceOpen'
 import { isSupabaseConfigured } from '../supabase/client'
 
 /** Vite inlines `import.meta.env.VITE_*` at build time — empty/missing → '' */
@@ -180,13 +181,28 @@ export function takeLineOaContactPendingReturn(): boolean {
   return true
 }
 
-/** เปิด LINE OA ในแท็บเดียวกัน (มือถือ → แอป LINE แล้วกลับมาแท็บเดิม) */
+/** QR สำหรับสแกนบนคอม — เปิด oaMessage พร้อมข้อความ (ไม่ออกจากหน้า /contact) */
+export function lineOaStarterQrImageUrl(message = LINE_OA_STARTER_MESSAGE): string {
+  const target = lineOaStarterMessageUrl(message)
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=10&data=${encodeURIComponent(target)}`
+}
+
+export async function copyLineOaStarterMessage(message = LINE_OA_STARTER_MESSAGE): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(message.trim())
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** เปิดแอป/แชท LINE โดยไม่พาเบราว์เซอร์ออกจาก /contact */
 export function openLineOaStarterMessageFromContact(message = LINE_OA_STARTER_MESSAGE): void {
   markLineOaContactPending()
-  window.location.assign(lineOaStarterMessageUrl(message))
+  openLineUrlInPlace(lineOaStarterMessageUrl(message))
 }
 
 export function openLineAddFriendFromContact(): void {
   markLineOaContactPending()
-  window.location.assign(lineAddFriendUrl())
+  openLineUrlInPlace(lineAddFriendUrl())
 }

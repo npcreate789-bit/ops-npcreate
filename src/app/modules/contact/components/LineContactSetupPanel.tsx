@@ -2,16 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import {
   clearLineConnection,
   clearLineOaContactStepDone,
+  copyLineOaStarterMessage,
   getLineOAuthDisabledReason,
   isLineOAuthConfigured,
   LINE_OA_ID,
   LINE_OA_STARTER_MESSAGE,
   lineOAuthDisabledHint,
+  lineOaStarterQrImageUrl,
   markLineOaContactStepDone,
   openLineAddFriendFromContact,
   openLineOaStarterMessageFromContact,
   takeLineOaContactPendingReturn,
 } from '../../../../shared/contact/channelConnectConfig'
+import { isLineContactMobileDevice } from '../../../../shared/contact/lineInPlaceOpen'
 import { startLineLogin } from '../../../../shared/contact/lineOAuth'
 
 interface LineContactSetupPanelProps {
@@ -35,16 +38,21 @@ export function LineContactSetupPanel({
 }: LineContactSetupPanelProps) {
   const step2Ref = useRef<HTMLLIElement>(null)
   const [returnedFromLine, setReturnedFromLine] = useState(false)
+  const [lineLaunched, setLineLaunched] = useState(false)
+  const [copyOk, setCopyOk] = useState(false)
+  const isMobile = isLineContactMobileDevice()
 
   const oauthReady = isLineOAuthConfigured()
   const oauthDisabledReason = oauthReady ? null : getLineOAuthDisabledReason()
   const loginConnected = Boolean(lineUserId)
   const oaHandle = LINE_OA_ID.startsWith('@') ? LINE_OA_ID : `@${LINE_OA_ID}`
+  const qrSrc = lineOaStarterQrImageUrl()
 
   function completeOaStepFromReturn() {
     markLineOaContactStepDone()
     onLineOaStepDone()
     setReturnedFromLine(true)
+    setLineLaunched(false)
     window.requestAnimationFrame(() => {
       step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     })
@@ -69,12 +77,20 @@ export function LineContactSetupPanel({
 
   function handleOpenStarterMessage() {
     openLineOaStarterMessageFromContact()
+    setLineLaunched(true)
+  }
+
+  async function handleCopyMessage() {
+    const ok = await copyLineOaStarterMessage()
+    setCopyOk(ok)
+    if (ok) window.setTimeout(() => setCopyOk(false), 2500)
   }
 
   function handleConfirmOaStep() {
     markLineOaContactStepDone()
     onLineOaStepDone()
     setReturnedFromLine(false)
+    setLineLaunched(false)
     step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
@@ -82,6 +98,7 @@ export function LineContactSetupPanel({
     clearLineOaContactStepDone()
     onLineOaStepReset()
     setReturnedFromLine(false)
+    setLineLaunched(false)
   }
 
   function handleLineLogin() {
@@ -100,7 +117,7 @@ export function LineContactSetupPanel({
   return (
     <div className="contact-line-flow" aria-label="ขั้นตอนเชื่อมต่อ LINE">
       <p className="contact-line-flow__intro">
-        ทำตาม 2 ขั้นตอนในหน้านี้ — เปิด LINE แล้วกลับมาแท็บเดิม ระบบจะพาไปขั้นถัดไปให้อัตโนมัติ
+        ทำครบ 2 ขั้นบนหน้านี้ — ขั้นที่ 1 เปิดแอป LINE โดยไม่ออกจากฟอร์ม (สแกน QR บนคอม หรือกดปุ่มบนมือถือ)
       </p>
 
       {error && (
@@ -111,11 +128,17 @@ export function LineContactSetupPanel({
 
       {returnedFromLine && lineOaStepDone && !loginConnected && (
         <p className="contact-line-flow__return-banner" role="status">
-          กลับมาที่แบบฟอร์มแล้ว — ทำขั้นที่ 2 เชื่อมต่อ LINE Login ด้านล่าง
-          {' '}
+          กลับมาที่แบบฟอร์มแล้ว — ทำขั้นที่ 2 เชื่อมต่อ LINE Login ด้านล่าง{' '}
           <button type="button" className="contact-connect__secondary" onClick={handleResetOaStep}>
             ยังไม่ได้ทัก LINE
           </button>
+        </p>
+      )}
+
+      {lineLaunched && !lineOaStepDone && (
+        <p className="contact-line-flow__wait-banner" role="status">
+          ยังอยู่หน้านี้ — ใน LINE ให้เพิ่มเพื่อน (ถ้ายังไม่มี) แล้วกดส่งข้อความ &quot;
+          {LINE_OA_STARTER_MESSAGE}&quot; ที่ระบบเติมให้ จากนั้นกลับมาที่หน้านี้
         </p>
       )}
 
@@ -130,23 +153,56 @@ export function LineContactSetupPanel({
             <div>
               <h3 className="contact-line-step__title">ทัก {oaHandle} บน LINE</h3>
               <p className="contact-line-step__desc">
-                กดปุ่มด้านล่าง — เปิด LINE ในแท็บเดียวกัน (ไม่เปิดแท็บใหม่) ส่งข้อความ{' '}
-                <strong>&quot;{LINE_OA_STARTER_MESSAGE}&quot;</strong> แล้วสลับกลับมาที่หน้านี้
+                {isMobile
+                  ? 'กดปุ่มด้านล่าง — เปิดแอป LINE โดยไม่ออกจากหน้านี้ ข้อความจะถูกเติมให้ กดส่งหนึ่งครั้ง'
+                  : 'สแกน QR ด้วยมือถือ หรือเปิด LINE บนคอม — ข้อความจะถูกเติมให้ กดส่งหนึ่งครั้ง'}
               </p>
             </div>
           </div>
 
           {!lineOaStepDone ? (
             <div className="contact-line-step__actions">
-              <button
-                type="button"
-                className="contact-connect__primary"
-                onClick={handleOpenStarterMessage}
-              >
-                เปิด LINE และส่งข้อความ &quot;{LINE_OA_STARTER_MESSAGE}&quot;
-              </button>
-              <p className="contact-section__hint">
-                บนมือถือจะเปิดแอป LINE — กลับมาที่เบราว์เซอร์แท็บเดิมเมื่อส่งเสร็จ ·{' '}
+              {!isMobile && (
+                <div className="contact-line-qr">
+                  <img
+                    src={qrSrc}
+                    width={200}
+                    height={200}
+                    alt={`QR ทัก ${oaHandle} ด้วยข้อความ ${LINE_OA_STARTER_MESSAGE}`}
+                    className="contact-line-qr__img"
+                  />
+                  <p className="contact-section__hint contact-line-qr__hint">
+                    สแกนด้วยแอป LINE บนมือถือ — เพิ่มเพื่อนและเปิดแชทพร้อมข้อความ
+                  </p>
+                </div>
+              )}
+
+              {isMobile ? (
+                <button
+                  type="button"
+                  className="contact-connect__primary"
+                  onClick={handleOpenStarterMessage}
+                >
+                  เปิดแอป LINE (ข้อความ &quot;{LINE_OA_STARTER_MESSAGE}&quot; พร้อมส่ง)
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="contact-connect__primary"
+                  onClick={handleOpenStarterMessage}
+                >
+                  เปิด LINE บนคอมน์เตอร์ (ถ้ามีติดตั้ง)
+                </button>
+              )}
+
+              <div className="contact-line-step__secondary-row">
+                <button
+                  type="button"
+                  className="contact-line-step__copy"
+                  onClick={() => void handleCopyMessage()}
+                >
+                  {copyOk ? 'คัดลอกแล้ว' : `คัดลอกข้อความ "${LINE_OA_STARTER_MESSAGE}"`}
+                </button>
                 <button
                   type="button"
                   className="contact-line-flow__inline-link"
@@ -154,7 +210,8 @@ export function LineContactSetupPanel({
                 >
                   เพิ่มเพื่อนอย่างเดียว
                 </button>
-              </p>
+              </div>
+
               <button
                 type="button"
                 className="contact-line-step__confirm"
@@ -225,7 +282,7 @@ export function LineContactSetupPanel({
                 เชื่อมต่อ LINE Login
               </button>
               <p className="contact-section__hint">
-                เปิดในหน้าเดียวกัน แล้วกลับมาที่แบบฟอร์มอัตโนมัติเมื่อลงชื่อเข้าใช้เสร็จ
+                จะออกจากหน้านี้ชั่วคราวเพื่อล็อกอิน แล้วกลับมาที่แบบฟอร์มอัตโนมัติ
               </p>
             </div>
           ) : (
