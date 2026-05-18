@@ -83,7 +83,7 @@ export function ContactLineLoginStep({
             </button>
             {waitingOnKeeperTab && (
               <p className="contact-section__hint contact-section__hint--muted">
-                ยืนยันในแอป LINE แล้วกลับมาแท็บนี้ — ไม่ต้องเปิดแท็บใหม่
+                ยืนยันในแอป LINE แล้ว<strong>กลับมาแท็บนี้</strong> — หน้านี้จะแสดง「เชื่อมต่อแล้ว」อัตโนมัติ
               </p>
             )}
             {hostMismatchHint && (

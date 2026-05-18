@@ -37,11 +37,12 @@ import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
 import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
 import {
+  applyLineOAuthBroadcastPayload,
   applyLineOAuthCallbackFromUrl,
   cleanupLineOAuthAfterKeeperReturn,
   clearLineOAuthBroadcastResult,
-  clearLineOAuthInProgress,
   completeLineOAuthFromCallback,
+  isLineOAuthInProgress,
   isLineOAuthKeeperTab,
   readLineOAuthBroadcastResult,
   stripLineOAuthParamsFromUrl,
@@ -103,16 +104,17 @@ export function ContactPage() {
 
   useEffect(() => {
     function applyBroadcast(payload: LineOAuthBroadcastPayload) {
-      if (payload.type === 'success') {
-        setLineUserId(payload.userId)
-        setLineDisplayName(payload.displayName)
+      const result = applyLineOAuthBroadcastPayload(payload)
+      if ('userId' in result) {
+        setLineUserId(result.userId)
+        setLineDisplayName(result.displayName)
         setChannelConnectError(null)
         setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
       } else {
-        setChannelConnectError(payload.error)
+        setChannelConnectError(result.error)
+        setFieldErrors((e) => ({ ...e, channelConnect: result.error }))
       }
       clearLineOAuthBroadcastResult()
-      clearLineOAuthInProgress()
       if (isLineOAuthKeeperTab()) {
         cleanupLineOAuthAfterKeeperReturn()
       }
@@ -125,28 +127,43 @@ export function ContactPage() {
   }, [])
 
   useEffect(() => {
-    if (!isLineOAuthKeeperTab()) return
+    if (!isLineOAuthKeeperTab() || !isLineOAuthInProgress()) return
 
-    function onKeeperVisible() {
-      if (document.visibilityState !== 'visible') return
+    function syncFromBroadcast() {
       const pending = readLineOAuthBroadcastResult()
-      if (!pending) return
+      if (!pending) return false
 
-      if (pending.type === 'success') {
-        setLineUserId(pending.userId)
-        setLineDisplayName(pending.displayName)
+      const result = applyLineOAuthBroadcastPayload(pending)
+      if ('userId' in result) {
+        setLineUserId(result.userId)
+        setLineDisplayName(result.displayName)
         setChannelConnectError(null)
         setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
       } else {
-        setChannelConnectError(pending.error)
+        setChannelConnectError(result.error)
+        setFieldErrors((e) => ({ ...e, channelConnect: result.error }))
       }
       clearLineOAuthBroadcastResult()
-      clearLineOAuthInProgress()
       cleanupLineOAuthAfterKeeperReturn()
+      return true
     }
 
+    function onKeeperVisible() {
+      if (document.visibilityState !== 'visible') return
+      syncFromBroadcast()
+    }
+
+    const pollId = window.setInterval(() => {
+      if (syncFromBroadcast()) {
+        window.clearInterval(pollId)
+      }
+    }, 1500)
+
     document.addEventListener('visibilitychange', onKeeperVisible)
-    return () => document.removeEventListener('visibilitychange', onKeeperVisible)
+    return () => {
+      window.clearInterval(pollId)
+      document.removeEventListener('visibilitychange', onKeeperVisible)
+    }
   }, [])
 
   useEffect(() => {
