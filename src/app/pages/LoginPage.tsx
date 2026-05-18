@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { SupabaseRequiredGate } from '../../shared/auth/SupabaseRequiredGate'
 import { allowDevAuthBypass, requiresSupabaseInProduction } from '../../shared/supabase/runtime'
@@ -9,7 +9,6 @@ import { normalizeLoginId } from '../../shared/auth/loginId'
 import { primeNotificationSound } from '../modules/notifications/notificationSound'
 import {
   CLIENT_LOGIN_PATH,
-  STAFF_LOGIN_PATH,
   isClientOnlyAccount,
   resolvePostLoginPath,
   type LoginAudience,
@@ -23,22 +22,12 @@ const COPY = {
     subtitle: 'เข้าสู่ระบบลูกค้า NP Create',
     loginPlaceholder: 'เช่น brandabc',
     hintPrimary: 'ใช้รหัสผู้ใช้และรหัสผ่านที่ทีม NP Create แจ้งให้หลังเริ่มสัญญา',
-    hintSecondary: 'ยังไม่มีบัญชี?',
-    ctaSecondary: 'ส่งคำขอติดต่อทีมงาน',
-    ctaSecondaryTo: '/contact',
-    otherPortalLabel: 'ทีมงาน NP Create',
-    otherPortalTo: STAFF_LOGIN_PATH,
   },
   staff: {
     title: 'NP Create OS',
     subtitle: 'เข้าสู่ระบบทีมงานภายใน',
     loginPlaceholder: 'เช่น sales01',
     hintPrimary: 'ใช้รหัสผู้ใช้ที่ผู้ดูแลระบบแจ้ง — ไม่ใช่อีเมล',
-    hintSecondary: 'ลูกค้าที่มีบัญชีแล้ว?',
-    ctaSecondary: 'เข้าสู่พื้นที่ลูกค้า',
-    ctaSecondaryTo: CLIENT_LOGIN_PATH,
-    otherPortalLabel: null,
-    otherPortalTo: null,
   },
 } as const
 
@@ -213,17 +202,6 @@ export function LoginPage({ audience }: LoginPageProps) {
         </button>
 
         <p className="login__hint muted">{copy.hintPrimary}</p>
-
-        <p className="login__hint login__hint--switch muted">
-          {copy.hintSecondary}{' '}
-          <Link to={copy.ctaSecondaryTo}>{copy.ctaSecondary}</Link>
-        </p>
-
-        {copy.otherPortalTo && copy.otherPortalLabel ? (
-          <p className="login__hint muted">
-            <Link to={copy.otherPortalTo}>{copy.otherPortalLabel}</Link>
-          </p>
-        ) : null}
       </form>
     </div>
   )
