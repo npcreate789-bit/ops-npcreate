@@ -9,6 +9,12 @@ import {
   persistLineConnection,
 } from './channelConnectConfig'
 import type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
+import {
+  clearLineOAuthBroadcastResult,
+  publishLineOAuthResult,
+  readLineOAuthBroadcastResult,
+  tryCloseLineOAuthCallbackTab,
+} from './lineOAuthBroadcast'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
@@ -77,20 +83,32 @@ export function isLineOAuthInProgress(): boolean {
 
 function applyOAuthSuccess(userId: string, displayName: string | null): void {
   persistLineConnection(userId, displayName ?? undefined)
+  publishLineOAuthResult({
+    type: 'success',
+    userId,
+    displayName,
+    at: Date.now(),
+  })
   clearLineOAuthInProgress()
 }
 
-function applyOAuthError(): void {
+function applyOAuthError(message: string): void {
+  publishLineOAuthResult({
+    type: 'error',
+    error: message,
+    at: Date.now(),
+  })
   clearLineOAuthInProgress()
 }
 
 /**
  * LINE Login แท็บเดียว: /contact → access.line.me → /contact?code=...
+ * ไม่ใช้ window.open / target=_blank — รวมตอนกด "เข้าสู่ระบบด้วยแอป LINE" บนหน้า LINE
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
   markLineOAuthInProgress()
-  window.location.assign(url)
+  window.location.replace(url)
 }
 
 /**
@@ -104,7 +122,7 @@ export async function completeLineOAuthFromCallback(
   const oauthError = searchParams.get('error')
   if (oauthError) {
     const message = mapLineOAuthError(oauthError)
-    applyOAuthError()
+    applyOAuthError(message)
     return { ok: false, error: message }
   }
 
@@ -115,13 +133,13 @@ export async function completeLineOAuthFromCallback(
   const storedState = consumeStoredLineOAuthState()
   if (!storedState || storedState !== stateParam) {
     const message = 'เซสชัน LINE Login หมดอายุ — กรุณากดเชื่อมต่อใหม่'
-    applyOAuthError()
+    applyOAuthError(message)
     return { ok: false, error: message }
   }
 
   if (!isSupabaseConfigured || !supabase) {
     const message = 'ระบบยังไม่พร้อม — ลองใหม่ภายหลัง'
-    applyOAuthError()
+    applyOAuthError(message)
     return { ok: false, error: message }
   }
 
@@ -136,7 +154,7 @@ export async function completeLineOAuthFromCallback(
   if (error) {
     const message = await parseFunctionInvokeError(error, data)
     const friendly = message || 'เชื่อมต่อ LINE ไม่สำเร็จ'
-    applyOAuthError()
+    applyOAuthError(friendly)
     return { ok: false, error: friendly }
   }
 
@@ -149,13 +167,14 @@ export async function completeLineOAuthFromCallback(
 
   if (!result?.ok || !result.user_id) {
     const message = mapLineOAuthError(result?.error ?? 'token_exchange_failed')
-    applyOAuthError()
+    applyOAuthError(message)
     return { ok: false, error: message }
   }
 
   const displayName = result.display_name ?? null
   applyOAuthSuccess(result.user_id, displayName)
   stripLineOAuthParamsFromUrl()
+  tryCloseLineOAuthCallbackTab()
 
   return {
     ok: true,
@@ -171,7 +190,7 @@ export function applyLineOAuthCallbackFromUrl(
   const error = searchParams.get('line_error')
   if (error) {
     const message = mapLineOAuthError(error)
-    applyOAuthError()
+    applyOAuthError(message)
     return { ok: false, error: message }
   }
 
@@ -180,14 +199,30 @@ export function applyLineOAuthCallbackFromUrl(
   const userId = searchParams.get('line_user_id')?.trim()
   if (!userId) {
     const message = 'ไม่พบ LINE user ID — ลองเชื่อมต่อใหม่'
-    applyOAuthError()
+    applyOAuthError(message)
     return { ok: false, error: message }
   }
 
   const displayName = searchParams.get('line_name')?.trim() || null
   applyOAuthSuccess(userId, displayName)
   stripLineOAuthParamsFromUrl()
+  tryCloseLineOAuthCallbackTab()
   return { ok: true, userId, displayName }
+}
+
+/** อ่านผล OAuth จาก broadcast/storage (เมื่อ LINE เปิดแท็บ callback แยก) */
+export function consumeLineOAuthBroadcastResult():
+  | { ok: true; userId: string; displayName: string | null }
+  | { ok: false; error: string }
+  | null {
+  const payload = readLineOAuthBroadcastResult()
+  if (!payload) return null
+  clearLineOAuthBroadcastResult()
+  const applied = applyLineOAuthBroadcastPayload(payload)
+  if ('userId' in applied) {
+    return { ok: true, userId: applied.userId, displayName: applied.displayName }
+  }
+  return { ok: false, error: applied.error }
 }
 
 function mapLineOAuthError(code: string): string {
@@ -229,7 +264,6 @@ export function stripLineOAuthParamsFromUrl(): void {
   }
 }
 
-/** @deprecated แท็บเดียว — ใช้ผลจาก completeLineOAuthFromCallback โดยตรง */
 export function applyLineOAuthBroadcastPayload(
   payload: LineOAuthBroadcastPayload,
 ): { userId: string; displayName: string | null } | { error: string } {

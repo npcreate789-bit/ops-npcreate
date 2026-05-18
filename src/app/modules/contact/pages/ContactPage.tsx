@@ -43,7 +43,10 @@ import {
 import {
   applyLineOAuthCallbackFromUrl,
   completeLineOAuthFromCallback,
+  clearLineOAuthBroadcastResult,
+  consumeLineOAuthBroadcastResult,
   stripLineOAuthParamsFromUrl,
+  subscribeLineOAuthBroadcast,
 } from '../../../../shared/contact/lineOAuth'
 import '../contact.css'
 
@@ -127,6 +130,22 @@ export function ContactPage() {
       setLineDisplayName(storedLine.displayName)
     }
 
+    function applyBroadcastLineOAuth(): boolean {
+      const broadcast = consumeLineOAuthBroadcastResult()
+      if (!broadcast) return false
+      if (broadcast.ok) {
+        setLineUserId(broadcast.userId)
+        setLineDisplayName(broadcast.displayName)
+        setChannelConnectError(null)
+        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+      } else {
+        setChannelConnectError(broadcast.error)
+        setFieldErrors((e) => ({ ...e, channelConnect: broadcast.error }))
+      }
+      setLineOAuthCompleting(false)
+      return true
+    }
+
     let cancelled = false
 
     async function finishOAuthReturn() {
@@ -156,18 +175,37 @@ export function ContactPage() {
       }
     }
 
-    void finishOAuthReturn()
+    if (!applyBroadcastLineOAuth()) {
+      void finishOAuthReturn()
+    }
+
+    const unsubscribeBroadcast = subscribeLineOAuthBroadcast((payload) => {
+      if (cancelled) return
+      clearLineOAuthBroadcastResult()
+      if (payload.type === 'success') {
+        setLineUserId(payload.userId)
+        setLineDisplayName(payload.displayName)
+        setChannelConnectError(null)
+        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+      } else {
+        setChannelConnectError(payload.error)
+        setFieldErrors((e) => ({ ...e, channelConnect: payload.error }))
+      }
+      setLineOAuthCompleting(false)
+      stripLineOAuthParamsFromUrl()
+    })
 
     function onVisibility() {
-      if (document.visibilityState === 'visible') {
-        void finishOAuthReturn()
-      }
+      if (document.visibilityState !== 'visible') return
+      if (applyBroadcastLineOAuth()) return
+      void finishOAuthReturn()
     }
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisibility)
+      unsubscribeBroadcast()
     }
   }, [searchParams])
 

@@ -88,6 +88,9 @@ export function ContactLineLoginStep({
                 กำลังยืนยันบัญชี LINE...
               </p>
             )}
+            <p className="contact-section__hint contact-section__hint--muted">
+              เปิดในแท็บเดิม — หลังกดเข้าสู่ระบบด้วยแอป LINE จะกลับมาหน้านี้อัตโนมัติ
+            </p>
             {hostMismatchHint && (
               <p className="contact-section__hint contact-section__hint--muted">{hostMismatchHint}</p>
             )}
