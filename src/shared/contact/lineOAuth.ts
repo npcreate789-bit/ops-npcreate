@@ -87,7 +87,6 @@ function applyOAuthSuccess(userId: string, displayName: string | null): void {
     at: Date.now(),
   })
   clearLineOAuthInProgress()
-  clearLineOAuthKeeperTab()
 }
 
 function applyOAuthError(message: string): void {
@@ -97,6 +96,24 @@ function applyOAuthError(message: string): void {
     at: Date.now(),
   })
   clearLineOAuthInProgress()
+}
+
+function openLineOAuthInNewTab(url: string): Window | null {
+  if (isLineContactMobileDevice()) {
+    const link = document.createElement('a')
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    return null
+  }
+
+  const popup = window.open(url, LINE_OAUTH_POPUP_WINDOW_NAME)
+  if (!popup || popup === window) return null
+  return popup
 }
 
 /**
@@ -111,28 +128,29 @@ export function startLineLogin(): void {
   closeLineOAuthPopupWindow(lineOAuthPopupRef)
   lineOAuthPopupRef = null
 
-  const popup = window.open(url, LINE_OAUTH_POPUP_WINDOW_NAME)
-
+  const popup = openLineOAuthInNewTab(url)
   if (popup) {
     lineOAuthPopupRef = popup
-    if (isLineContactMobileDevice()) {
-      try {
-        popup.focus()
-      } catch {
-        /* ignore */
-      }
+    try {
+      popup.focus()
+    } catch {
+      /* ignore */
     }
     return
   }
 
-  clearLineOAuthKeeperTab()
-  window.location.replace(url)
+  if (!isLineContactMobileDevice()) {
+    clearLineOAuthKeeperTab()
+    clearLineOAuthInProgress()
+    throw new Error('เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป — อนุญาตป๊อปอัปแล้วลองใหม่')
+  }
 }
 
-/** เรียกจากแท็บ /contact เดิมเมื่อได้ผล OAuth หรือผู้ใช้กลับจากแอป LINE */
+/** เรียกจากแท็บ keeper หลังได้ผล OAuth สำเร็จเท่านั้น */
 export function cleanupLineOAuthAfterKeeperReturn(): void {
   closeLineOAuthPopupWindow(lineOAuthPopupRef)
   lineOAuthPopupRef = null
+  clearLineOAuthKeeperTab()
   try {
     window.focus()
   } catch {

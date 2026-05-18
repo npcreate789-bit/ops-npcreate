@@ -43,19 +43,14 @@ export function clearLineOAuthKeeperTab(): void {
   }
 }
 
-/** ปิดแท็บ/หน้าต่าง OAuth ที่ค้างบน access.line.me (มักไม่ได้รับ redirect บนมือถือ) */
+/**
+ * ปิดหน้าต่าง OAuth ที่ keeper เปิดไว้เท่านั้น — ไม่ใช้ window.open('', name)
+ * เพราะบางเบราว์เซอร์อาจปิด/เปลี่ยนแท็บ /contact ผิดตัว
+ */
 export function closeLineOAuthPopupWindow(popupRef?: Window | null): void {
+  if (!popupRef || popupRef === window || popupRef.closed) return
   try {
-    popupRef?.close()
-  } catch {
-    /* ignore */
-  }
-
-  try {
-    const named = window.open('', LINE_OAUTH_POPUP_WINDOW_NAME)
-    if (named && named !== window && !named.closed) {
-      named.close()
-    }
+    popupRef.close()
   } catch {
     /* ignore */
   }
@@ -83,8 +78,6 @@ export function publishLineOAuthResult(payload: LineOAuthBroadcastPayload): void
       /* ignore */
     }
   }
-
-  closeLineOAuthPopupWindow()
 }
 
 export function readLineOAuthBroadcastResult(): LineOAuthBroadcastPayload | null {
@@ -146,11 +139,18 @@ export function subscribeLineOAuthBroadcast(
   }
 }
 
-/** แท็บที่ LINE เปิดกลับมาพร้อม ?code= — ปิดหลังส่งผลไปแท็บเดิมแล้ว */
+/** แท็บ callback ชั่วคราว — ปิดได้เฉพาะเมื่อไม่ใช่แท็บ keeper */
 export function tryCloseLineOAuthCallbackTab(): void {
   if (isLineOAuthKeeperTab()) return
-
-  closeLineOAuthPopupWindow()
+  if (window.opener && !window.opener.closed) {
+    try {
+      window.opener.focus()
+    } catch {
+      /* ignore */
+    }
+  }
+  const openedAsOAuthPopup = window.name === LINE_OAUTH_POPUP_WINDOW_NAME
+  if (!window.opener && !openedAsOAuthPopup) return
 
   window.setTimeout(() => {
     try {
@@ -158,18 +158,5 @@ export function tryCloseLineOAuthCallbackTab(): void {
     } catch {
       /* ignore */
     }
-
-    window.setTimeout(() => {
-      if (typeof document === 'undefined') return
-      if (!document.hidden) return
-      try {
-        const path = window.location.pathname
-        if (path === '/contact' || path.endsWith('/contact')) {
-          document.title = 'เชื่อมต่อ LINE แล้ว — กลับแท็บ /contact'
-        }
-      } catch {
-        /* ignore */
-      }
-    }, 300)
   }, 400)
 }

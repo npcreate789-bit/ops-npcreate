@@ -130,18 +130,18 @@ export function ContactPage() {
     function onKeeperVisible() {
       if (document.visibilityState !== 'visible') return
       const pending = readLineOAuthBroadcastResult()
-      if (pending) {
-        if (pending.type === 'success') {
-          setLineUserId(pending.userId)
-          setLineDisplayName(pending.displayName)
-          setChannelConnectError(null)
-          setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
-        } else {
-          setChannelConnectError(pending.error)
-        }
-        clearLineOAuthBroadcastResult()
-        clearLineOAuthInProgress()
+      if (!pending) return
+
+      if (pending.type === 'success') {
+        setLineUserId(pending.userId)
+        setLineDisplayName(pending.displayName)
+        setChannelConnectError(null)
+        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+      } else {
+        setChannelConnectError(pending.error)
       }
+      clearLineOAuthBroadcastResult()
+      clearLineOAuthInProgress()
       cleanupLineOAuthAfterKeeperReturn()
     }
 
