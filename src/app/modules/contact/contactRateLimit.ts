@@ -1,6 +1,12 @@
+import { isLocalDevHost } from '../../../shared/config/appUrl'
+
 const COOLDOWN_KEY = 'npc-contact-cooldown-until'
-export const CONTACT_MIN_FORM_MS = 3_000
-export const CONTACT_CLIENT_COOLDOWN_MS = 60_000
+
+/** รอขั้นต่ำก่อนกดส่ง (กัน bot) */
+export const CONTACT_MIN_FORM_MS = isLocalDevHost() ? 500 : 1_500
+
+/** ระยะห่างระหว่างการส่งซ้ำใน session เดียว */
+export const CONTACT_CLIENT_COOLDOWN_MS = isLocalDevHost() ? 0 : 15_000
 
 export function getContactCooldownRemainingMs(): number {
   try {
