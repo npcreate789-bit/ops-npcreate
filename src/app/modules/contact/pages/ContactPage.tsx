@@ -23,8 +23,11 @@ import {
   validateContactDetails,
   validateLineLogin,
 } from '../contactFormUtils'
-import type { ContactHandoffState } from '../contactLineHandoff'
-import { openLineChatForInquiry, reopenLineInquiryHandoff } from '../contactLineHandoff'
+import {
+  finishContactHandoffAfterSubmit,
+  openLineChatForInquiry,
+  openLineHandoffPopup,
+} from '../contactLineHandoff'
 import { runContactSubmit } from '../contactSubmitFlow'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
@@ -38,12 +41,6 @@ const HERO_POINTS = [
   'ขั้นที่ 1 — เชื่อมต่อ LINE Login',
   'ขั้นที่ 2 — กรอกชื่อ เบอร์ และบริการที่สนใจ',
   'กดส่ง — บันทึกในระบบ + เปิดแชท LINE @npcreate',
-] as const
-
-const STEPS_USER_SEND = [
-  'เปิดแชท LINE @npcreate (ระบบจะเปิดให้อัตโนมัติ)',
-  'กดส่งข้อความในแชท — ทีม NP Create จะเห็นรายละเอียดใน inbox',
-  'ทีม Sales ติดต่อกลับภายใน 1–2 วันทำการ',
 ] as const
 
 function serviceLabelsForCodes(
@@ -75,7 +72,7 @@ export function ContactPage() {
     phone?: string
     channelConnect?: string
   }>({})
-  const [handoff, setHandoff] = useState<ContactHandoffState | null>(null)
+  const [exitingAfterSubmit, setExitingAfterSubmit] = useState(false)
 
   const lineLoginReady = isContactLineLoginReady(lineUserId)
 
@@ -160,6 +157,8 @@ export function ContactPage() {
     setSaving(true)
     setFormError(null)
 
+    const handoffWin = openLineHandoffPopup()
+
     try {
       const result = await runContactSubmit({
         contactName,
@@ -171,24 +170,13 @@ export function ContactPage() {
       })
 
       markContactCooldown()
-
-      const nextHandoff: ContactHandoffState = {
-        leadId: result.leadId,
-        lineMessage: result.lineMessage,
-        chatUrl: result.chatUrl,
-        lineDelivery: result.lineDelivery,
-      }
-      setHandoff(nextHandoff)
       setSaving(false)
+      setExitingAfterSubmit(true)
 
-      openLineChatForInquiry(result.chatUrl)
-
-      window.setTimeout(() => {
-        if (window.location.pathname.includes('/contact')) {
-          window.scrollTo({ top: 0, behavior: 'smooth' })
-        }
-      }, 400)
+      openLineChatForInquiry(result.chatUrl, handoffWin)
+      finishContactHandoffAfterSubmit(handoffWin)
     } catch (err) {
+      handoffWin?.close()
       const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'
       setFormError(friendlyContactSubmitError(raw))
       setSaving(false)
@@ -196,8 +184,7 @@ export function ContactPage() {
     }
   }
 
-  if (handoff) {
-    const hasConfirmation = handoff.lineDelivery === 'confirmation_pushed'
+  if (exitingAfterSubmit) {
     return (
       <div className="contact-page contact-page--success">
         <div className="contact-page__bg" aria-hidden />
@@ -205,39 +192,13 @@ export function ContactPage() {
           <div className="contact-success-card__icon" aria-hidden>
             ✓
           </div>
-          <h2>บันทึกข้อมูลแล้ว — ส่งข้อความใน LINE</h2>
+          <h2>ส่งข้อมูลสำเร็จ</h2>
           <p>
-            ข้อมูลถูกบันทึกในระบบ {COMPANY_BRAND_NAME} แล้ว
-            {hasConfirmation
-              ? ' และส่งข้อความยืนยันไปแชท LINE ของคุณแล้ว'
-              : ''}
-            {' '}
-            ขั้นสำคัญสุดท้าย: <strong>กดส่งข้อความ</strong>ในแชท LINE @npcreate
-            (ข้อความถูกเติมในช่องพิมพ์แล้ว) เพื่อให้ทีมเห็นรายละเอียดใน inbox
+            บันทึกในระบบ {COMPANY_BRAND_NAME} แล้ว — กำลังเปิด LINE และปิดหน้านี้
           </p>
           <p className="contact-success-card__wait">
-            หากแชท LINE ยังไม่เปิด กดปุ่มด้านล่าง
+            กรุณา<strong>กดส่งข้อความ</strong>ในแอป LINE @npcreate (ข้อความถูกเติมในช่องพิมพ์แล้ว)
           </p>
-          <ol className="contact-success-steps">
-            {STEPS_USER_SEND.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-          <div className="contact-success-actions">
-            <button
-              type="button"
-              className="contact-link--primary"
-              onClick={() => reopenLineInquiryHandoff(handoff.chatUrl)}
-            >
-              เปิดแชท LINE @npcreate
-            </button>
-            <Link to={loginPathForAudience('client')} className="contact-link--ghost">
-              เข้าสู่ระบบ (ลูกค้าปัจจุบัน)
-            </Link>
-            <a href="https://npcreate.co.th" className="contact-link--ghost" rel="noreferrer">
-              กลับเว็บไซต์หลัก
-            </a>
-          </div>
         </article>
       </div>
     )
