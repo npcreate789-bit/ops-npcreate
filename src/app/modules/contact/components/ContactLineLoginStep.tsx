@@ -1,0 +1,79 @@
+import {
+  clearLineConnection,
+  getLineOAuthDisabledReason,
+  isLineOAuthConfigured,
+  lineOAuthDisabledHint,
+} from '../../../../shared/contact/channelConnectConfig'
+import { startLineLogin } from '../../../../shared/contact/lineOAuth'
+
+interface ContactLineLoginStepProps {
+  lineUserId: string | null
+  lineDisplayName: string | null
+  onLineDisconnected: () => void
+  error?: string
+}
+
+export function ContactLineLoginStep({
+  lineUserId,
+  lineDisplayName,
+  onLineDisconnected,
+  error,
+}: ContactLineLoginStepProps) {
+  const oauthReady = isLineOAuthConfigured()
+  const oauthDisabledReason = oauthReady ? null : getLineOAuthDisabledReason()
+  const connected = Boolean(lineUserId)
+
+  function handleLineLogin() {
+    try {
+      startLineLogin()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  return (
+    <div className="contact-line-login">
+      {error && (
+        <p className="contact-field-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {connected ? (
+        <div className="contact-connect__status contact-connect__status--ok">
+          <span className="contact-connect__check" aria-hidden>
+            ✓
+          </span>
+          <div>
+            <strong>เชื่อมต่อ LINE แล้ว</strong>
+            <p className="contact-connect__meta">
+              {lineDisplayName ? `${lineDisplayName} · ` : ''}
+              {lineUserId}
+            </p>
+            </div>
+          <button
+            type="button"
+            className="contact-connect__secondary"
+            onClick={() => {
+              clearLineConnection()
+              onLineDisconnected()
+            }}
+          >
+            เปลี่ยนบัญชี
+          </button>
+        </div>
+      ) : oauthReady ? (
+        <button type="button" className="contact-connect__primary" onClick={handleLineLogin}>
+          เชื่อมต่อ LINE Login
+        </button>
+      ) : (
+        <p className="contact-field-error">
+          {oauthDisabledReason
+            ? lineOAuthDisabledHint(oauthDisabledReason)
+            : 'LINE Login ยังไม่พร้อม — ติดต่อทีม NP Create'}
+        </p>
+      )}
+    </div>
+  )
+}
+

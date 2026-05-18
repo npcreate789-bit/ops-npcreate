@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { BUSINESS_TYPES } from '../../crm/constants'
 import { listPublicServicePackages } from '../../sales/api/packages'
 import type { ServicePackageOption } from '../../../../shared/packages/serviceInterests'
 import { isLocalDevHost } from '../../../../shared/config/appUrl'
@@ -9,7 +8,8 @@ import {
   COMPANY_ICON_SRC,
   COMPANY_TAGLINE_EN,
 } from '../../../../shared/company/companyProfile'
-import { ContactInput, ContactSelect } from '../components/ContactField'
+import { ContactInput } from '../components/ContactField'
+import { ContactLineLoginStep } from '../components/ContactLineLoginStep'
 import {
   contactCooldownMessage,
   contactFormTooFastMessage,
@@ -19,16 +19,17 @@ import {
 } from '../contactRateLimit'
 import {
   friendlyContactSubmitError,
-  isContactLineReady,
-  validateContactForm,
+  isContactLineLoginReady,
+  validateContactDetails,
+  validateLineLogin,
 } from '../contactFormUtils'
+import {
+  buildContactLineInquiryMessage,
+  openLineInquiryAndHandoff,
+} from '../contactLineHandoff'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
-import { LineContactSetupPanel } from '../components/LineContactSetupPanel'
-import {
-  readLineConnection,
-  readLineOaContactStepDone,
-} from '../../../../shared/contact/channelConnectConfig'
+import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
 import {
   applyLineOAuthCallbackFromUrl,
   stripLineOAuthParamsFromUrl,
@@ -36,16 +37,23 @@ import {
 import '../contact.css'
 
 const HERO_POINTS = [
-  'เชื่อมต่อ LINE ก่อน แล้วกรอกข้อมูลสั้นๆ',
-  'ทีม Sales รับ Lead ในระบบทันที',
-  'ติดต่อกลับภายใน 1–2 วันทำการ',
+  'ขั้นที่ 1 — เชื่อมต่อ LINE Login',
+  'ขั้นที่ 2 — กรอกชื่อ เบอร์ และบริการที่สนใจ',
+  'กดทัก LINE ส่งข้อความ — ทีม Sales รับ Lead ในระบบทันที',
 ] as const
 
-const SUCCESS_STEPS = [
-  'ทีม Sales ติดต่อกลับทาง LINE @npcreate',
-  'คุยรายละเอียดและเสนอแพ็กเกจ — ใบเสนอราคาส่งเมื่อพร้อม',
+const HANDOFF_STEPS = [
+  'ส่งข้อความในแชท LINE @npcreate (กดส่งในแอป LINE)',
+  'ทีม Sales ติดต่อกลับภายใน 1–2 วันทำการ',
   'หลังเริ่มงาน ใช้แชทใน Client Workspace',
 ] as const
+
+function serviceLabelsForCodes(
+  codes: string[],
+  options: ServicePackageOption[],
+): string[] {
+  return codes.map((code) => options.find((o) => o.code === code)?.name ?? code)
+}
 
 export function ContactPage() {
   const [searchParams] = useSearchParams()
@@ -58,9 +66,7 @@ export function ContactPage() {
   const [phone, setPhone] = useState('')
   const [lineUserId, setLineUserId] = useState('')
   const [lineDisplayName, setLineDisplayName] = useState<string | null>(null)
-  const [lineOaStepDone, setLineOaStepDone] = useState(false)
   const [channelConnectError, setChannelConnectError] = useState<string | null>(null)
-  const [businessType, setBusinessType] = useState('')
   const [services, setServices] = useState<string[]>([])
   const [serviceOptions, setServiceOptions] = useState<ServicePackageOption[]>([])
   const [servicesLoading, setServicesLoading] = useState(true)
@@ -71,12 +77,11 @@ export function ContactPage() {
     phone?: string
     channelConnect?: string
   }>({})
-  const [done, setDone] = useState(false)
+  const [handedOff, setHandedOff] = useState(false)
 
-  const lineReady = isContactLineReady({ lineOaStepDone, lineUserId })
+  const lineLoginReady = isContactLineLoginReady(lineUserId)
 
   useEffect(() => {
-    setLineOaStepDone(readLineOaContactStepDone())
     const storedLine = readLineConnection()
     if (storedLine) {
       setLineUserId(storedLine.userId)
@@ -86,7 +91,6 @@ export function ContactPage() {
     const lineResult = applyLineOAuthCallbackFromUrl(searchParams)
     if (lineResult) {
       if (lineResult.ok) {
-        setLineOaStepDone(readLineOaContactStepDone())
         setLineUserId(lineResult.userId)
         setLineDisplayName(lineResult.displayName)
         setChannelConnectError(null)
@@ -134,14 +138,14 @@ export function ContactPage() {
       return
     }
 
-    const validation = validateContactForm({
+    const lineErrors = validateLineLogin(lineUserId)
+    const detailErrors = validateContactDetails({
       contactName,
       phone,
-      businessType,
       services,
       lineUserId,
-      lineOaStepDone,
     })
+    const validation = { ...lineErrors, ...detailErrors }
     if (Object.keys(validation).length > 0) {
       setFieldErrors(validation)
       setFormError(null)
@@ -157,18 +161,25 @@ export function ContactPage() {
     setFormError(null)
     try {
       const name = contactName.trim()
+      const labels = serviceLabelsForCodes(services, serviceOptions)
+      const lineMessage = buildContactLineInquiryMessage({
+        contactName: name,
+        phone: phone.trim(),
+        serviceLabels: labels,
+      })
+
       await submitPublicInquiry({
         brand_name: name,
         preferred_contact_channel: 'line',
         contact_name: name,
         phone: phone.trim(),
         line_user_id: lineUserId.trim(),
-        business_type: businessType || undefined,
         services_interested: services,
         company_website: companyWebsite,
       })
       markContactCooldown()
-      setDone(true)
+      openLineInquiryAndHandoff(lineMessage)
+      setHandedOff(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'
@@ -179,7 +190,7 @@ export function ContactPage() {
     }
   }
 
-  if (done) {
+  if (handedOff) {
     return (
       <div className="contact-page contact-page--success">
         <div className="contact-page__bg" aria-hidden />
@@ -187,12 +198,16 @@ export function ContactPage() {
           <div className="contact-success-card__icon" aria-hidden>
             ✓
           </div>
-          <h2>ส่งข้อมูลเรียบร้อย</h2>
+          <h2>เปิด LINE เพื่อส่งข้อความ</h2>
           <p>
-            ขอบคุณที่สนใจ {COMPANY_BRAND_NAME} ทีมงานจะติดต่อกลับทาง LINE @npcreate
+            บันทึกข้อมูลในระบบแล้ว — กรุณากดส่งข้อความในแชท LINE @npcreate
+            ทีม {COMPANY_BRAND_NAME} จะติดต่อกลับต่อจากนั้น
+          </p>
+          <p className="contact-success-card__wait muted">
+            รอดำเนินการ Flow ถัดไป — หากแท็บนี้ยังเปิดอยู่ สามารถปิดได้แล้วไปคุยใน LINE
           </p>
           <ol className="contact-success-steps">
-            {SUCCESS_STEPS.map((step) => (
+            {HANDOFF_STEPS.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>
@@ -227,7 +242,7 @@ export function ContactPage() {
             ติดต่อ<span className="contact-hero__accent">ทีมงาน</span>
           </h1>
           <p className="contact-hero__lead">
-            เชื่อมต่อ LINE ก่อน จากนั้นกรอกข้อมูลสั้นๆ — ทีม Sales รับ Lead ในระบบทันที
+            เชื่อมต่อ LINE Login ก่อน จากนั้นกรอกข้อมูลแล้วกดทัก LINE ส่งข้อความ
           </p>
           <ul className="contact-hero__list">
             {HERO_POINTS.map((point) => (
@@ -268,16 +283,11 @@ export function ContactPage() {
 
             <section className="contact-section" aria-labelledby="contact-sec-line">
               <h2 id="contact-sec-line" className="contact-section__title">
-                ขั้นที่ 1 — เชื่อมต่อ LINE
+                ขั้นที่ 1 — เชื่อมต่อ LINE Login
               </h2>
-              <LineContactSetupPanel
+              <ContactLineLoginStep
                 lineUserId={lineUserId || null}
                 lineDisplayName={lineDisplayName}
-                lineOaStepDone={lineOaStepDone}
-                onLineOaStepDone={() => {
-                  setLineOaStepDone(true)
-                  setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
-                }}
                 onLineDisconnected={() => {
                   setLineUserId('')
                   setLineDisplayName(null)
@@ -287,20 +297,20 @@ export function ContactPage() {
             </section>
 
             <section
-              className={`contact-section${lineReady ? '' : ' contact-section--locked'}`}
+              className={`contact-section${lineLoginReady ? '' : ' contact-section--locked'}`}
               aria-labelledby="contact-sec-details"
-              aria-disabled={!lineReady}
+              aria-disabled={!lineLoginReady}
             >
               <h2 id="contact-sec-details" className="contact-section__title">
                 ขั้นที่ 2 — ข้อมูลติดต่อ
               </h2>
-              {!lineReady && (
+              {!lineLoginReady && (
                 <p className="contact-section__lock-hint">
-                  ทำขั้นที่ 1 ให้ครบก่อน — ทัก LINE และเชื่อมต่อ Login
+                  เชื่อมต่อ LINE Login ในขั้นที่ 1 ก่อน
                 </p>
               )}
 
-              <fieldset className="contact-section__fields" disabled={!lineReady}>
+              <fieldset className="contact-section__fields" disabled={!lineLoginReady}>
                 <ContactInput
                   id="contact-name"
                   ref={contactNameRef}
@@ -334,19 +344,6 @@ export function ContactPage() {
                   placeholder="0812345678"
                   autoComplete="tel"
                 />
-                <ContactSelect
-                  id="contact-business"
-                  label="ประเภทธุรกิจ"
-                  value={businessType}
-                  onChange={(e) => setBusinessType(e.target.value)}
-                >
-                  <option value="">— เลือกประเภท (ไม่บังคับ) —</option>
-                  {BUSINESS_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </ContactSelect>
 
                 <div className="contact-section__services">
                   <p className="contact-section__label">บริการที่สนใจ</p>
@@ -373,12 +370,12 @@ export function ContactPage() {
             <button
               type="submit"
               className="contact-submit"
-              disabled={saving || !lineReady}
+              disabled={saving || !lineLoginReady}
             >
-              {saving ? 'กำลังส่ง...' : 'ส่งข้อมูลติดต่อ'}
+              {saving ? 'กำลังส่ง...' : 'ทัก LINE ส่งข้อความ'}
             </button>
             <p className="contact-form-note">
-              กดส่งถือว่ายินยอมให้ทีม NP Create ติดต่อกลับทาง LINE
+              กดปุ่มจะบันทึกข้อมูลและเปิดแชท LINE @npcreate พร้อมข้อความที่กรอกไว้
             </p>
           </form>
         </div>

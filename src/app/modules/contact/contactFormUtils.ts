@@ -4,10 +4,8 @@ import { isLineOAuthConfigured } from '../../../shared/contact/channelConnectCon
 export interface ContactFormFields {
   contactName: string
   phone: string
-  businessType: string
   services: string[]
   lineUserId: string
-  lineOaStepDone: boolean
 }
 
 export function friendlyContactSubmitError(message: string): string {
@@ -31,46 +29,36 @@ export function friendlyContactSubmitError(message: string): string {
     return 'ข้อมูลยาวเกินไป กรุณาตรวจสอบแล้วลองใหม่'
   }
   if (m.includes('line connection required') || m.includes('line_id is required')) {
-    return 'กรุณาเชื่อมต่อ LINE ก่อนส่งข้อมูล'
+    return 'กรุณาเชื่อมต่อ LINE Login ก่อน'
   }
   return message
 }
 
-export function validateContactForm(fields: ContactFormFields): {
+export function validateContactDetails(fields: ContactFormFields): {
   contactName?: string
   phone?: string
-  channelConnect?: string
 } {
-  const errors: {
-    contactName?: string
-    phone?: string
-    channelConnect?: string
-  } = {}
-
-  if (!fields.lineOaStepDone) {
-    errors.channelConnect = 'ทักข้อความ "สนใจบริการ" ที่ @npcreate ก่อน (ขั้นที่ 1)'
-  } else if (
-    isLineOAuthConfigured() &&
-    !fields.lineUserId.trim() &&
-    !isLocalDevHost()
-  ) {
-    errors.channelConnect = 'เชื่อมต่อ LINE Login ก่อนส่งข้อมูล (ขั้นที่ 2)'
-  }
-
+  const errors: { contactName?: string; phone?: string } = {}
   if (!fields.contactName.trim()) {
     errors.contactName = 'กรุณาระบุชื่อผู้ติดต่อ'
   }
   if (!fields.phone.trim()) {
     errors.phone = 'กรุณาระบุเบอร์โทร'
   }
-
   return errors
 }
 
-export function isContactLineReady(
-  fields: Pick<ContactFormFields, 'lineOaStepDone' | 'lineUserId'>,
-): boolean {
-  if (!fields.lineOaStepDone) return false
+export function validateLineLogin(lineUserId: string): { channelConnect?: string } {
+  if (isLineOAuthConfigured() && !lineUserId.trim() && !isLocalDevHost()) {
+    return { channelConnect: 'กรุณาเชื่อมต่อ LINE Login ก่อน (ขั้นที่ 1)' }
+  }
+  if (!isLineOAuthConfigured() && !isLocalDevHost()) {
+    return { channelConnect: 'LINE Login ยังไม่พร้อม' }
+  }
+  return {}
+}
+
+export function isContactLineLoginReady(lineUserId: string): boolean {
   if (!isLineOAuthConfigured()) return isLocalDevHost()
-  return Boolean(fields.lineUserId.trim())
+  return Boolean(lineUserId.trim())
 }
