@@ -38,7 +38,7 @@
   align-items: start;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1100px) {
   .contact-layout {
     grid-template-columns: minmax(16rem, 1fr) minmax(22rem, 1.35fr);
     gap: 2.5rem;
@@ -569,8 +569,21 @@
 .contact-page--success {
   display: grid;
   place-items: center;
+  align-content: start;
   min-height: 100dvh;
   padding-top: max(2rem, env(safe-area-inset-top));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 768px) {
+  .contact-page--success {
+    place-items: stretch;
+    align-content: start;
+  }
+
+  .contact-page--success .contact-success-card {
+    margin-top: 0.5rem;
+  }
 }
 
 .sr-only {
@@ -1008,6 +1021,14 @@
 }
 
 @media (max-width: 768px) {
+  .contact-form {
+    padding-bottom: 0.5rem;
+  }
+
+  .contact-section:last-of-type {
+    padding-bottom: 5.5rem;
+  }
+
   .contact-form__footer {
     position: sticky;
     bottom: 0;

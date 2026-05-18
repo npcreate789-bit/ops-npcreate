@@ -31,12 +31,17 @@ import {
   readContactLineHandoffFailReason,
   readContactLineHandoffMessage,
   reopenLineInquiryHandoff,
+  takeContactHandoffSuccessPending,
   wasContactLineHandoffPushed,
 } from '../contactLineHandoff'
 import { lineHandoffFailureMessage } from '../lineHandoffMessages'
+import { isMobileBrowser } from '../../../../shared/line/lineStaffOpenUrl'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
 import { submitPublicInquiry } from '../api/submitInquiry'
-import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
+import {
+  readLineConnection,
+  takeLineOaContactPendingReturn,
+} from '../../../../shared/contact/channelConnectConfig'
 import {
   applyLineOAuthCallbackFromUrl,
   completeLineOAuthFromCallback,
@@ -97,6 +102,31 @@ export function ContactPage() {
   )
 
   const lineLoginReady = isContactLineLoginReady(lineUserId)
+
+  function tryShowHandoffSuccess(): boolean {
+    if (!readContactLineHandoffMessage()) return false
+    setHandedOff(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return true
+  }
+
+  useEffect(() => {
+    if (takeContactHandoffSuccessPending() && readContactLineHandoffMessage()) {
+      setHandedOff(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    function onHandoffReturn() {
+      if (document.visibilityState !== 'visible') return
+      if (takeLineOaContactPendingReturn() && readContactLineHandoffMessage()) {
+        takeContactHandoffSuccessPending()
+        tryShowHandoffSuccess()
+      }
+    }
+    document.addEventListener('visibilitychange', onHandoffReturn)
+    return () => document.removeEventListener('visibilitychange', onHandoffReturn)
+  }, [])
 
   useEffect(() => {
     const storedLine = readLineConnection()
@@ -250,21 +280,9 @@ export function ContactPage() {
         pushedToChat: handoff.pushedToChat,
       })
 
-      const showSuccess = () => {
-        setHandedOff(true)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-      }
-
-      if (document.visibilityState === 'visible') {
-        showSuccess()
-      } else {
-        const onReturn = () => {
-          if (document.visibilityState === 'visible') {
-            document.removeEventListener('visibilitychange', onReturn)
-            showSuccess()
-          }
-        }
-        document.addEventListener('visibilitychange', onReturn)
+      if (document.visibilityState === 'visible' && !isMobileBrowser()) {
+        takeContactHandoffSuccessPending()
+        tryShowHandoffSuccess()
       }
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'

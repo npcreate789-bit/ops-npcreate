@@ -10,6 +10,7 @@ const PENDING_MESSAGE_KEY = 'npc_contact_handoff_line_message'
 const PENDING_CHAT_URL_KEY = 'npc_contact_handoff_chat_url'
 const PENDING_PUSHED_KEY = 'npc_contact_handoff_pushed'
 const PENDING_FAIL_REASON_KEY = 'npc_contact_handoff_fail_reason'
+const PENDING_SUCCESS_UI_KEY = 'npc_contact_handoff_success_ui'
 
 export function buildContactLineInquiryMessage(input: {
   contactName: string
@@ -70,6 +71,25 @@ export function readContactLineHandoffChatUrl(): string | null {
   }
 }
 
+/** หลังส่งฟอร์มสำเร็จ — ใช้แสดงหน้า success เมื่อกลับจาก LINE (มือถือ reload หน้า) */
+export function markContactHandoffSuccessPending(): void {
+  try {
+    sessionStorage.setItem(PENDING_SUCCESS_UI_KEY, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function takeContactHandoffSuccessPending(): boolean {
+  try {
+    const pending = sessionStorage.getItem(PENDING_SUCCESS_UI_KEY) === '1'
+    sessionStorage.removeItem(PENDING_SUCCESS_UI_KEY)
+    return pending
+  } catch {
+    return false
+  }
+}
+
 export function wasContactLineHandoffPushed(): boolean {
   try {
     return sessionStorage.getItem(PENDING_PUSHED_KEY) === '1'
@@ -101,6 +121,7 @@ export function openContactLineHandoffAfterSubmit(input: {
   pushedToChat: boolean
 }): void {
   markLineOaContactPending()
+  markContactHandoffSuccessPending()
   navigateToLineHandoff(contactLineHandoffOpenUrl(input))
 }
 
