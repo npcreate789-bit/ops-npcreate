@@ -101,12 +101,31 @@ export function buildLineOAuthState(): string {
   const payload = { n: crypto.randomUUID(), r: buildLineOAuthReturnUrl() }
   const state = btoa(JSON.stringify(payload))
   sessionStorage.setItem(LINE_OAUTH_STATE_KEY, state)
+  try {
+    localStorage.setItem(LINE_OAUTH_STATE_KEY, state)
+  } catch {
+    /* private mode / quota */
+  }
   return state
 }
 
+/** sessionStorage ก่อน — ถ้าหาย (ล็อกอินด้วยแอป LINE กลับคนละแท็บ) ใช้ localStorage */
 export function consumeStoredLineOAuthState(): string | null {
-  const state = sessionStorage.getItem(LINE_OAUTH_STATE_KEY)
+  const state =
+    sessionStorage.getItem(LINE_OAUTH_STATE_KEY) ??
+    (() => {
+      try {
+        return localStorage.getItem(LINE_OAUTH_STATE_KEY)
+      } catch {
+        return null
+      }
+    })()
   sessionStorage.removeItem(LINE_OAUTH_STATE_KEY)
+  try {
+    localStorage.removeItem(LINE_OAUTH_STATE_KEY)
+  } catch {
+    /* ignore */
+  }
   return state
 }
 

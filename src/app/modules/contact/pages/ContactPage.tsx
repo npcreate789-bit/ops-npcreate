@@ -39,7 +39,7 @@ import { readLineConnection } from '../../../../shared/contact/channelConnectCon
 import {
   applyLineOAuthCallbackFromUrl,
   completeLineOAuthFromCallback,
-  isLineOAuthInProgress,
+  maybeReloadContactAfterLineAppReturn,
   stripLineOAuthParamsFromUrl,
 } from '../../../../shared/contact/lineOAuth'
 import '../contact.css'
@@ -129,10 +129,7 @@ export function ContactPage() {
 
   useEffect(() => {
     function onVisibility() {
-      if (document.visibilityState !== 'visible' || !isLineOAuthInProgress()) return
-      const params = new URLSearchParams(window.location.search)
-      if (params.has('code') || params.has('line_connected') || params.has('line_error')) return
-      window.location.reload()
+      maybeReloadContactAfterLineAppReturn()
     }
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)

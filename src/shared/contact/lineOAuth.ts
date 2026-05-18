@@ -12,6 +12,7 @@ import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
 const LINE_AUTH_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const LINE_OAUTH_IN_PROGRESS_KEY = 'npc_contact_line_oauth_in_progress'
+const LINE_OAUTH_VISIBILITY_RELOAD_KEY = 'npc_contact_line_oauth_visibility_reload'
 
 export interface LineOAuthCallbackParams {
   line_user_id?: string
@@ -54,6 +55,7 @@ function markLineOAuthInProgress(): void {
 export function clearLineOAuthInProgress(): void {
   try {
     sessionStorage.removeItem(LINE_OAUTH_IN_PROGRESS_KEY)
+    sessionStorage.removeItem(LINE_OAUTH_VISIBILITY_RELOAD_KEY)
   } catch {
     /* ignore */
   }
@@ -73,8 +75,33 @@ export function isLineOAuthInProgress(): boolean {
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
+  try {
+    sessionStorage.removeItem(LINE_OAUTH_VISIBILITY_RELOAD_KEY)
+  } catch {
+    /* ignore */
+  }
   markLineOAuthInProgress()
   window.location.assign(url)
+}
+
+/** รีโหลดครั้งเดียวเมื่อกลับจากแอป LINE แต่ URL ยังไม่มี code (กันวน reload) */
+export function maybeReloadContactAfterLineAppReturn(): boolean {
+  if (document.visibilityState !== 'visible' || !isLineOAuthInProgress()) return false
+  const params = new URLSearchParams(window.location.search)
+  if (params.has('code') || params.has('line_connected') || params.has('line_error')) {
+    return false
+  }
+  try {
+    if (sessionStorage.getItem(LINE_OAUTH_VISIBILITY_RELOAD_KEY)) {
+      clearLineOAuthInProgress()
+      return false
+    }
+    sessionStorage.setItem(LINE_OAUTH_VISIBILITY_RELOAD_KEY, '1')
+  } catch {
+    return false
+  }
+  window.location.reload()
+  return true
 }
 
 /**
