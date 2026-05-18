@@ -139,13 +139,24 @@ export function lineOaHandleForUrl(): string {
   return id.startsWith('@') ? id : `@${id}`
 }
 
+/** จำกัดความยาวข้อความใน URL — ลิงก์ยาวเกินมักทำให้ LINE แจ้ง "ไม่สามารถเชื่อมต่อได้" */
+const LINE_OA_MESSAGE_MAX_LEN = 1200
+
+function trimLineOaMessageForUrl(message: string): string {
+  const trimmed = message.trim()
+  if (trimmed.length <= LINE_OA_MESSAGE_MAX_LEN) return trimmed
+  return `${trimmed.slice(0, LINE_OA_MESSAGE_MAX_LEN - 1)}…`
+}
+
 /**
  * เปิดแชท OA พร้อมข้อความในช่องพิมพ์
- * รูปแบบ LINE: https://line.me/R/oaMessage/@id/?{ข้อความที่ encode แล้ว} (ไม่ใช้ ?text=)
+ * รูปแบบ LINE: https://line.me/R/oaMessage/%40id/?{ข้อความที่ encode แล้ว}
+ * @see https://developers.line.biz/en/docs/messaging-api/using-line-url-scheme/
  */
 export function lineOaStarterMessageUrl(message = LINE_OA_STARTER_MESSAGE): string {
-  const base = `https://line.me/R/oaMessage/${lineOaHandleForUrl()}/`
-  return `${base}?${encodeURIComponent(message.trim())}`
+  const encodedId = encodeURIComponent(lineOaHandleForUrl())
+  const text = trimLineOaMessageForUrl(message)
+  return `https://line.me/R/oaMessage/${encodedId}/?${encodeURIComponent(text)}`
 }
 
 export function markLineOaContactStepDone(): void {
