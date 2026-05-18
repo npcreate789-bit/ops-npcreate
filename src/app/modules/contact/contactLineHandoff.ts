@@ -1,3 +1,4 @@
+import { appUrl } from '../../../shared/config/appUrl'
 import {
   lineOaStarterMessageUrl,
   markLineOaContactPending,
@@ -21,6 +22,15 @@ export function buildContactLineInquiryMessage(input: {
     lines.push(`บริการที่สนใจ: ${input.serviceLabels.join(', ')}`)
   }
   return lines.join('\n')
+}
+
+export function contactCrmLeadUrl(leadId: string): string {
+  return appUrl(`/app/crm/leads/${leadId}`)
+}
+
+/** ข้อความในช่องพิมพ์เมื่อเปิด LINE (oaMessage) */
+export function buildContactLineOaPrefillMessage(leadId: string): string {
+  return `CRM:${contactCrmLeadUrl(leadId)}`
 }
 
 export function persistContactLineHandoffState(input: {

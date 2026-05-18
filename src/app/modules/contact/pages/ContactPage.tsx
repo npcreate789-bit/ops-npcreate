@@ -26,6 +26,7 @@ import {
 import { deliverContactLineHandoff } from '../api/contactLineHandoffApi'
 import {
   buildContactLineInquiryMessage,
+  buildContactLineOaPrefillMessage,
   contactLineHandoffUrl,
   openContactLineHandoffAfterSubmit,
   persistContactLineHandoffState,
@@ -248,11 +249,12 @@ export function ContactPage() {
       })
       markContactCooldown()
 
-      const chatUrl = contactLineHandoffUrl(lineMessage)
+      const oaPrefill = buildContactLineOaPrefillMessage(leadId)
+      const chatUrl = contactLineHandoffUrl(oaPrefill)
 
       if (
         !persistContactLineHandoffState({
-          message: lineMessage,
+          message: oaPrefill,
           chatUrl,
           pushedToChat: false,
         })
@@ -262,7 +264,7 @@ export function ContactPage() {
 
       setSaving(false)
 
-      openContactLineHandoffAfterSubmit({ chatUrl, message: lineMessage })
+      openContactLineHandoffAfterSubmit({ chatUrl, message: oaPrefill })
 
       if (document.visibilityState === 'visible' && !isMobileBrowser()) {
         takeContactHandoffSuccessPending()
@@ -276,7 +278,7 @@ export function ContactPage() {
       })
         .then((handoff) => {
           persistContactLineHandoffState({
-            message: lineMessage,
+            message: oaPrefill,
             chatUrl,
             pushedToChat: handoff.pushedToChat,
             failReason: handoff.pushedToChat ? undefined : handoff.reason,

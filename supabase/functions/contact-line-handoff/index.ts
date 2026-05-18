@@ -82,30 +82,13 @@ function resolvePushTargets(lead: LeadRow, requestLineUserId: string): string[] 
   return out
 }
 
-function buildOaStaffNotifyMessage(input: {
-  lead: LeadRow
-  customerText: string
-  pushUserId?: string
-}): string {
-  const services = (input.lead.services_interested ?? []).filter(Boolean)
-  const lines = [
-    `[Lead ใหม่ — /contact]`,
-    `แบรนด์: ${input.lead.brand_name?.trim() || '—'}`,
-    `ชื่อ: ${input.lead.contact_name?.trim() || '—'}`,
-    `โทร: ${input.lead.phone?.trim() || '—'}`,
-    `LINE Login: ${input.lead.line_user_id?.trim() || '—'}`,
-  ]
-  if (input.lead.line_oa_chat_user_id?.trim()) {
-    lines.push(`แชท OA: ${input.lead.line_oa_chat_user_id.trim()}`)
-  }
-  if (input.pushUserId) {
-    lines.push(`ส่ง push ไปที่: ${input.pushUserId}`)
-  }
-  if (services.length > 0) {
-    lines.push(`บริการ: ${services.join(', ')}`)
-  }
-  lines.push('', '--- ข้อความลูกค้า ---', input.customerText.trim(), '', `CRM: ${appLeadUrl(input.lead.id)}`)
-  return lines.join('\n')
+function buildOaPrefillMessage(leadId: string): string {
+  return `CRM:${appLeadUrl(leadId)}`
+}
+
+/** ข้อความ push ผ่าน Messaging API */
+function buildMessagingHandoffText(customerText: string): string {
+  return ['--- ข้อความลูกค้า ---', customerText.trim()].join('\n')
 }
 
 async function botProfileExists(token: string, userId: string): Promise<boolean> {
@@ -265,7 +248,7 @@ Deno.serve(async (req) => {
       return json({
         ok: true,
         mode: 'open_chat',
-        url: lineOaMessageUrl(text),
+        url: lineOaMessageUrl(buildOaPrefillMessage(leadId)),
         reason: 'invalid_line_user_id',
         oa_notified: false,
       })
@@ -309,7 +292,8 @@ Deno.serve(async (req) => {
     }
 
     const pushTargets = resolvePushTargets(leadRow, lineUserId)
-    const chatUrl = lineOaMessageUrl(text)
+    const oaPrefill = buildOaPrefillMessage(leadId)
+    const chatUrl = lineOaMessageUrl(oaPrefill)
 
     const messagingToken = Deno.env.get('LINE_MESSAGING_CHANNEL_ACCESS_TOKEN')?.trim()
     const oaToken = Deno.env.get('LINE_OA_CHANNEL_ACCESS_TOKEN')?.trim()
@@ -325,14 +309,11 @@ Deno.serve(async (req) => {
       })
     }
 
-    const customerPush = await pushLineTextToTargets(customerToken, pushTargets, text)
+    const messagingText = buildMessagingHandoffText(text)
+    const customerPush = await pushLineTextToTargets(customerToken, pushTargets, messagingText)
 
     let pushUserId = customerPush.to
-    let staffText = buildOaStaffNotifyMessage({
-      lead: leadRow,
-      customerText: text,
-      pushUserId,
-    })
+    const staffText = messagingText
 
     let oaNotified = false
     try {
@@ -346,7 +327,7 @@ Deno.serve(async (req) => {
     }
 
     if (oaToken && messagingToken && oaToken !== messagingToken) {
-      const oaExtra = await pushLineTextToTargets(oaToken, pushTargets, text)
+      const oaExtra = await pushLineTextToTargets(oaToken, pushTargets, messagingText)
       if (oaExtra.ok) {
         oaNotified = true
         if (!pushUserId) pushUserId = oaExtra.to
