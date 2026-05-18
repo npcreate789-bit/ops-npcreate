@@ -5,14 +5,16 @@ import {
   lineOAuthDisabledHint,
   lineOAuthRedirectUri,
   LINE_CHANNEL_ID,
+  markLineOaContactPending,
   persistLineConnection,
 } from './channelConnectConfig'
+import { openLineUrlInPlace } from './lineInPlaceOpen'
+import { isMobileBrowser } from '../line/lineStaffOpenUrl'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
 const LINE_AUTH_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const LINE_OAUTH_IN_PROGRESS_KEY = 'npc_contact_line_oauth_in_progress'
-const LINE_OAUTH_VISIBILITY_RELOAD_KEY = 'npc_contact_line_oauth_visibility_reload'
 
 export interface LineOAuthCallbackParams {
   line_user_id?: string
@@ -55,7 +57,6 @@ function markLineOAuthInProgress(): void {
 export function clearLineOAuthInProgress(): void {
   try {
     sessionStorage.removeItem(LINE_OAUTH_IN_PROGRESS_KEY)
-    sessionStorage.removeItem(LINE_OAUTH_VISIBILITY_RELOAD_KEY)
   } catch {
     /* ignore */
   }
@@ -70,38 +71,21 @@ export function isLineOAuthInProgress(): boolean {
 }
 
 /**
- * เริ่ม LINE Login — redirect ไป access.line.me
- * หลังกด «เข้าสู่ระบบด้วยแอป LINE» LINE จะ redirect กลับ /contact?code=...
+ * เริ่ม LINE Login
+ * - มือถือ: เปิดแอป LINE / access.line.me โดยไม่พาเบราว์เซอร์ออกจาก /contact (ไม่สร้างแท็บใหม่)
+ * - เดสก์ท็อป: แทนที่ URL ในแท็บเดิม (replace ไม่ใช่แท็บใหม่)
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
-  try {
-    sessionStorage.removeItem(LINE_OAUTH_VISIBILITY_RELOAD_KEY)
-  } catch {
-    /* ignore */
-  }
   markLineOAuthInProgress()
-  window.location.assign(url)
-}
+  markLineOaContactPending()
 
-/** รีโหลดครั้งเดียวเมื่อกลับจากแอป LINE แต่ URL ยังไม่มี code (กันวน reload) */
-export function maybeReloadContactAfterLineAppReturn(): boolean {
-  if (document.visibilityState !== 'visible' || !isLineOAuthInProgress()) return false
-  const params = new URLSearchParams(window.location.search)
-  if (params.has('code') || params.has('line_connected') || params.has('line_error')) {
-    return false
+  if (isMobileBrowser()) {
+    openLineUrlInPlace(url)
+    return
   }
-  try {
-    if (sessionStorage.getItem(LINE_OAUTH_VISIBILITY_RELOAD_KEY)) {
-      clearLineOAuthInProgress()
-      return false
-    }
-    sessionStorage.setItem(LINE_OAUTH_VISIBILITY_RELOAD_KEY, '1')
-  } catch {
-    return false
-  }
-  window.location.reload()
-  return true
+
+  window.location.replace(url)
 }
 
 /**

@@ -39,7 +39,6 @@ import { readLineConnection } from '../../../../shared/contact/channelConnectCon
 import {
   applyLineOAuthCallbackFromUrl,
   completeLineOAuthFromCallback,
-  maybeReloadContactAfterLineAppReturn,
   stripLineOAuthParamsFromUrl,
 } from '../../../../shared/contact/lineOAuth'
 import '../contact.css'
@@ -122,18 +121,18 @@ export function ContactPage() {
 
     void finishOAuthReturn()
 
-    return () => {
-      cancelled = true
-    }
-  }, [searchParams])
-
-  useEffect(() => {
     function onVisibility() {
-      maybeReloadContactAfterLineAppReturn()
+      if (document.visibilityState === 'visible') {
+        void finishOAuthReturn()
+      }
     }
     document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [])
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     let cancelled = false
