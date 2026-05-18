@@ -2,6 +2,7 @@ import {
   buildLineOAuthState,
   consumeStoredLineOAuthState,
   getLineOAuthDisabledReason,
+  isValidLineLoginChannelId,
   lineOAuthDisabledHint,
   lineOAuthRedirectUri,
   LINE_CHANNEL_ID,
@@ -40,10 +41,16 @@ function buildLineAuthorizeUrl(): string {
     )
   }
 
+  if (!isValidLineLoginChannelId(LINE_CHANNEL_ID)) {
+    throw new Error(
+      'LINE Channel ID ไม่ถูกต้อง — ใช้ Channel ID จากแท็บ LINE Login ใน Developers Console (ตัวเลขเท่านั้น)',
+    )
+  }
+
   const state = buildLineOAuthState()
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: LINE_CHANNEL_ID,
+    client_id: LINE_CHANNEL_ID.trim(),
     redirect_uri: redirectUri,
     state,
     scope: 'profile openid',

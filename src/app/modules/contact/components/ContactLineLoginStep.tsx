@@ -3,6 +3,7 @@ import {
   getLineOAuthDisabledReason,
   isLineOAuthConfigured,
   lineOAuthDisabledHint,
+  lineOAuthHostMismatchHint,
 } from '../../../../shared/contact/channelConnectConfig'
 import {
   isLineOAuthInProgress,
@@ -14,6 +15,7 @@ interface ContactLineLoginStepProps {
   lineUserId: string | null
   lineDisplayName: string | null
   onLineDisconnected: () => void
+  onLoginError?: (message: string) => void
   error?: string
 }
 
@@ -21,6 +23,7 @@ export function ContactLineLoginStep({
   lineUserId,
   lineDisplayName,
   onLineDisconnected,
+  onLoginError,
   error,
 }: ContactLineLoginStepProps) {
   const oauthReady = isLineOAuthConfigured()
@@ -28,10 +31,15 @@ export function ContactLineLoginStep({
   const connected = Boolean(lineUserId)
   const waitingOnKeeperTab = isLineOAuthKeeperTab() && isLineOAuthInProgress() && !connected
 
+  const hostMismatchHint = lineOAuthHostMismatchHint()
+
   function handleLineLogin() {
     try {
       startLineLogin()
     } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'ไม่สามารถเริ่ม LINE Login ได้ — ลองใหม่อีกครั้ง'
+      onLoginError?.(message)
       console.error(err)
     }
   }
@@ -77,6 +85,9 @@ export function ContactLineLoginStep({
               <p className="contact-section__hint contact-section__hint--muted">
                 ยืนยันในแอป LINE แล้วกลับมาแท็บนี้ — ไม่ต้องเปิดแท็บใหม่
               </p>
+            )}
+            {hostMismatchHint && (
+              <p className="contact-section__hint contact-section__hint--muted">{hostMismatchHint}</p>
             )}
           </>
         ) : (

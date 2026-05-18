@@ -1,4 +1,4 @@
-import { getAppOrigin, isLocalDevHost } from '../config/appUrl'
+import { APP_CANONICAL_ORIGIN, getAppOrigin, isCanonicalProductionHost, isLocalDevHost } from '../config/appUrl'
 import { openLineUrlInPlace } from './lineInPlaceOpen'
 import { isSupabaseConfigured } from '../supabase/client'
 
@@ -81,20 +81,33 @@ export function lineOAuthCallbackUrl(): string | null {
   return `${base.replace(/\/$/, '')}/functions/v1/line-oauth-callback`
 }
 
-/** redirect_uri ที่ LINE ส่งกลับ — ต้องลงทะเบียนใน LINE Developers Console */
+/**
+ * redirect_uri ส่งไป LINE — ต้องตรงกับที่ลงทะเบียนใน LINE Console ทุกตัวอักษร
+ * ใช้โดเมนหลัก (VITE_APP_URL) บน production — ไม่ใช้ ops / preview ที่อาจไม่ได้ลงทะเบียน
+ */
 export function lineOAuthRedirectUri(): string {
-  const origin = getAppOrigin().replace(/\/$/, '')
+  const origin = isLocalDevHost()
+    ? getAppOrigin().replace(/\/$/, '')
+    : APP_CANONICAL_ORIGIN
   return `${origin}/contact`
 }
 
 export function buildLineOAuthReturnUrl(): string {
-  if (typeof window !== 'undefined') {
-    const path = window.location.pathname
-    if (path === '/contact' || path.endsWith('/contact')) {
-      return `${window.location.origin}/contact`
-    }
-  }
   return lineOAuthRedirectUri()
+}
+
+/** Channel ID ของ LINE Login (ตัวเลข) — ไม่ใช่ Messaging API secret */
+export function isValidLineLoginChannelId(id: string | undefined): boolean {
+  const trimmed = id?.trim()
+  return Boolean(trimmed && /^\d{5,}$/.test(trimmed))
+}
+
+/** คำเตือนเมื่อเปิด /contact จากโดเมนที่ไม่ตรง VITE_APP_URL */
+export function lineOAuthHostMismatchHint(): string | null {
+  if (typeof window === 'undefined' || isLocalDevHost() || isCanonicalProductionHost()) {
+    return null
+  }
+  return `LINE Login ใช้ callback ${lineOAuthRedirectUri()} — เปิดหน้านี้ที่ ${APP_CANONICAL_ORIGIN}/contact หากยังเชื่อมต่อไม่ได้`
 }
 
 export function buildLineOAuthState(): string {

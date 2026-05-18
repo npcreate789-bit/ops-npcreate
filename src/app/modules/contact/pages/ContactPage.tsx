@@ -429,6 +429,10 @@ export function ContactPage() {
                   setLineUserId('')
                   setLineDisplayName(null)
                 }}
+                onLoginError={(message) => {
+                  setChannelConnectError(message)
+                  setFieldErrors((e) => ({ ...e, channelConnect: message }))
+                }}
                 error={fieldErrors.channelConnect ?? channelConnectError ?? undefined}
               />
             </section>
