@@ -44,7 +44,7 @@ function buildLineAuthorizeUrl(): string {
     redirect_uri: redirectUri,
     state,
     scope: 'profile openid',
-    bot_prompt: 'normal',
+    bot_prompt: 'aggressive',
     ui_locales: 'th',
   })
 

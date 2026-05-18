@@ -943,3 +943,103 @@
   margin-top: 0.75rem;
   text-align: center;
 }
+
+/* —— Tablet / mobile / iPad —— */
+@media (max-width: 1024px) {
+  .contact-layout {
+    max-width: 36rem;
+    margin-inline: auto;
+  }
+
+  .contact-hero__lead {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .contact-page {
+    --contact-input-h: 3rem;
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .contact-hero h1 {
+    font-size: clamp(1.55rem, 6vw, 2rem);
+  }
+
+  .contact-form-card {
+    padding: 1.15rem;
+    border-radius: 16px;
+  }
+
+  .contact-chip {
+    min-height: 2.75rem;
+    padding: 0.55rem 1rem;
+    font-size: 0.88rem;
+  }
+
+  .contact-submit {
+    min-height: 3.25rem;
+    font-size: 1.05rem;
+  }
+
+  .contact-connect__primary {
+    min-height: 3rem;
+    font-size: 1rem;
+  }
+
+  .contact-success-card {
+    max-width: none;
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  .contact-success-actions a,
+  .contact-success-actions button.contact-link--primary {
+    min-height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.contact-form__footer {
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .contact-form__footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    margin: 1rem -1.15rem -1.15rem;
+    padding: 0.85rem 1.15rem max(1rem, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(
+      180deg,
+      rgba(12, 18, 36, 0.72) 0%,
+      rgba(12, 18, 36, 0.96) 28%
+    );
+    backdrop-filter: blur(12px);
+  }
+
+  .contact-form__footer .contact-submit {
+    margin-top: 0;
+  }
+
+  .contact-form__footer .contact-form-note {
+    margin-top: 0.65rem;
+  }
+}
+
+.contact-success-card__warn {
+  margin: 1rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  text-align: left;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fde68a;
+}

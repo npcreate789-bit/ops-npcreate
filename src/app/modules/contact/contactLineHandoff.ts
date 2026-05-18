@@ -1,10 +1,15 @@
-import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
+import {
+  lineAddFriendUrl,
+  lineOaStarterMessageUrl,
+  markLineOaContactPending,
+} from '../../../shared/contact/channelConnectConfig'
 import { openLineUrlInPlace } from '../../../shared/contact/lineInPlaceOpen'
 import { isMobileBrowser } from '../../../shared/line/lineStaffOpenUrl'
 
 const PENDING_MESSAGE_KEY = 'npc_contact_handoff_line_message'
 const PENDING_CHAT_URL_KEY = 'npc_contact_handoff_chat_url'
 const PENDING_PUSHED_KEY = 'npc_contact_handoff_pushed'
+const PENDING_FAIL_REASON_KEY = 'npc_contact_handoff_fail_reason'
 
 export function buildContactLineInquiryMessage(input: {
   contactName: string
@@ -22,6 +27,7 @@ export function persistContactLineHandoffState(input: {
   message: string
   chatUrl: string
   pushedToChat: boolean
+  failReason?: string
 }): boolean {
   const trimmed = input.message.trim()
   if (!trimmed) return false
@@ -29,10 +35,23 @@ export function persistContactLineHandoffState(input: {
     sessionStorage.setItem(PENDING_MESSAGE_KEY, trimmed)
     sessionStorage.setItem(PENDING_CHAT_URL_KEY, input.chatUrl)
     sessionStorage.setItem(PENDING_PUSHED_KEY, input.pushedToChat ? '1' : '0')
+    if (input.failReason) {
+      sessionStorage.setItem(PENDING_FAIL_REASON_KEY, input.failReason)
+    } else {
+      sessionStorage.removeItem(PENDING_FAIL_REASON_KEY)
+    }
   } catch {
     return false
   }
   return true
+}
+
+export function readContactLineHandoffFailReason(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_FAIL_REASON_KEY)
+  } catch {
+    return null
+  }
 }
 
 export function readContactLineHandoffMessage(): string | null {
@@ -61,6 +80,28 @@ export function wasContactLineHandoffPushed(): boolean {
 
 export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
+}
+
+/** URL เปิด LINE หลังส่งฟอร์ม — push สำเร็จเปิดแชท OA, ไม่สำเร็จเปิดพร้อมข้อความในช่องพิมพ์ */
+export function contactLineHandoffOpenUrl(input: {
+  chatUrl: string
+  pushedToChat: boolean
+}): string {
+  if (input.pushedToChat) {
+    return lineAddFriendUrl()
+  }
+  return input.chatUrl.trim() || lineAddFriendUrl()
+}
+
+/**
+ * หลังกดส่งฟอร์ม — เปิด LINE ทันที (อยู่ใน user gesture ของปุ่มส่ง)
+ */
+export function openContactLineHandoffAfterSubmit(input: {
+  chatUrl: string
+  pushedToChat: boolean
+}): void {
+  markLineOaContactPending()
+  navigateToLineHandoff(contactLineHandoffOpenUrl(input))
 }
 
 /**
@@ -93,5 +134,13 @@ export function prepareLineInquiryHandoff(message: string): boolean {
 }
 
 export function reopenLineInquiryHandoff(): void {
-  navigateToLineHandoff()
+  const msg = readContactLineHandoffMessage()
+  const chatUrl = readContactLineHandoffChatUrl() ?? (msg ? contactLineHandoffUrl(msg) : '')
+  markLineOaContactPending()
+  navigateToLineHandoff(
+    contactLineHandoffOpenUrl({
+      chatUrl,
+      pushedToChat: wasContactLineHandoffPushed(),
+    }),
+  )
 }

@@ -35,7 +35,11 @@ function lineOaMessageUrl(message: string): string {
   return `${base}?${encodeURIComponent(message.trim())}`
 }
 
-async function pushLineText(token: string, to: string, text: string): Promise<boolean> {
+async function pushLineText(
+  token: string,
+  to: string,
+  text: string,
+): Promise<{ ok: boolean; reason?: string }> {
   const lineRes = await fetch('https://api.line.me/v2/bot/message/push', {
     method: 'POST',
     headers: {
@@ -47,11 +51,17 @@ async function pushLineText(token: string, to: string, text: string): Promise<bo
       messages: [{ type: 'text', text }],
     }),
   })
-  if (!lineRes.ok) {
-    console.error('contact-line-handoff push failed', lineRes.status, await lineRes.text())
-    return false
+
+  if (lineRes.ok) return { ok: true }
+
+  const errBody = await lineRes.text()
+  console.error('contact-line-handoff push failed', lineRes.status, errBody)
+
+  if (lineRes.status === 403 || errBody.includes('not a friend')) {
+    return { ok: false, reason: 'not_friend' }
   }
-  return true
+
+  return { ok: false, reason: 'push_failed' }
 }
 
 Deno.serve(async (req) => {
@@ -106,7 +116,8 @@ Deno.serve(async (req) => {
       return json({ error: 'ไม่พบ Lead' }, 404)
     }
 
-    if (lead.channel !== 'website' || lead.line_user_id !== lineUserId) {
+    const leadLineId = (lead.line_user_id ?? '').trim()
+    if (lead.channel !== 'website' || leadLineId.toLowerCase() !== lineUserId.toLowerCase()) {
       return json({ error: 'ไม่ได้รับอนุญาต' }, 403)
     }
 
@@ -122,8 +133,13 @@ Deno.serve(async (req) => {
       return json({ ok: true, mode: 'open_chat', url: chatUrl, reason: 'no_messaging_token' })
     }
 
-    const pushed = await pushLineText(lineToken, lineUserId, text)
-    if (pushed) {
+    let pushResult = await pushLineText(lineToken, lineUserId, text)
+    if (!pushResult.ok) {
+      await new Promise((r) => setTimeout(r, 400))
+      pushResult = await pushLineText(lineToken, lineUserId, text)
+    }
+
+    if (pushResult.ok) {
       return json({ ok: true, mode: 'push', url: chatUrl })
     }
 
@@ -131,7 +147,7 @@ Deno.serve(async (req) => {
       ok: true,
       mode: 'open_chat',
       url: chatUrl,
-      reason: 'push_failed',
+      reason: pushResult.reason ?? 'push_failed',
     })
   } catch (e) {
     console.error('contact-line-handoff', e)

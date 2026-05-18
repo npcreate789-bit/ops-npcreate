@@ -8,22 +8,23 @@ export interface ContactLineHandoffResult {
   mode: ContactLineHandoffMode
   url: string
   pushedToChat: boolean
-  /** จาก edge เมื่อ push ไม่ได้ — ช่วย debug / แสดงผู้ใช้ */
   reason?: string
 }
 
-export async function deliverContactLineHandoff(input: {
+const RETRYABLE_REASONS = new Set(['push_failed', 'not_friend'])
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function invokeHandoff(input: {
   leadId: string
   lineUserId: string
   text: string
 }): Promise<ContactLineHandoffResult> {
   const url = lineOaStarterMessageUrl(input.text)
 
-  if (!isSupabaseConfigured || !supabase) {
-    return { mode: 'open_chat', url, pushedToChat: false }
-  }
-
-  const { data, error } = await supabase.functions.invoke('contact-line-handoff', {
+  const { data, error } = await supabase!.functions.invoke('contact-line-handoff', {
     body: {
       lead_id: input.leadId,
       line_user_id: input.lineUserId,
@@ -34,7 +35,7 @@ export async function deliverContactLineHandoff(input: {
   if (error) {
     const message = await parseFunctionInvokeError(error, data)
     console.warn('contact-line-handoff', message)
-    return { mode: 'open_chat', url, pushedToChat: false, reason: message }
+    return { mode: 'open_chat', url, pushedToChat: false, reason: 'push_failed' }
   }
 
   const result = data as {
@@ -46,7 +47,7 @@ export async function deliverContactLineHandoff(input: {
   } | null
 
   if (result?.error) {
-    return { mode: 'open_chat', url, pushedToChat: false, reason: result.error }
+    return { mode: 'open_chat', url, pushedToChat: false, reason: 'push_failed' }
   }
 
   if (result?.mode === 'push' && result.ok) {
@@ -61,6 +62,28 @@ export async function deliverContactLineHandoff(input: {
     mode: 'open_chat',
     url: result?.url?.trim() || url,
     pushedToChat: false,
-    reason: result?.reason,
+    reason: result?.reason ?? 'push_failed',
   }
+}
+
+export async function deliverContactLineHandoff(input: {
+  leadId: string
+  lineUserId: string
+  text: string
+}): Promise<ContactLineHandoffResult> {
+  const url = lineOaStarterMessageUrl(input.text)
+
+  if (!isSupabaseConfigured || !supabase) {
+    return { mode: 'open_chat', url, pushedToChat: false, reason: 'no_messaging_token' }
+  }
+
+  let last = await invokeHandoff(input)
+  if (last.pushedToChat) return last
+
+  if (last.reason && RETRYABLE_REASONS.has(last.reason)) {
+    await sleep(600)
+    last = await invokeHandoff(input)
+  }
+
+  return last
 }
