@@ -8,6 +8,8 @@ export interface ContactLineHandoffResult {
   mode: ContactLineHandoffMode
   url: string
   pushedToChat: boolean
+  /** จาก edge เมื่อ push ไม่ได้ — ช่วย debug / แสดงผู้ใช้ */
+  reason?: string
 }
 
 export async function deliverContactLineHandoff(input: {
@@ -32,14 +34,20 @@ export async function deliverContactLineHandoff(input: {
   if (error) {
     const message = await parseFunctionInvokeError(error, data)
     console.warn('contact-line-handoff', message)
-    return { mode: 'open_chat', url, pushedToChat: false }
+    return { mode: 'open_chat', url, pushedToChat: false, reason: message }
   }
 
   const result = data as {
     ok?: boolean
     mode?: ContactLineHandoffMode
     url?: string
+    reason?: string
+    error?: string
   } | null
+
+  if (result?.error) {
+    return { mode: 'open_chat', url, pushedToChat: false, reason: result.error }
+  }
 
   if (result?.mode === 'push' && result.ok) {
     return {
@@ -53,5 +61,6 @@ export async function deliverContactLineHandoff(input: {
     mode: 'open_chat',
     url: result?.url?.trim() || url,
     pushedToChat: false,
+    reason: result?.reason,
   }
 }

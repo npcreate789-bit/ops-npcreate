@@ -1,5 +1,6 @@
 import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
 import { openLineUrlInPlace } from '../../../shared/contact/lineInPlaceOpen'
+import { isMobileBrowser } from '../../../shared/line/lineStaffOpenUrl'
 
 const PENDING_MESSAGE_KEY = 'npc_contact_handoff_line_message'
 const PENDING_CHAT_URL_KEY = 'npc_contact_handoff_chat_url'
@@ -62,13 +63,21 @@ export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
 }
 
-/** เปิดแชท LINE @npcreate โดยไม่พาเว็บออกจากหน้า / ไม่ใช้ line:// (ลดแจ้งเตือนเปิดแอป) */
+/**
+ * เปิดแชท LINE @npcreate พร้อมข้อความในช่องพิมพ์
+ * — มือถือใช้ https://line.me โดยตรง (ไม่ใช้ line://) หลังผู้ใช้กดปุ่มหรือหลังส่งฟอร์ม
+ */
 export function navigateToLineHandoff(url?: string): void {
   const target = (url ?? readContactLineHandoffChatUrl() ?? '').trim()
   if (!target) {
     const msg = readContactLineHandoffMessage()
     if (!msg) return
     navigateToLineHandoff(contactLineHandoffUrl(msg))
+    return
+  }
+
+  if (isMobileBrowser()) {
+    window.location.assign(target)
     return
   }
 

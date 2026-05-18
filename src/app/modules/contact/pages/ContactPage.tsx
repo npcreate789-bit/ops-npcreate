@@ -26,6 +26,7 @@ import {
 import { deliverContactLineHandoff } from '../api/contactLineHandoffApi'
 import {
   buildContactLineInquiryMessage,
+  navigateToLineHandoff,
   persistContactLineHandoffState,
   readContactLineHandoffMessage,
   reopenLineInquiryHandoff,
@@ -240,8 +241,17 @@ export function ContactPage() {
       }
 
       setSaving(false)
-      setHandedOff(true)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+
+      if (handoff.pushedToChat) {
+        setHandedOff(true)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else {
+        navigateToLineHandoff(handoff.url)
+        if (document.visibilityState === 'visible') {
+          setHandedOff(true)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        }
+      }
     } catch (err) {
       const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'
       setFormError(friendlyContactSubmitError(raw))
@@ -277,7 +287,8 @@ export function ContactPage() {
           </p>
           {!pushedToChat && (
             <p className="contact-success-card__wait">
-              กดปุ่มด้านล่างเมื่อพร้อม — ระบบจะเปิดแชท LINE @npcreate (ข้อความถูกเติมในช่องพิมพ์แล้ว)
+              กรุณา<strong>กดส่ง</strong>ข้อความในแชท LINE @npcreate — ทีมจะเห็นหลังคุณกดส่งในแอป
+              หากแชทไม่เปิด กดปุ่มด้านล่าง
             </p>
           )}
           <ol className="contact-success-steps">
