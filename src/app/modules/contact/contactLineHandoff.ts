@@ -1,11 +1,9 @@
 import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
-import { isMobileBrowser } from '../../../shared/line/lineStaffOpenUrl'
+import { openLineUrlInPlace } from '../../../shared/contact/lineInPlaceOpen'
 
 const PENDING_MESSAGE_KEY = 'npc_contact_handoff_line_message'
 const PENDING_CHAT_URL_KEY = 'npc_contact_handoff_chat_url'
 const PENDING_PUSHED_KEY = 'npc_contact_handoff_pushed'
-
-export const LINE_HANDOFF_FALLBACK_UI_MS = 900
 
 export function buildContactLineInquiryMessage(input: {
   contactName: string
@@ -64,17 +62,7 @@ export function contactLineHandoffUrl(message: string): string {
   return lineOaStarterMessageUrl(message)
 }
 
-function lineSchemeUrl(httpsUrl: string): string | null {
-  try {
-    const parsed = new URL(httpsUrl)
-    if (!parsed.pathname.includes('/oaMessage/')) return null
-    return `line:/${parsed.pathname}${parsed.search}`
-  } catch {
-    return null
-  }
-}
-
-/** เปิดแชท LINE @npcreate (มือถือลอง line:// ก่อน แล้ว https) */
+/** เปิดแชท LINE @npcreate โดยไม่พาเว็บออกจากหน้า / ไม่ใช้ line:// (ลดแจ้งเตือนเปิดแอป) */
 export function navigateToLineHandoff(url?: string): void {
   const target = (url ?? readContactLineHandoffChatUrl() ?? '').trim()
   if (!target) {
@@ -84,20 +72,7 @@ export function navigateToLineHandoff(url?: string): void {
     return
   }
 
-  if (isMobileBrowser()) {
-    const scheme = lineSchemeUrl(target)
-    if (scheme) {
-      window.location.assign(scheme)
-      window.setTimeout(() => {
-        if (document.visibilityState === 'visible') {
-          window.location.assign(target)
-        }
-      }, 600)
-      return
-    }
-  }
-
-  window.location.assign(target)
+  openLineUrlInPlace(target)
 }
 
 export function prepareLineInquiryHandoff(message: string): boolean {
