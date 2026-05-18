@@ -1,12 +1,11 @@
 import { lineOaStarterMessageUrl } from '../../../shared/contact/channelConnectConfig'
 import { isMobileBrowser } from '../../../shared/line/lineStaffOpenUrl'
 
-export interface ContactHandoffState {
-  lineMessage: string
-  chatUrl: string
-  lineDelivery: 'user_send_required' | 'confirmation_pushed'
-  leadId: string
-}
+const PENDING_MESSAGE_KEY = 'npc_contact_handoff_line_message'
+const PENDING_CHAT_URL_KEY = 'npc_contact_handoff_chat_url'
+const PENDING_PUSHED_KEY = 'npc_contact_handoff_pushed'
+
+export const LINE_HANDOFF_FALLBACK_UI_MS = 900
 
 export function buildContactLineInquiryMessage(input: {
   contactName: string
@@ -18,6 +17,47 @@ export function buildContactLineInquiryMessage(input: {
     lines.push(`บริการที่สนใจ: ${input.serviceLabels.join(', ')}`)
   }
   return lines.join('\n')
+}
+
+export function persistContactLineHandoffState(input: {
+  message: string
+  chatUrl: string
+  pushedToChat: boolean
+}): boolean {
+  const trimmed = input.message.trim()
+  if (!trimmed) return false
+  try {
+    sessionStorage.setItem(PENDING_MESSAGE_KEY, trimmed)
+    sessionStorage.setItem(PENDING_CHAT_URL_KEY, input.chatUrl)
+    sessionStorage.setItem(PENDING_PUSHED_KEY, input.pushedToChat ? '1' : '0')
+  } catch {
+    return false
+  }
+  return true
+}
+
+export function readContactLineHandoffMessage(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_MESSAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function readContactLineHandoffChatUrl(): string | null {
+  try {
+    return sessionStorage.getItem(PENDING_CHAT_URL_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function wasContactLineHandoffPushed(): boolean {
+  try {
+    return sessionStorage.getItem(PENDING_PUSHED_KEY) === '1'
+  } catch {
+    return false
+  }
 }
 
 export function contactLineHandoffUrl(message: string): string {
@@ -34,13 +74,15 @@ function lineSchemeUrl(httpsUrl: string): string | null {
   }
 }
 
-/**
- * เปิดแชท LINE @npcreate พร้อมข้อความจากฟอร์ม
- * ลูกค้ากดส่งในแอป → ข้อความเข้า inbox ทีม NP Create
- */
-export function openLineChatForInquiry(chatUrl: string): void {
-  const target = chatUrl.trim()
-  if (!target) return
+/** เปิดแชท LINE @npcreate (มือถือลอง line:// ก่อน แล้ว https) */
+export function navigateToLineHandoff(url?: string): void {
+  const target = (url ?? readContactLineHandoffChatUrl() ?? '').trim()
+  if (!target) {
+    const msg = readContactLineHandoffMessage()
+    if (!msg) return
+    navigateToLineHandoff(contactLineHandoffUrl(msg))
+    return
+  }
 
   if (isMobileBrowser()) {
     const scheme = lineSchemeUrl(target)
@@ -50,7 +92,7 @@ export function openLineChatForInquiry(chatUrl: string): void {
         if (document.visibilityState === 'visible') {
           window.location.assign(target)
         }
-      }, 500)
+      }, 600)
       return
     }
   }
@@ -58,11 +100,14 @@ export function openLineChatForInquiry(chatUrl: string): void {
   window.location.assign(target)
 }
 
-/** @deprecated ใช้ openLineChatForInquiry */
-export function navigateToLineHandoff(url?: string): void {
-  if (url) openLineChatForInquiry(url)
+export function prepareLineInquiryHandoff(message: string): boolean {
+  return persistContactLineHandoffState({
+    message,
+    chatUrl: contactLineHandoffUrl(message),
+    pushedToChat: false,
+  })
 }
 
-export function reopenLineInquiryHandoff(chatUrl: string): void {
-  openLineChatForInquiry(chatUrl)
+export function reopenLineInquiryHandoff(): void {
+  navigateToLineHandoff()
 }
