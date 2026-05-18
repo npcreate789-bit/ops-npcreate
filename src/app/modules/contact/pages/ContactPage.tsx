@@ -24,17 +24,18 @@ import {
   validateLineLogin,
 } from '../contactFormUtils'
 import {
-  buildContactLineOaPrefillMessage,
-  contactLineHandoffUrl,
-  openContactLineHandoffAfterSubmit,
-  persistContactLineHandoffState,
+  createContactLeadId,
+  markContactHandoffSubmitFailed,
+  openContactLineHandoffImmediately,
+  prepareContactLineHandoffLaunch,
   readContactLineHandoffMessage,
   reopenLineInquiryHandoff,
+  takeContactHandoffSubmitFailed,
   takeContactHandoffSuccessPending,
 } from '../contactLineHandoff'
 import { isMobileBrowser } from '../../../../shared/line/lineStaffOpenUrl'
 import { loginPathForAudience } from '../../../../shared/auth/postLoginPath'
-import { submitPublicInquiry } from '../api/submitInquiry'
+import { submitPublicInquiryInBackground } from '../api/submitInquiry'
 import {
   readLineConnection,
   takeLineOaContactPendingReturn,
@@ -190,7 +191,7 @@ export function ContactPage() {
     )
   }
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
 
     const cooldownMs = getContactCooldownRemainingMs()
@@ -227,56 +228,59 @@ export function ContactPage() {
     setFieldErrors({})
     setSaving(true)
     setFormError(null)
-    try {
-      const name = contactName.trim()
-      const labels = serviceLabelsForCodes(services, serviceOptions)
-      const leadId = await submitPublicInquiry({
-        brand_name: name,
-        preferred_contact_channel: 'line',
-        contact_name: name,
-        phone: phone.trim(),
-        line_user_id: lineUserId.trim(),
-        services_interested: services,
-        company_website: companyWebsite,
-      })
-      markContactCooldown()
 
-      const oaPrefill = buildContactLineOaPrefillMessage({
-        leadId,
-        contactName: name,
-        phone: phone.trim(),
-        serviceLabels: labels,
-      })
-      const chatUrl = contactLineHandoffUrl(oaPrefill)
+    const name = contactName.trim()
+    const labels = serviceLabelsForCodes(services, serviceOptions)
+    const leadId = createContactLeadId()
+    const launch = prepareContactLineHandoffLaunch({
+      leadId,
+      contactName: name,
+      phone: phone.trim(),
+      serviceLabels: labels,
+    })
 
-      if (
-        !persistContactLineHandoffState({
-          message: oaPrefill,
-          chatUrl,
-          pushedToChat: false,
-        })
-      ) {
-        throw new Error('ไม่สามารถเตรียมข้อความ LINE ได้')
-      }
-
-      setSaving(false)
-
-      openContactLineHandoffAfterSubmit({ chatUrl, message: oaPrefill })
-
-      if (document.visibilityState === 'visible' && !isMobileBrowser()) {
-        takeContactHandoffSuccessPending()
-        tryShowHandoffSuccess()
-      }
-    } catch (err) {
-      const raw = err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ'
-      setFormError(friendlyContactSubmitError(raw))
+    if (!launch) {
+      setFormError('ไม่สามารถเตรียมข้อความ LINE ได้')
       setSaving(false)
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
     }
+
+    openContactLineHandoffImmediately(launch)
+
+    if (document.visibilityState === 'visible' && !isMobileBrowser()) {
+      takeContactHandoffSuccessPending()
+      tryShowHandoffSuccess()
+    }
+
+    const inquiryInput = {
+      lead_id: leadId,
+      brand_name: name,
+      preferred_contact_channel: 'line' as const,
+      contact_name: name,
+      phone: phone.trim(),
+      line_user_id: lineUserId.trim(),
+      services_interested: services,
+      company_website: companyWebsite,
+    }
+
+    submitPublicInquiryInBackground(inquiryInput, (result) => {
+      setSaving(false)
+      if (result.ok) {
+        markContactCooldown()
+        return
+      }
+      markContactHandoffSubmitFailed()
+      if (document.visibilityState === 'visible') {
+        setFormError(friendlyContactSubmitError(result.error))
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    })
   }
 
   if (handedOff) {
     const canReopenLine = Boolean(readContactLineHandoffMessage())
+    const submitFailed = takeContactHandoffSubmitFailed()
     return (
       <div className="contact-page contact-page--success">
         <div className="contact-page__bg" aria-hidden />
@@ -289,6 +293,11 @@ export function ContactPage() {
             บันทึกข้อมูลในระบบแล้ว — ข้อความถูกเติมในช่องพิมพ์แชท @npcreate แล้ว
             กรุณา<strong>กดส่ง</strong>ในแอป LINE เพื่อให้ทีม {COMPANY_BRAND_NAME} เห็นแชทใน chat.line.biz
           </p>
+          {submitFailed && (
+            <p className="contact-success-card__warn" role="alert">
+              บันทึก Lead ในระบบไม่สำเร็จ — กรุณากลับมาส่งฟอร์มอีกครั้ง หรือติดต่อทีมโดยตรง
+            </p>
+          )}
           <p className="contact-success-card__wait">
             ถ้าแชทไม่เปิดหรือช่องข้อความว่าง กดปุ่มด้านล่างเพื่อเปิด LINE อีกครั้ง
           </p>

@@ -11,6 +11,12 @@ const PENDING_CHAT_URL_KEY = 'npc_contact_handoff_chat_url'
 const PENDING_PUSHED_KEY = 'npc_contact_handoff_pushed'
 const PENDING_FAIL_REASON_KEY = 'npc_contact_handoff_fail_reason'
 const PENDING_SUCCESS_UI_KEY = 'npc_contact_handoff_success_ui'
+const PENDING_SUBMIT_FAILED_KEY = 'npc_contact_handoff_submit_failed'
+
+/** id สำหรับ CRM ใน oaMessage — สร้างก่อนเปิด LINE เพื่อไม่รอ RPC */
+export function createContactLeadId(): string {
+  return crypto.randomUUID()
+}
 
 export function buildContactLineInquiryMessage(input: {
   contactName: string
@@ -129,16 +135,60 @@ export function contactLineHandoffOpenUrl(chatUrl: string, message?: string): st
   return msg ? lineOaStarterMessageUrl(msg) : lineOaStarterMessageUrl()
 }
 
-/**
- * หลังกดส่งฟอร์ม — เปิด LINE พร้อมข้อความในช่องพิมพ์ (user gesture)
- */
-export function openContactLineHandoffAfterSubmit(input: {
+export function markContactHandoffSubmitFailed(): void {
+  try {
+    sessionStorage.setItem(PENDING_SUBMIT_FAILED_KEY, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function takeContactHandoffSubmitFailed(): boolean {
+  try {
+    const failed = sessionStorage.getItem(PENDING_SUBMIT_FAILED_KEY) === '1'
+    sessionStorage.removeItem(PENDING_SUBMIT_FAILED_KEY)
+    return failed
+  } catch {
+    return false
+  }
+}
+
+export type ContactLineHandoffLaunch = {
+  leadId: string
+  oaPrefill: string
   chatUrl: string
-  message: string
-}): void {
+}
+
+/** เตรียมข้อความ + URL — เรียกก่อน await ใดๆ ในปุ่มส่ง */
+export function prepareContactLineHandoffLaunch(input: {
+  leadId: string
+  contactName: string
+  phone: string
+  serviceLabels: string[]
+}): ContactLineHandoffLaunch | null {
+  const oaPrefill = buildContactLineOaPrefillMessage({
+    leadId: input.leadId,
+    contactName: input.contactName,
+    phone: input.phone,
+    serviceLabels: input.serviceLabels,
+  })
+  const chatUrl = contactLineHandoffUrl(oaPrefill)
+  const ok = persistContactLineHandoffState({
+    message: oaPrefill,
+    chatUrl,
+    pushedToChat: false,
+  })
+  if (!ok) return null
+  return { leadId: input.leadId, oaPrefill, chatUrl }
+}
+
+/**
+ * เปิด LINE ทันทีใน user gesture (ก่อน/คู่กับ submit แบบ keepalive)
+ */
+export function openContactLineHandoffImmediately(launch: ContactLineHandoffLaunch): void {
   markLineOaContactPending()
   markContactHandoffSuccessPending()
-  navigateToLineHandoff(contactLineHandoffOpenUrl(input.chatUrl, input.message))
+  navigateToLineHandoff(contactLineHandoffOpenUrl(launch.chatUrl, launch.oaPrefill))
 }
 
 /**

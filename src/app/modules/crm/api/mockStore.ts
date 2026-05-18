@@ -91,10 +91,10 @@ export const mockLeadsApi = {
     return load().find((l) => l.id === id) ?? null
   },
 
-  async create(payload: LeadInsert): Promise<Lead> {
+  async create(payload: LeadInsert & { id?: string }): Promise<Lead> {
     const now = new Date().toISOString()
     const lead: Lead = {
-      id: crypto.randomUUID(),
+      id: payload.id ?? crypto.randomUUID(),
       customer_id: null,
       converted_at: null,
       created_at: now,

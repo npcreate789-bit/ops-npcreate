@@ -16,14 +16,38 @@ export interface PublicInquiryInput {
   ad_budget_monthly?: number | null
   /** honeypot — ต้องว่างเสมอ */
   company_website?: string
+  /** client-generated — ต้องตรงกับ CRM ใน oaMessage ที่เปิดก่อน submit */
+  lead_id?: string
 }
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
+
+function buildRpcBody(input: PublicInquiryInput): Record<string, unknown> {
+  return {
+    p_brand_name: input.brand_name.trim(),
+    p_contact_name: input.contact_name?.trim() || null,
+    p_phone: input.phone?.trim() || null,
+    p_line_id: input.line_id?.trim() || null,
+    p_facebook: input.facebook?.trim() || null,
+    p_business_type: input.business_type || null,
+    p_services_interested: input.services_interested ?? [],
+    p_pain_points: null,
+    p_ad_budget_monthly: input.ad_budget_monthly ?? null,
+    p_shop_links: null,
+    p_notes: null,
+    p_company_website: input.company_website?.trim() || null,
+    p_preferred_contact_channel: input.preferred_contact_channel,
+    p_line_user_id: input.line_user_id?.trim() || null,
+    p_facebook_psid: input.facebook_psid?.trim() || null,
+    p_lead_id: input.lead_id?.trim() || null,
+  }
+}
 
 async function submitPublicInquiryDevMock(input: PublicInquiryInput): Promise<string> {
   await new Promise((r) => setTimeout(r, 400))
 
   const lead = await mockLeadsApi.create({
+    id: input.lead_id,
     owner_id: DEV_OWNER,
     brand_name: input.brand_name.trim(),
     contact_name: input.contact_name?.trim() || null,
@@ -54,24 +78,58 @@ export async function submitPublicInquiry(input: PublicInquiryInput): Promise<st
     return submitPublicInquiryDevMock(input)
   }
 
-  const { data, error } = await supabase.rpc('submit_public_inquiry', {
-    p_brand_name: input.brand_name.trim(),
-    p_contact_name: input.contact_name?.trim() || null,
-    p_phone: input.phone?.trim() || null,
-    p_line_id: input.line_id?.trim() || null,
-    p_facebook: input.facebook?.trim() || null,
-    p_business_type: input.business_type || null,
-    p_services_interested: input.services_interested ?? [],
-    p_pain_points: null,
-    p_ad_budget_monthly: input.ad_budget_monthly ?? null,
-    p_shop_links: null,
-    p_notes: null,
-    p_company_website: input.company_website?.trim() || null,
-    p_preferred_contact_channel: input.preferred_contact_channel,
-    p_line_user_id: input.line_user_id?.trim() || null,
-    p_facebook_psid: input.facebook_psid?.trim() || null,
-  })
+  const { data, error } = await supabase.rpc('submit_public_inquiry', buildRpcBody(input))
 
   if (error) throw new Error(error.message)
   return data as string
+}
+
+/**
+ * บันทึก Lead หลังเปิด LINE แล้ว — ใช้ fetch keepalive เพื่อไม่ถูกยกเลิกเมื่อออกจากหน้า (มือถือ)
+ */
+export function submitPublicInquiryInBackground(
+  input: PublicInquiryInput,
+  onResult: (result: { ok: true; leadId: string } | { ok: false; error: string }) => void,
+): void {
+  if (!isSupabaseConfigured || !supabase) {
+    void submitPublicInquiryDevMock(input)
+      .then((leadId) => onResult({ ok: true, leadId }))
+      .catch((err: unknown) => {
+        onResult({ ok: false, error: err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ' })
+      })
+    return
+  }
+
+  const url = import.meta.env.VITE_SUPABASE_URL
+  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+  if (!url || !anonKey) {
+    onResult({ ok: false, error: 'ระบบยังไม่เชื่อมต่อฐานข้อมูล' })
+    return
+  }
+
+  void fetch(`${url.replace(/\/$/, '')}/rest/v1/rpc/submit_public_inquiry`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: anonKey,
+      Authorization: `Bearer ${anonKey}`,
+    },
+    body: JSON.stringify(buildRpcBody(input)),
+    keepalive: true,
+  })
+    .then(async (res) => {
+      const data = (await res.json().catch(() => null)) as string | { message?: string } | null
+      if (!res.ok) {
+        const msg =
+          data && typeof data === 'object' && 'message' in data && data.message
+            ? String(data.message)
+            : `HTTP ${res.status}`
+        onResult({ ok: false, error: msg })
+        return
+      }
+      onResult({ ok: true, leadId: String(data) })
+    })
+    .catch((err: unknown) => {
+      onResult({ ok: false, error: err instanceof Error ? err.message : 'ส่งข้อมูลไม่สำเร็จ' })
+    })
 }
