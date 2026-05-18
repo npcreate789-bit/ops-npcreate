@@ -74,14 +74,31 @@ export function isFacebookChatConfigured(): boolean {
   return Boolean(FACEBOOK_PAGE_ID && FACEBOOK_APP_ID)
 }
 
+/** Edge callback (legacy) — ใช้เมื่อ redirect_uri ชี้มาที่ Supabase */
 export function lineOAuthCallbackUrl(): string | null {
   const base = resolveViteEnv(import.meta.env.VITE_SUPABASE_URL)
   if (!base || base.includes('xxxxxxxx')) return null
   return `${base.replace(/\/$/, '')}/functions/v1/line-oauth-callback`
 }
 
+/** redirect_uri ที่ LINE ส่งกลับ — ต้องลงทะเบียนใน LINE Developers Console */
+export function lineOAuthRedirectUri(): string {
+  const origin = getAppOrigin().replace(/\/$/, '')
+  return `${origin}/contact`
+}
+
+export function buildLineOAuthReturnUrl(): string {
+  if (typeof window !== 'undefined') {
+    const path = window.location.pathname
+    if (path === '/contact' || path.endsWith('/contact')) {
+      return `${window.location.origin}/contact`
+    }
+  }
+  return lineOAuthRedirectUri()
+}
+
 export function buildLineOAuthState(): string {
-  const payload = { n: crypto.randomUUID(), r: getAppOrigin() }
+  const payload = { n: crypto.randomUUID(), r: buildLineOAuthReturnUrl() }
   const state = btoa(JSON.stringify(payload))
   sessionStorage.setItem(LINE_OAUTH_STATE_KEY, state)
   return state

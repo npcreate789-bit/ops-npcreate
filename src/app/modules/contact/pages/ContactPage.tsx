@@ -38,6 +38,8 @@ import { submitPublicInquiry } from '../api/submitInquiry'
 import { readLineConnection } from '../../../../shared/contact/channelConnectConfig'
 import {
   applyLineOAuthCallbackFromUrl,
+  completeLineOAuthFromCallback,
+  isLineOAuthInProgress,
   stripLineOAuthParamsFromUrl,
 } from '../../../../shared/contact/lineOAuth'
 import '../contact.css'
@@ -100,8 +102,13 @@ export function ContactPage() {
       setLineDisplayName(storedLine.displayName)
     }
 
-    const lineResult = applyLineOAuthCallbackFromUrl(searchParams)
-    if (lineResult) {
+    let cancelled = false
+
+    async function finishOAuthReturn() {
+      const fromCode = await completeLineOAuthFromCallback(searchParams)
+      const lineResult = fromCode ?? applyLineOAuthCallbackFromUrl(searchParams)
+      if (!lineResult || cancelled) return
+
       if (lineResult.ok) {
         setLineUserId(lineResult.userId)
         setLineDisplayName(lineResult.displayName)
@@ -112,7 +119,24 @@ export function ContactPage() {
       }
       stripLineOAuthParamsFromUrl()
     }
+
+    void finishOAuthReturn()
+
+    return () => {
+      cancelled = true
+    }
   }, [searchParams])
+
+  useEffect(() => {
+    function onVisibility() {
+      if (document.visibilityState !== 'visible' || !isLineOAuthInProgress()) return
+      const params = new URLSearchParams(window.location.search)
+      if (params.has('code') || params.has('line_connected') || params.has('line_error')) return
+      window.location.reload()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
 
   useEffect(() => {
     let cancelled = false

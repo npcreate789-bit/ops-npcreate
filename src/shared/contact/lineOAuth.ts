@@ -1,11 +1,14 @@
 import {
   buildLineOAuthState,
+  consumeStoredLineOAuthState,
   getLineOAuthDisabledReason,
-  lineOAuthCallbackUrl,
-  LINE_CHANNEL_ID,
   lineOAuthDisabledHint,
+  lineOAuthRedirectUri,
+  LINE_CHANNEL_ID,
   persistLineConnection,
 } from './channelConnectConfig'
+import { isSupabaseConfigured, supabase } from '../supabase/client'
+import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
 const LINE_AUTH_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const LINE_OAUTH_IN_PROGRESS_KEY = 'npc_contact_line_oauth_in_progress'
@@ -18,7 +21,7 @@ export interface LineOAuthCallbackParams {
 }
 
 function buildLineAuthorizeUrl(): string {
-  const redirectUri = lineOAuthCallbackUrl()
+  const redirectUri = lineOAuthRedirectUri()
   const disabled = getLineOAuthDisabledReason()
   if (!redirectUri || !LINE_CHANNEL_ID || disabled) {
     throw new Error(
@@ -33,8 +36,10 @@ function buildLineAuthorizeUrl(): string {
     redirect_uri: redirectUri,
     state,
     scope: 'profile openid',
-    /** normal = ไม่บังคับ add-OA ระหว่าง login (ลดหน้าต่าง/ขั้นตอนซ้อน) */
+    /** บังคับหน้า login — ลด auto login ค้างบน access.line.me */
+    prompt: 'login',
     bot_prompt: 'normal',
+    ui_locales: 'th',
   })
 
   return `${LINE_AUTH_URL}?${params.toString()}`
@@ -65,8 +70,8 @@ export function isLineOAuthInProgress(): boolean {
 }
 
 /**
- * เริ่ม LINE Login — redirect ในแท็บเดียว (ตามแนวทาง LINE Web Login)
- * ไม่ใช้ popup เพราะจะซ้อนกับปุ่ม «เข้าสู่ระบบด้วยแอป LINE» แล้วกลายนหลายหน้าต่าง
+ * เริ่ม LINE Login — redirect ไป access.line.me
+ * หลังกด «เข้าสู่ระบบด้วยแอป LINE» LINE จะ redirect กลับ /contact?code=...
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
@@ -74,7 +79,74 @@ export function startLineLogin(): void {
   window.location.assign(url)
 }
 
-/** อ่าน query หลัง redirect กลับจาก edge function */
+/**
+ * แลก code บน /contact (redirect_uri = /contact) แล้วบันทึก LINE user
+ */
+export async function completeLineOAuthFromCallback(
+  searchParams: URLSearchParams,
+): Promise<
+  { ok: true; userId: string; displayName: string | null } | { ok: false; error: string } | null
+> {
+  const oauthError = searchParams.get('error')
+  if (oauthError) {
+    clearLineOAuthInProgress()
+    return { ok: false, error: mapLineOAuthError(oauthError) }
+  }
+
+  const code = searchParams.get('code')?.trim()
+  const stateParam = searchParams.get('state')?.trim()
+  if (!code || !stateParam) return null
+
+  const storedState = consumeStoredLineOAuthState()
+  if (!storedState || storedState !== stateParam) {
+    clearLineOAuthInProgress()
+    return { ok: false, error: 'เซสชัน LINE Login หมดอายุ — กรุณากดเชื่อมต่อใหม่' }
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    clearLineOAuthInProgress()
+    return { ok: false, error: 'ระบบยังไม่พร้อม — ลองใหม่ภายหลัง' }
+  }
+
+  const { data, error } = await supabase.functions.invoke('line-oauth-callback', {
+    body: {
+      code,
+      state: stateParam,
+      redirect_uri: lineOAuthRedirectUri(),
+    },
+  })
+
+  if (error) {
+    clearLineOAuthInProgress()
+    const message = await parseFunctionInvokeError(error, data)
+    return { ok: false, error: message || 'เชื่อมต่อ LINE ไม่สำเร็จ' }
+  }
+
+  const result = data as {
+    ok?: boolean
+    user_id?: string
+    display_name?: string | null
+    error?: string
+  } | null
+
+  if (!result?.ok || !result.user_id) {
+    clearLineOAuthInProgress()
+    return {
+      ok: false,
+      error: mapLineOAuthError(result?.error ?? 'token_exchange_failed'),
+    }
+  }
+
+  persistLineConnection(result.user_id, result.display_name ?? undefined)
+  clearLineOAuthInProgress()
+  return {
+    ok: true,
+    userId: result.user_id,
+    displayName: result.display_name ?? null,
+  }
+}
+
+/** อ่าน query หลัง redirect จาก edge (รูปแบบเดิม line_connected=1) */
 export function applyLineOAuthCallbackFromUrl(
   searchParams: URLSearchParams,
 ): { ok: true; userId: string; displayName: string | null } | { ok: false; error: string } | null {
@@ -106,6 +178,7 @@ function mapLineOAuthError(code: string): string {
       return 'ระบบ LINE Login ยังไม่พร้อม — ติดต่อทีม NP Create'
     case 'token_exchange_failed':
     case 'profile_failed':
+    case 'invalid_state':
       return 'เชื่อมต่อ LINE ไม่สำเร็จ — ลองใหม่อีกครั้ง'
     default:
       return 'เชื่อมต่อ LINE ไม่สำเร็จ'
@@ -114,7 +187,16 @@ function mapLineOAuthError(code: string): string {
 
 export function stripLineOAuthParamsFromUrl(): void {
   const url = new URL(window.location.href)
-  const keys = ['line_connected', 'line_user_id', 'line_name', 'line_error', 'code', 'state']
+  const keys = [
+    'line_connected',
+    'line_user_id',
+    'line_name',
+    'line_error',
+    'code',
+    'state',
+    'error',
+    'error_description',
+  ]
   let changed = false
   for (const key of keys) {
     if (url.searchParams.has(key)) {
