@@ -208,7 +208,7 @@ export function ContactPage() {
             บันทึกข้อมูลในระบบแล้ว — กรุณา<strong>กดส่ง</strong>ข้อความในแชท LINE @npcreate
             (ข้อความถูกเติมไว้แล้ว) ทีม {COMPANY_BRAND_NAME} จะเห็นในแชท OA หลังคุณกดส่ง
           </p>
-          <p className="contact-success-card__wait muted">
+          <p className="contact-success-card__wait">
             รอดำเนินการ Flow ถัดไป — หาก LINE ยังไม่เปิด กดปุ่มด้านล่างอีกครั้ง
           </p>
           <ol className="contact-success-steps">
@@ -362,7 +362,7 @@ export function ContactPage() {
                 <div className="contact-section__services">
                   <p className="contact-section__label">บริการที่สนใจ</p>
                   {servicesLoading && (
-                    <p className="contact-section__hint muted">กำลังโหลด...</p>
+                    <p className="contact-section__hint contact-section__hint--muted">กำลังโหลด...</p>
                   )}
                   <div className="contact-chips" role="group" aria-label="บริการที่สนใจ">
                     {serviceOptions.map((pkg) => (

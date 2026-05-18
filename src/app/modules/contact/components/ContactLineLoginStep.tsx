@@ -39,41 +39,42 @@ export function ContactLineLoginStep({
         </p>
       )}
 
-      {connected ? (
-        <div className="contact-connect__status contact-connect__status--ok">
-          <span className="contact-connect__check" aria-hidden>
-            ✓
-          </span>
-          <div>
-            <strong>เชื่อมต่อ LINE แล้ว</strong>
-            <p className="contact-connect__meta">
-              {lineDisplayName ? `${lineDisplayName} · ` : ''}
-              {lineUserId}
-            </p>
+      <div className="contact-connect">
+        {connected ? (
+          <div className="contact-connect__status contact-connect__status--ok">
+            <span className="contact-connect__check" aria-hidden>
+              ✓
+            </span>
+            <div className="contact-connect__status-body">
+              <strong>เชื่อมต่อ LINE แล้ว</strong>
+              <p className="contact-connect__meta">
+                {lineDisplayName ? `${lineDisplayName} · ` : ''}
+                {lineUserId}
+              </p>
+              <button
+                type="button"
+                className="contact-connect__secondary"
+                onClick={() => {
+                  clearLineConnection()
+                  onLineDisconnected()
+                }}
+              >
+                เปลี่ยนบัญชี
+              </button>
             </div>
-          <button
-            type="button"
-            className="contact-connect__secondary"
-            onClick={() => {
-              clearLineConnection()
-              onLineDisconnected()
-            }}
-          >
-            เปลี่ยนบัญชี
+          </div>
+        ) : oauthReady ? (
+          <button type="button" className="contact-connect__primary" onClick={handleLineLogin}>
+            เชื่อมต่อ LINE Login
           </button>
-        </div>
-      ) : oauthReady ? (
-        <button type="button" className="contact-connect__primary" onClick={handleLineLogin}>
-          เชื่อมต่อ LINE Login
-        </button>
-      ) : (
-        <p className="contact-field-error">
-          {oauthDisabledReason
-            ? lineOAuthDisabledHint(oauthDisabledReason)
-            : 'LINE Login ยังไม่พร้อม — ติดต่อทีม NP Create'}
-        </p>
-      )}
+        ) : (
+          <p className="contact-field-error">
+            {oauthDisabledReason
+              ? lineOAuthDisabledHint(oauthDisabledReason)
+              : 'LINE Login ยังไม่พร้อม — ติดต่อทีม NP Create'}
+          </p>
+        )}
+      </div>
     </div>
   )
 }
-

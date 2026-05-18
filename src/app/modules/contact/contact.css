@@ -466,6 +466,19 @@
   line-height: 1.55;
 }
 
+.contact-success-card > p + p {
+  margin-top: 0.75rem;
+}
+
+.contact-success-card > p strong {
+  color: var(--npc-text);
+  font-weight: 600;
+}
+
+.contact-success-card__wait {
+  font-size: 0.85rem;
+}
+
 .contact-success-steps {
   margin: 1.5rem 0 0;
   padding: 1rem 1.1rem;
@@ -516,14 +529,18 @@
   margin-top: 1.5rem;
 }
 
-.contact-success-actions a {
-  display: inline-block;
+.contact-success-actions a,
+.contact-success-actions button.contact-link--primary {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.65rem 1.25rem;
   border-radius: 10px;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
   transition: background 0.15s;
+  text-align: center;
 }
 
 .contact-success-actions a.contact-link--primary,
@@ -533,6 +550,10 @@
   border: none;
   cursor: pointer;
   font: inherit;
+}
+
+.contact-success-actions button.contact-link--primary:hover {
+  filter: brightness(1.05);
 }
 
 .contact-success-actions a.contact-link--ghost {
@@ -661,6 +682,19 @@
   font-size: 0.78rem;
   color: var(--npc-text-muted);
   word-break: break-all;
+}
+
+.contact-connect__status-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.contact-line-login .contact-connect__secondary {
+  margin-top: 0.5rem;
+}
+
+.contact-section__hint--muted {
+  color: var(--npc-text-muted);
 }
 
 .contact-line-flow {
