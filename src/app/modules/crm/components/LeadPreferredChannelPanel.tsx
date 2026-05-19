@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Lead } from '../types'
 import {
   NPCREATE_FACEBOOK_MESSENGER_URL,
@@ -50,6 +51,24 @@ export function LeadPreferredChannelPanel({
     Boolean(lineIds.line_oa_chat_user_id?.trim()) &&
     !lineLoginAndOaIdsMismatch(lineIds)
 
+  const [openLineError, setOpenLineError] = useState<string | null>(null)
+
+  async function handleOpenLine() {
+    setOpenLineError(null)
+    const oaOpenId = resolveLineStaffChatOpenUserId(lineIds)
+    const userId = oaOpenId ?? lineIds.line_user_id?.trim() ?? null
+    if (!userId) {
+      setOpenLineError('ยังไม่มี LINE User ID — บันทึกจากแชท OA หรือให้ลูกค้าทัก @npcreate')
+      return
+    }
+    const opened = await openStaffLineChat(userId, { mode: oaOpenId ? 'direct' : 'auto' })
+    if (!opened) {
+      setOpenLineError(
+        'เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาตป็อปอัปสำหรับเว็บนี้ หรือเปิด chat.line.biz แล้วค้นหาจาก ID ที่คัดลอก',
+      )
+    }
+  }
+
   return (
     <section
       className={`card card--wide crm-preferred-channel crm-preferred-channel--${ch}${variant === 'quotation' ? ' crm-preferred-channel--quotation' : ''}`}
@@ -88,12 +107,7 @@ export function LeadPreferredChannelPanel({
             <button
               type="button"
               className="crm-btn crm-btn--primary crm-preferred-channel__cta"
-              onClick={() =>
-                void openStaffLineChat(
-                  lineIds.line_oa_chat_user_id ?? lineIds.line_user_id,
-                  { mode: lineIds.line_oa_chat_user_id ? 'direct' : 'auto' },
-                )
-              }
+              onClick={() => void handleOpenLine()}
             >
               {staffOpenChannelLabel(ch)}
             </button>
@@ -110,6 +124,11 @@ export function LeadPreferredChannelPanel({
               <span className="crm-preferred-channel__pill crm-preferred-channel__pill--ok">
                 ID พร้อมใช้งาน
               </span>
+            ) : null}
+            {openLineError ? (
+              <p className="crm-preferred-channel__open-error" role="alert">
+                {openLineError}
+              </p>
             ) : null}
           </>
         ) : (

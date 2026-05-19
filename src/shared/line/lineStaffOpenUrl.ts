@@ -101,14 +101,31 @@ export function staffLineChatUrl(
     if (direct) return direct
   }
 
-  if (mode !== 'direct') {
-    const inbox = staffLineOaInboxUrl()
-    if (inbox) return inbox
-  }
+  const inbox = staffLineOaInboxUrl()
+  if (inbox) return inbox
 
   const text = options?.text?.trim()
   if (text) return lineOaMessageUrlWithText(text)
   return NPCREATE_LINE_OA_URL
+}
+
+/** เปิดแท็บใหม่ทันที (ต้องเรียกจาก click handler โดยไม่ await ก่อนหน้า) */
+export function openUrlInNewTab(url: string): boolean {
+  const win = window.open(url, '_blank', 'noopener,noreferrer')
+  if (win) return true
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.target = '_blank'
+    anchor.rel = 'noopener noreferrer'
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function copyLineUserIdForStaffSearch(userId: string): Promise<boolean> {
@@ -120,22 +137,28 @@ async function copyLineUserIdForStaffSearch(userId: string): Promise<boolean> {
   }
 }
 
-/** เปิดแชท — inbox เป็นค่าเริ่มต้น; คัดลอก LINE User ID ให้ค้นหาใน chat.line.biz เมื่อไม่ใช้ direct */
+/**
+ * เปิดแชท LINE สำหรับทีม
+ * เปิดแท็บก่อนเสมอ (อยู่ใน user gesture) แล้วค่อยคัดลอก ID สำหรับโหมด inbox
+ * @returns false ถ้าเบราว์เซอร์บล็อกป็อปอัป
+ */
 export async function openStaffLineChat(
   lineUserId?: string | null,
   options?: { text?: string; directUserChat?: boolean; mode?: StaffLineChatOpenMode },
-): Promise<void> {
+): Promise<boolean> {
   const uid = lineUserId?.trim()
   const useDirect =
     options?.mode === 'direct' ||
     (options?.mode !== 'inbox' && staffDirectUserChatEnabled(options) && isLineMessagingUserId(uid))
 
+  const url = staffLineChatUrl(lineUserId, options)
+  const opened = openUrlInNewTab(url)
+
   if (uid && !useDirect) {
-    await copyLineUserIdForStaffSearch(uid)
+    void copyLineUserIdForStaffSearch(uid)
   }
 
-  const url = staffLineChatUrl(lineUserId, options)
-  window.open(url, '_blank', 'noopener,noreferrer')
+  return opened
 }
 
 /** เตือนเมื่อยังเปิดแชทตรงลูกค้าไม่ได้หรือใช้โหมด inbox */

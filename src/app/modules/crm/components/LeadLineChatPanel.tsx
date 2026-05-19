@@ -54,6 +54,8 @@ export function LeadLineChatPanel({
   const idMismatch = lineLoginAndOaIdsMismatch(lineIds)
   const onlyLoginId = Boolean(lineIds.line_user_id?.trim()) && !lineIds.line_oa_chat_user_id?.trim()
 
+  const [openManagerError, setOpenManagerError] = useState<string | null>(null)
+
   const { messages, loading, sending, error, bottomRef, send } = useLeadLineChat(
     lead,
     senderProfileId,
@@ -98,12 +100,25 @@ export function LeadLineChatPanel({
           <button
             type="button"
             className="crm-btn crm-btn--ghost crm-line-chat__open-external"
-            onClick={() => void openStaffLineChat(openChatId, { mode: 'direct' })}
+            onClick={() => {
+              setOpenManagerError(null)
+              void openStaffLineChat(openChatId, { mode: 'direct' }).then((opened) => {
+                if (!opened) {
+                  setOpenManagerError('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาตป็อปอัป')
+                }
+              })
+            }}
           >
             เปิดใน Manager
           </button>
         ) : null}
       </header>
+
+      {openManagerError ? (
+        <p className="crm-line-chat__open-error" role="alert">
+          {openManagerError}
+        </p>
+      ) : null}
 
       <div className="crm-line-chat__status-row" role="status">
         {lineChatLinked ? (
