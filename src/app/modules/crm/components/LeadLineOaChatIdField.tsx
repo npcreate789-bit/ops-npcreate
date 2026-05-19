@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   lineLoginAndOaIdsMismatch,
-  lineStaffChatIdHint,
   parseLineOaChatUserIdFromInput,
-  resolveLineStaffChatOpenUserId,
 } from '../../../../shared/line/lineUserIdResolution'
-import { openStaffLineChat } from '../../../../shared/line/staffLineMessaging'
 import { updateLead } from '../api/leads'
 import type { Lead } from '../types'
 import '../crm.css'
@@ -14,6 +11,62 @@ interface LeadLineOaChatIdFieldProps {
   lead: Lead
   readOnly?: boolean
   onSaved?: (lead: Lead) => void
+}
+
+function truncateId(id: string): string {
+  const t = id.trim()
+  if (t.length <= 20) return t
+  return `${t.slice(0, 10)}…${t.slice(-10)}`
+}
+
+function CopyIdButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(value.trim())
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="crm-line-ids__copy"
+      onClick={() => void handleCopy()}
+      title="คัดลอก ID เต็ม"
+    >
+      {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+    </button>
+  )
+}
+
+function IdCard({
+  label,
+  value,
+  primary,
+  meta,
+}: {
+  label: string
+  value: string
+  primary?: boolean
+  meta?: string
+}) {
+  return (
+    <div className={`crm-line-ids__card${primary ? ' crm-line-ids__card--primary' : ''}`}>
+      <span className="crm-line-ids__card-label">{label}</span>
+      <div className="crm-line-ids__card-row">
+        <code className="crm-line-ids__card-value" title={value}>
+          {truncateId(value)}
+        </code>
+        <CopyIdButton value={value} />
+      </div>
+      {meta ? <span className="crm-line-ids__card-meta">{meta}</span> : null}
+    </div>
+  )
 }
 
 export function LeadLineOaChatIdField({
@@ -30,20 +83,22 @@ export function LeadLineOaChatIdField({
     setDraft(lead.line_oa_chat_user_id ?? '')
   }, [lead.id, lead.line_oa_chat_user_id])
 
-  const ids = {
+  const loginId = lead.line_user_id?.trim() ?? ''
+  const oaId = lead.line_oa_chat_user_id?.trim() ?? ''
+  const sameId =
+    Boolean(loginId && oaId) && loginId.toLowerCase() === oaId.toLowerCase()
+  const mismatch = lineLoginAndOaIdsMismatch({
     line_user_id: lead.line_user_id,
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
-  }
-  const mismatch = lineLoginAndOaIdsMismatch(ids)
-  const openId = resolveLineStaffChatOpenUserId(ids)
+  })
+  const hasOaId = Boolean(oaId)
+  const needsSetup = !hasOaId && !readOnly
 
   async function handleSave() {
     setError(null)
     const parsed = parseLineOaChatUserIdFromInput(draft)
     if (!parsed) {
-      setError(
-        'ไม่พบ LINE User ID (รูปแบบ U ตามด้วยตัวเลข a-f 32 ตัว) — วางลิงก์ chat.line.biz หรือ ID จาก URL แชท',
-      )
+      setError('วางลิงก์ chat.line.biz หรือ ID หลัง /chat/ (รูปแบบ U + 32 ตัว)')
       return
     }
     setSaving(true)
@@ -70,48 +125,56 @@ export function LeadLineOaChatIdField({
 
   return (
     <div className="crm-line-ids">
-      <div className="crm-line-ids__row">
-        {lead.line_user_id && (
-          <p className="crm-line-ids__id muted">
-            LINE Login (ฟอร์มติดต่อ): <strong>{lead.line_user_id}</strong>
-          </p>
-        )}
-        {lead.line_oa_chat_user_id && (
-          <p className="crm-line-ids__id">
-            แชท OA: <strong>{lead.line_oa_chat_user_id}</strong>
-          </p>
-        )}
-        {mismatch && (
-          <p className="crm-line-ids__warn" role="status">
-            ID จากการเชื่อมต่อ LINE กับแชท OA ไม่ตรงกัน — ปกติเมื่อยังไม่ได้ผูกช่อง Login กับ OA
-            หรือลูกค้ายังไม่ทัก @npcreate
-          </p>
-        )}
-        <p className="crm-line-ids__hint muted">{lineStaffChatIdHint(ids)}</p>
-      </div>
+      {(loginId || oaId) && (
+        <div className="crm-line-ids__cards">
+          {sameId ? (
+            <IdCard label="LINE User ID" value={loginId} primary meta="ใช้ทั้งฟอร์มติดต่อและแชท OA" />
+          ) : (
+            <>
+              {loginId ? <IdCard label="ฟอร์มติดต่อ (LINE Login)" value={loginId} /> : null}
+              {oaId ? (
+                <IdCard label="แชท Official Account" value={oaId} primary meta="ใช้เปิดแชทและส่งจากระบบ" />
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
 
-      {!readOnly && (
-        <div className="crm-line-ids__form">
-          <label className="crm-line-ids__label" htmlFor={`line-oa-chat-${lead.id}`}>
-            บันทึก ID จากแชท OA
-          </label>
+      {mismatch && !sameId ? (
+        <p className="crm-line-ids__note" role="status">
+          ID จากฟอร์มกับแชท OA ไม่ตรงกัน — ระบบจะใช้ ID จากแชท OA / ข้อความลูกค้าสำหรับส่ง Push
+        </p>
+      ) : null}
+
+      {hasOaId ? (
+        <p className="crm-line-ids__ready" role="status">
+          เชื่อมต่อแชท OA แล้ว — ใช้แผงแชทด้านล่างส่งข้อความได้
+        </p>
+      ) : null}
+
+      {!readOnly ? (
+        <details className="crm-line-ids__edit" open={needsSetup}>
+          <summary>{hasOaId ? 'แก้ไข ID แชท OA' : 'บันทึก ID จากแชท OA'}</summary>
+          <p className="crm-line-ids__edit-hint muted">
+            คัดลอกจาก URL บน chat.line.biz ส่วนหลัง <code>/chat/</code>
+          </p>
           <div className="crm-line-ids__controls">
             <input
               id={`line-oa-chat-${lead.id}`}
               type="text"
-              className="crm-input"
-              placeholder="วางลิงก์ chat.line.biz/.../chat/U… หรือ ID หลัง /chat/"
+              className="crm-input crm-line-ids__input"
+              placeholder="วางลิงก์หรือ Uxxxxxxxx…"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               disabled={saving}
             />
             <button
               type="button"
-              className="crm-btn crm-btn--secondary"
+              className="crm-btn crm-btn--ghost"
               disabled={saving}
               onClick={handlePasteFromClipboard}
             >
-              วางจากคลิปบอร์ด
+              วาง
             </button>
             <button
               type="button"
@@ -122,24 +185,14 @@ export function LeadLineOaChatIdField({
               {saving ? 'กำลังบันทึก…' : 'บันทึก'}
             </button>
           </div>
-          {error && (
-            <p className="contact-field-error" role="alert">
+          {error ? (
+            <p className="crm-line-ids__error" role="alert">
               {error}
             </p>
-          )}
-          {savedFlash && <p className="crm-line-ids__ok">บันทึก ID แชท OA แล้ว</p>}
-        </div>
-      )}
-
-      {openId && (
-        <button
-          type="button"
-          className="crm-btn crm-btn--secondary crm-line-ids__open"
-          onClick={() => void openStaffLineChat(openId, { mode: 'direct' })}
-        >
-          เปิดแชทตรง (chat.line.biz)
-        </button>
-      )}
+          ) : null}
+          {savedFlash ? <p className="crm-line-ids__ok">บันทึกแล้ว</p> : null}
+        </details>
+      ) : null}
     </div>
   )
 }

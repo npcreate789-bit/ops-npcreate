@@ -6,20 +6,23 @@ import {
   staffOpenChannelLabel,
   type PreferredContactChannel,
 } from '../../../../shared/crm/preferredContactChannel'
+import {
+  lineLoginAndOaIdsMismatch,
+  resolveLineStaffChatOpenUserId,
+} from '../../../../shared/line/lineUserIdResolution'
 import { openStaffLineChat } from '../../../../shared/line/staffLineMessaging'
 import { LeadLineOaChatIdField } from './LeadLineOaChatIdField'
 import '../crm.css'
 
 const EXTERNAL_SALES_CHECKLIST = [
-  'ทักลูกค้าทางช่องทางที่เลือก — แนะนำตัวและยืนยันข้อมูลจากฟอร์ม',
-  'สรุปความต้องการ / บริการที่สนใจ — บันทึกใน Lead (Pain points / บันทึก)',
-  'เสนอแพ็กเกจเบื้องต้น — เมื่อลูกค้าพร้อมค่อยสร้างใบเสนอราคาในระบบ',
-  'หลังอนุมัติใบเสนอราคาและชำระเงิน — ลูกค้าใช้แชทใน Client Workspace',
+  'ทักลูกค้า แนะนำตัว และยืนยันข้อมูลจากฟอร์ม',
+  'สรุปความต้องการ — บันทึกใน Lead',
+  'เสนอแพ็กเกจเบื้องต้น → สร้างใบเสนอราคาเมื่อลูกค้าพร้อม',
+  'หลังชำระเงิน — ลูกค้าใช้ Client Workspace',
 ] as const
 
 interface LeadPreferredChannelPanelProps {
   lead: Lead
-  /** แสดงคำเตือนก่อนส่งใบเสนอราคา */
   variant?: 'default' | 'quotation'
   readOnly?: boolean
   onLeadUpdated?: (lead: Lead) => void
@@ -36,108 +39,129 @@ export function LeadPreferredChannelPanel({
 
   const ch = channel as PreferredContactChannel
   const label = preferredContactChannelLabel(ch)
+  const isLine = ch === 'line'
   const lineIds = {
     line_user_id: lead.line_user_id,
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
   }
   const openHref = openUrlForPreferredChannel(ch, lineIds)
+  const hasOaChat = Boolean(resolveLineStaffChatOpenUserId(lineIds))
+  const idsSynced =
+    Boolean(lineIds.line_oa_chat_user_id?.trim()) &&
+    !lineLoginAndOaIdsMismatch(lineIds)
 
   return (
     <section
-      className={`card card--wide crm-preferred-channel${variant === 'quotation' ? ' crm-preferred-channel--quotation' : ''}`}
+      className={`card card--wide crm-preferred-channel crm-preferred-channel--${ch}${variant === 'quotation' ? ' crm-preferred-channel--quotation' : ''}`}
       aria-label="ช่องทางติดต่อลูกค้า"
     >
       <header className="crm-preferred-channel__head">
-        <div>
-          <h2>
-            {variant === 'quotation'
-              ? `ติดต่อลูกค้าทาง ${label} ก่อนส่งใบเสนอราคา`
-              : `ติดต่อกลับทาง ${label}`}
-          </h2>
-          <p className="muted">
-            {variant === 'quotation'
-              ? 'คุยและสรุปความต้องการนอกระบบก่อน — ใบเสนอราคาในระบบส่งหลังลูกค้าพร้อม'
-              : 'ลูกค้าเลือกช่องทางนี้จากฟอร์มติดต่อ — คุยนอกระบบจนกว่าจะชำระและเริ่มงาน'}
-          </p>
+        <div className="crm-preferred-channel__title-block">
+          {isLine ? (
+            <span className="crm-preferred-channel__line-mark" aria-hidden>
+              LINE
+            </span>
+          ) : null}
+          <div>
+            <h2>
+              {variant === 'quotation'
+                ? `ติดต่อทาง ${label} ก่อนส่งใบเสนอราคา`
+                : `ช่องทางติดต่อ: ${label}`}
+            </h2>
+            <p className="crm-preferred-channel__lead">
+              {variant === 'quotation'
+                ? 'คุยและสรุปความต้องการก่อน — ส่งใบเสนอราคาเมื่อลูกค้าพร้อม'
+                : 'ลูกค้าเลือกจากฟอร์มติดต่อ — คุยจนกว่าชำระและเริ่มงาน'}
+            </p>
+          </div>
         </div>
-        <span className={`crm-preferred-channel__badge crm-preferred-channel__badge--${ch}`}>
-          {label}
-        </span>
+        {!isLine ? (
+          <span className={`crm-preferred-channel__badge crm-preferred-channel__badge--${ch}`}>
+            {label}
+          </span>
+        ) : null}
       </header>
 
-      <div className="crm-preferred-channel__actions">
-        {ch === 'line' ? (
-          <button
-            type="button"
-            className="crm-btn crm-btn--primary"
-            onClick={() =>
-              void openStaffLineChat(
-                lineIds.line_oa_chat_user_id ?? lineIds.line_user_id,
-                { mode: lineIds.line_oa_chat_user_id ? 'direct' : 'auto' },
-              )
-            }
-          >
-            {staffOpenChannelLabel(ch)}
-          </button>
+      <div className="crm-preferred-channel__toolbar">
+        {isLine ? (
+          <>
+            <button
+              type="button"
+              className="crm-btn crm-btn--primary crm-preferred-channel__cta"
+              onClick={() =>
+                void openStaffLineChat(
+                  lineIds.line_oa_chat_user_id ?? lineIds.line_user_id,
+                  { mode: lineIds.line_oa_chat_user_id ? 'direct' : 'auto' },
+                )
+              }
+            >
+              {staffOpenChannelLabel(ch)}
+            </button>
+            {hasOaChat ? (
+              <span className="crm-preferred-channel__pill crm-preferred-channel__pill--ok">
+                เชื่อมต่อ OA แล้ว
+              </span>
+            ) : (
+              <span className="crm-preferred-channel__pill crm-preferred-channel__pill--muted">
+                บันทึก ID แชทเพื่อเปิดแชทตรง
+              </span>
+            )}
+            {idsSynced ? (
+              <span className="crm-preferred-channel__pill crm-preferred-channel__pill--ok">
+                ID พร้อมใช้งาน
+              </span>
+            ) : null}
+          </>
         ) : (
           <a
             href={openHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="crm-btn crm-btn--primary"
+            className="crm-btn crm-btn--primary crm-preferred-channel__cta"
           >
             {staffOpenChannelLabel(ch)}
           </a>
         )}
-        {ch === 'line' && lead.line_id && (
+
+        {ch === 'line' && lead.line_id ? (
           <span className="crm-preferred-channel__meta">
-            LINE ID ลูกค้า: <strong>{lead.line_id}</strong>
+            LINE ID: <strong>{lead.line_id}</strong>
           </span>
-        )}
-        {ch === 'facebook' && lead.facebook_psid && (
+        ) : null}
+        {ch === 'facebook' && lead.facebook_psid ? (
           <span className="crm-preferred-channel__meta">
-            Facebook ID: <strong>{lead.facebook_psid}</strong>
+            Facebook: <strong>{lead.facebook_psid}</strong>
           </span>
-        )}
-        {ch === 'facebook' && lead.facebook && (
+        ) : null}
+        {ch === 'facebook' && lead.facebook ? (
           <span className="crm-preferred-channel__meta">
-            เพจ/FB: <strong>{lead.facebook}</strong>
+            เพจ: <strong>{lead.facebook}</strong>
           </span>
-        )}
-        {ch === 'facebook' && !lead.facebook && (
+        ) : null}
+        {ch === 'facebook' && !lead.facebook ? (
           <span className="crm-preferred-channel__meta muted">
-            แนะนำให้ลูกค้าทักเพจ{' '}
+            แนะนำทักเพจ{' '}
             <a href={NPCREATE_FACEBOOK_MESSENGER_URL} target="_blank" rel="noopener noreferrer">
               NP Create
             </a>
           </span>
-        )}
+        ) : null}
       </div>
 
-      {ch === 'line' && (
-        <LeadLineOaChatIdField
-          lead={lead}
-          readOnly={readOnly}
-          onSaved={onLeadUpdated}
-        />
-      )}
+      {isLine ? (
+        <LeadLineOaChatIdField lead={lead} readOnly={readOnly} onSaved={onLeadUpdated} />
+      ) : null}
 
-      {variant === 'default' && (
-        <ol className="crm-preferred-channel__checklist">
-          {EXTERNAL_SALES_CHECKLIST.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-      )}
-
-      {ch === 'line' && variant === 'default' && (
-        <p className="crm-preferred-channel__footnote muted">
-          OA:{' '}
-          <a href={openHref} target="_blank" rel="noopener noreferrer">
-            {openHref.replace(/^https?:\/\//, '')}
-          </a>
-        </p>
-      )}
+      {variant === 'default' ? (
+        <details className="crm-preferred-channel__steps">
+          <summary>ขั้นตอนติดต่อลูกค้า</summary>
+          <ol className="crm-preferred-channel__checklist">
+            {EXTERNAL_SALES_CHECKLIST.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </details>
+      ) : null}
     </section>
   )
 }
