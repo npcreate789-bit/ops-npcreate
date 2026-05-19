@@ -59,7 +59,7 @@ export const HOME_CLIENT_ACTIONS = [
 /** คำอธิบายสั้นสำหรับการ์ดเมนู */
 export const HOME_MODULE_HINTS: Record<string, string> = {
   '/app/work': 'งานค้าง นัด Lead สัญญา และแจ้งเตือน',
-  '/app/crm': 'Lead → ขาย → บรีฟ → Client Workspace',
+  '/app/crm': 'Lead จากฟอร์ม /contact → ขาย → บรีฟ → Client Workspace',
   '/app/sales': 'CRM → ใบเสนอราคา → Finance → Client Workspace',
   '/app/finance': 'ชำระเงินและเอกสารการเงิน',
   '/app/onboarding': 'รับบรีฟและเปิดงานลูกค้า',
@@ -81,5 +81,6 @@ export const HOME_MODULE_HINTS: Record<string, string> = {
 }
 
 export const HOME_WORK_PREVIEW_LIMIT = 6
+export const HOME_CONTACT_INQUIRIES_LIMIT = 6
 export const HOME_PRIORITY_LIMIT = 6
 export const HOME_MODULE_GRID_LIMIT = 12

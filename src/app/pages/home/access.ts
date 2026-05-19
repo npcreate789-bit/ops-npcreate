@@ -1,6 +1,6 @@
 import { isClientOnlyAccount } from '../../../shared/auth/postLoginPath'
-import { BANGKOK_TZ } from '../../../shared/dates/bangkok'
 import type { AppRole } from '../../../shared/types/roles'
+import { BANGKOK_TZ } from '../../../shared/dates/bangkok'
 import { canAccessNavPath, sidebarNavItemsForRoles, type NavItem } from '../../config/navigation'
 import { helpNavItemsForRoles } from '../../modules/help/access'
 import {
@@ -58,4 +58,34 @@ export function homePriorityActions(
 export function canOpenHomePath(roles: AppRole[], path: string): boolean {
   if (roles.length === 0) return true
   return canAccessNavPath(roles, path)
+}
+
+/** แสดงรายการลูกค้าที่ส่งฟอร์ม /contact บนหน้าหลัก */
+export function canViewHomeContactInquiries(roles: AppRole[], configured: boolean): boolean {
+  if (!configured) return true
+  if (roles.length === 0) return false
+  if (isClientOnlyAccount(roles)) return false
+  return canAccessNavPath(roles, '/app/crm')
+}
+
+export function homeLeadDetailLink(
+  roles: AppRole[],
+  leadId: string,
+): { to: string; linkable: boolean; lockedLabel: string } {
+  const detail = `/app/crm/${leadId}`
+  if (canOpenHomePath(roles, '/app/crm')) {
+    return { to: detail, linkable: true, lockedLabel: '' }
+  }
+  if (canOpenHomePath(roles, '/app/sales')) {
+    return {
+      to: '/app/sales',
+      linkable: true,
+      lockedLabel: 'เปิดใน Sales — ไม่มีสิทธิ์ CRM',
+    }
+  }
+  return {
+    to: detail,
+    linkable: false,
+    lockedLabel: 'ไม่มีสิทธิ์เปิดรายละเอียด Lead',
+  }
 }

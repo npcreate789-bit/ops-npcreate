@@ -14,13 +14,17 @@ import { useNotificationUnread } from '../modules/notifications/useNotificationU
 import '../modules/crm/crm.css'
 import {
   bangkokGreeting,
+  canOpenHomePath,
   homeAllModuleCount,
   homeModulesForRoles,
   homePriorityActions,
   isClientOnlyHome,
 } from './home/access'
 import { HOME_MODULE_HINTS } from './home/constants'
+import { HomeContactInquiries } from './home/HomeContactInquiries'
 import { HomeWorkPreview } from './home/HomeWorkPreview'
+import { canViewHomeContactInquiries } from './home/access'
+import { useHomeContactInquiries } from './home/useHomeContactInquiries'
 import { useHomeDashboard } from './home/useHomeDashboard'
 import './pages.css'
 import './home/home-dashboard.css'
@@ -54,6 +58,14 @@ export function HomePage() {
     hasKinds,
     enabled: workEnabled,
   } = useHomeDashboard(userId, roles, configured)
+
+  const showContactInquiries = canViewHomeContactInquiries(roles, configured)
+  const {
+    items: contactInquiries,
+    loading: contactLoading,
+    error: contactError,
+    total: contactTotal,
+  } = useHomeContactInquiries(roles, configured)
 
   const unreadNotif = useNotificationUnread(userId, roles)
   const priorityActions = homePriorityActions(navRoles, clientOnly)
@@ -114,6 +126,35 @@ export function HomePage() {
 
       {configured && roles.length === 0 && !profileLoadError && (
         <p className="crm-banner crm-banner--warn">กำลังโหลดบทบาท…</p>
+      )}
+
+      {showContactInquiries && (
+        <section className="home-panel home-panel--contact" aria-labelledby="home-contact-heading">
+          <header className="home-panel__head">
+            <div>
+              <h2 id="home-contact-heading">ลูกค้าติดต่อจากฟอร์ม</h2>
+              <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
+                สอบถามจาก /contact → CRM — กดรายการเพื่อเปิด Lead
+              </p>
+            </div>
+            {canOpenHomePath(roles, '/app/crm') && (
+              <Link to="/app/crm" className="muted">
+                CRM ทั้งหมด{contactTotal > 0 ? ` · ${contactTotal} รายการล่าสุด` : ''} →
+              </Link>
+            )}
+          </header>
+          <ol className="home-flow" aria-label="ขั้นตอนการติดต่อลูกค้า">
+            <li>ลูกค้ากรอกฟอร์มที่หน้า /contact (LINE หรือ Facebook)</li>
+            <li>ระบบสร้าง Lead ใน CRM อัตโนมัติ</li>
+            <li>ทีม Sales ติดต่อกลับ → ใบเสนอราคา → Finance → Client Workspace</li>
+          </ol>
+          <HomeContactInquiries
+            items={contactInquiries}
+            roles={roles}
+            loading={contactLoading}
+            error={contactError}
+          />
+        </section>
       )}
 
       {workEnabled && (

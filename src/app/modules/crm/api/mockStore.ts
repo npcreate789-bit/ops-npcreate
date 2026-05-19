@@ -22,7 +22,35 @@ function save(leads: Lead[]) {
 
 function seed(): Lead[] {
   const now = new Date().toISOString()
+  const weekAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
   const leads: Lead[] = [
+    {
+      id: crypto.randomUUID(),
+      owner_id: DEV_OWNER,
+      brand_name: 'แบรนด์จากฟอร์มติดต่อ (ตัวอย่าง)',
+      contact_name: 'คุณบี',
+      phone: '0898765432',
+      line_id: null,
+      line_user_id: 'U_demo_contact_form',
+      line_oa_chat_user_id: null,
+      facebook: null,
+      facebook_psid: null,
+      business_type: 'อาหาร',
+      ad_budget_daily: null,
+      ad_budget_monthly: 30000,
+      pain_points: null,
+      services_interested: ['gmv_max', 'content'],
+      status: 'interested',
+      channel: 'website',
+      preferred_contact_channel: 'line',
+      shop_links: null,
+      notes: 'Lead จาก /contact — แสดงบนหน้าหลัก',
+      reminder_at: null,
+      customer_id: null,
+      converted_at: null,
+      created_at: weekAgo,
+      updated_at: weekAgo,
+    },
     {
       id: crypto.randomUUID(),
       owner_id: DEV_OWNER,
