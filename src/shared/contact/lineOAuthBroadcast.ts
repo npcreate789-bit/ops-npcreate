@@ -154,19 +154,27 @@ export function tryCloseLineOAuthCallbackTab(): void {
     return
   }
 
-  if (window.opener && !window.opener.closed) {
+  const opener = window.opener
+  if (opener && !opener.closed) {
     try {
-      window.opener.focus()
+      opener.focus()
     } catch {
       /* ignore */
     }
   }
 
   window.setTimeout(() => {
+    if (opener && !opener.closed) {
+      try {
+        opener.focus()
+      } catch {
+        /* ignore */
+      }
+    }
     try {
       window.close()
     } catch {
       /* ignore */
     }
-  }, 400)
+  }, 300)
 }

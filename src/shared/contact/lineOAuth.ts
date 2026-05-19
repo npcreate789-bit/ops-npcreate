@@ -11,6 +11,9 @@ import {
 import type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
 import {
   clearLineOAuthBroadcastResult,
+  clearLineOAuthKeeperTab,
+  LINE_OAUTH_POPUP_WINDOW_NAME,
+  markLineOAuthKeeperTab,
   publishLineOAuthResult,
   readLineOAuthBroadcastResult,
   tryCloseLineOAuthCallbackTab,
@@ -50,7 +53,7 @@ function buildLineAuthorizeUrl(): string {
     redirect_uri: redirectUri,
     state,
     scope: 'profile openid',
-    bot_prompt: 'aggressive',
+    bot_prompt: 'normal',
     ui_locales: 'th',
   })
 
@@ -102,12 +105,25 @@ function applyOAuthError(message: string): void {
 }
 
 /**
- * LINE Login แท็บเดียว: /contact → access.line.me → /contact?code=...
- * ไม่ใช้ window.open / target=_blank — รวมตอนกด "เข้าสู่ระบบด้วยแอป LINE" บนหน้า LINE
+ * LINE Login — แท็บ /contact (keeper) ค้างอยู่ เปิด OAuth ในหน้าต่างย่อย/แท็บชั่วคราว
+ * หลังกด「เข้าสู่ระบบด้วยแอป LINE」ผลส่งกลับ keeper ผ่าน broadcast แล้วปิดแท็บ callback
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
   markLineOAuthInProgress()
+  markLineOAuthKeeperTab()
+
+  const oauthWindow = window.open(url, LINE_OAUTH_POPUP_WINDOW_NAME)
+  if (oauthWindow && oauthWindow !== window) {
+    try {
+      oauthWindow.focus()
+    } catch {
+      /* ignore */
+    }
+    return
+  }
+
+  clearLineOAuthKeeperTab()
   window.location.replace(url)
 }
 
