@@ -53,8 +53,10 @@ import {
 } from '../../../../shared/contact/lineOAuth'
 import {
   clearLineOAuthKeeperTab,
+  consumeCloseLineOAuthAuxSignal,
   dismissDuplicateOAuthCallbackTab,
   isLineOAuthKeeperTab,
+  readLineOAuthBroadcastResult,
 } from '../../../../shared/contact/lineOAuthBroadcast'
 import '../contact.css'
 
@@ -134,6 +136,56 @@ export function ContactPage() {
   useEffect(() => {
     if (isLineOAuthKeeperTab() && isLineOAuthInProgress()) {
       setLineOAuthCompleting(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isLineOAuthKeeperTab() || !isLineOAuthInProgress()) return
+
+    function syncKeeperFromStorage(): boolean {
+      if (consumeCloseLineOAuthAuxSignal()) {
+        closeLineOAuthAuxWindow()
+      }
+      const pending = readLineOAuthBroadcastResult()
+      if (!pending) return false
+      const broadcast = consumeLineOAuthBroadcastResult()
+      if (!broadcast) return false
+      closeLineOAuthAuxWindow()
+      if (broadcast.ok) {
+        setLineUserId(broadcast.userId)
+        setLineDisplayName(broadcast.displayName)
+        setChannelConnectError(null)
+        setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+        clearLineOAuthKeeperTab()
+      } else {
+        setChannelConnectError(broadcast.error)
+        setFieldErrors((e) => ({ ...e, channelConnect: broadcast.error }))
+        clearLineOAuthKeeperTab()
+      }
+      setLineOAuthCompleting(false)
+      stripLineOAuthParamsFromUrl()
+      return true
+    }
+
+    const startedAt = Date.now()
+    const intervalId = window.setInterval(() => {
+      if (Date.now() - startedAt > 3 * 60 * 1000 || !isLineOAuthInProgress()) {
+        window.clearInterval(intervalId)
+        return
+      }
+      if (syncKeeperFromStorage()) {
+        window.clearInterval(intervalId)
+      }
+    }, 500)
+
+    function onPageShow() {
+      syncKeeperFromStorage()
+    }
+    window.addEventListener('pageshow', onPageShow)
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('pageshow', onPageShow)
     }
   }, [])
 

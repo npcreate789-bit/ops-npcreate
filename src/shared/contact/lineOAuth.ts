@@ -15,14 +15,13 @@ import {
   clearLineOAuthKeeperTab,
   dismissDuplicateOAuthCallbackTab,
   finalizeOAuthCallbackTabs,
-  LINE_OAUTH_POPUP_WINDOW_NAME,
   markLineOAuthKeeperTab,
+  openLineOAuthAuxTab,
   publishLineOAuthResult,
   readLineOAuthBroadcastResult,
-  registerLineOAuthAuxWindow,
   resolveOAuthCallbackTabRole,
 } from './lineOAuthBroadcast'
-import { isMobileBrowser } from '../line/lineStaffOpenUrl'
+import { shouldUseLineOAuthKeeperTab } from '../line/lineStaffOpenUrl'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
@@ -119,27 +118,10 @@ export function startLineLogin(): void {
   markLineOAuthInProgress()
   clearOAuthCallbackOwner()
 
-  if (isMobileBrowser()) {
+  if (shouldUseLineOAuthKeeperTab()) {
     markLineOAuthKeeperTab()
-    let oauthTab: Window | null = null
-    try {
-      oauthTab = window.open('about:blank', LINE_OAUTH_POPUP_WINDOW_NAME)
-      if (oauthTab && oauthTab !== window) {
-        registerLineOAuthAuxWindow(oauthTab)
-        oauthTab.location.replace(url)
-        try {
-          oauthTab.focus()
-        } catch {
-          /* ignore */
-        }
-        return
-      }
-    } catch {
-      /* fall through */
-    }
-    oauthTab = window.open(url, LINE_OAUTH_POPUP_WINDOW_NAME)
-    if (oauthTab && oauthTab !== window) {
-      registerLineOAuthAuxWindow(oauthTab)
+    const oauthTab = openLineOAuthAuxTab(url)
+    if (oauthTab) {
       try {
         oauthTab.focus()
       } catch {

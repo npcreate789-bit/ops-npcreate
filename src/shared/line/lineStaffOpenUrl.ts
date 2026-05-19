@@ -32,6 +32,20 @@ export function isMobileBrowser(): boolean {
   )
 }
 
+/** Safari / WebKit (ไม่รวม Chrome, Edge, Firefox iOS) */
+export function isSafariBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent
+  return /Safari/i.test(ua) && !/Chrome|CriOS|Chromium|Edg|OPR|FxiOS/i.test(ua)
+}
+
+/** ค้าง /contact เปิด OAuth แท็บใหม่ — มือถือ + iPad Safari */
+export function shouldUseLineOAuthKeeperTab(): boolean {
+  if (isMobileBrowser()) return true
+  if (typeof navigator === 'undefined') return false
+  return isSafariBrowser() && navigator.maxTouchPoints > 1
+}
+
 /** ลิงก์ line.me พร้อมข้อความล่วงหน้า (มือถือ / fallback) */
 export function lineOaMessageUrlWithText(text: string): string {
   return lineOaStarterMessageUrl(text)

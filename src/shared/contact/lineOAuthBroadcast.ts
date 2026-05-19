@@ -1,6 +1,7 @@
 /** ส่งผล LINE Login จากแท็บ callback กลับแท็บ /contact เดิม */
 export const LINE_OAUTH_BROADCAST_CHANNEL = 'npc_contact_line_oauth'
 export const LINE_OAUTH_RESULT_LS_KEY = 'npc_contact_line_oauth_result'
+export const LINE_OAUTH_CLOSE_AUX_LS_KEY = 'npc_contact_line_oauth_close_aux'
 export const LINE_OAUTH_POPUP_WINDOW_NAME = 'npc_line_oauth'
 const LINE_OAUTH_KEEPER_TAB_KEY = 'npc_contact_line_oauth_keeper'
 const LINE_OAUTH_CALLBACK_OWNER_KEY = 'npc_contact_line_oauth_callback_owner'
@@ -30,17 +31,53 @@ export function closeLineOAuthAuxWindow(): void {
     }
   }
 
-  const auxRef = registeredAuxWindow
+  tryClose(registeredAuxWindow)
   registeredAuxWindow = null
-  tryClose(auxRef)
+}
 
-  if (!auxRef) return
+/** เปิด OAuth ในแท็บใหม่ — Safari ต้องนำทางตรงใน user gesture (ไม่ใช้ about:blank) */
+export function openLineOAuthAuxTab(url: string): Window | null {
+  try {
+    const direct = window.open(url, LINE_OAUTH_POPUP_WINDOW_NAME)
+    if (direct && direct !== window) {
+      registerLineOAuthAuxWindow(direct)
+      return direct
+    }
+  } catch {
+    /* fall through */
+  }
 
   try {
-    const named = window.open('', LINE_OAUTH_POPUP_WINDOW_NAME)
-    tryClose(named)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.target = LINE_OAUTH_POPUP_WINDOW_NAME
+    anchor.rel = 'noopener noreferrer'
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
   } catch {
     /* ignore */
+  }
+
+  return null
+}
+
+export function signalCloseLineOAuthAuxViaStorage(): void {
+  try {
+    localStorage.setItem(LINE_OAUTH_CLOSE_AUX_LS_KEY, String(Date.now()))
+  } catch {
+    /* ignore */
+  }
+}
+
+export function consumeCloseLineOAuthAuxSignal(): boolean {
+  try {
+    if (!localStorage.getItem(LINE_OAUTH_CLOSE_AUX_LS_KEY)) return false
+    localStorage.removeItem(LINE_OAUTH_CLOSE_AUX_LS_KEY)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -103,6 +140,7 @@ export function requestCloseLineOAuthAuxWindow(): void {
   }
 
   const payload: LineOAuthBroadcastPayload = { type: 'close_aux', at: Date.now() }
+  signalCloseLineOAuthAuxViaStorage()
   try {
     const channel = new BroadcastChannel(LINE_OAUTH_BROADCAST_CHANNEL)
     channel.postMessage(payload)
@@ -206,6 +244,10 @@ export function subscribeLineOAuthBroadcast(
   handler: (payload: LineOAuthBroadcastPayload) => void,
 ): () => void {
   const onStorage = (event: StorageEvent) => {
+    if (event.key === LINE_OAUTH_CLOSE_AUX_LS_KEY) {
+      handler({ type: 'close_aux', at: Date.now() })
+      return
+    }
     if (event.key !== LINE_OAUTH_RESULT_LS_KEY || !event.newValue) return
     try {
       handler(JSON.parse(event.newValue) as LineOAuthBroadcastPayload)
@@ -275,10 +317,6 @@ export type OAuthCallbackTabRole = 'primary' | 'duplicate'
 /** แท็บ callback — ข้ามถ้าแท็บอื่นแลก code แล้ว (ไม่ handoff ไป access.line.me) */
 export function resolveOAuthCallbackTabRole(): OAuthCallbackTabRole {
   if (!isOAuthCallbackLocation()) return 'primary'
-
-  if (isLineOAuthKeeperTab()) {
-    return 'primary'
-  }
 
   if (canHandoffOAuthCallbackToOpener()) {
     handoffOAuthCallbackToSameOriginOpener()
