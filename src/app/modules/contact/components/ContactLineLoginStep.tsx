@@ -89,7 +89,7 @@ export function ContactLineLoginStep({
               </p>
             )}
             <p className="contact-section__hint contact-section__hint--muted">
-              หน้านี้จะค้างอยู่ — ล็อกอิน LINE เปิดในแท็บชั่วคราว หลังกด「เข้าสู่ระบบด้วยแอป LINE」จะกลับมาที่หน้านี้โดยอัตโนมัติ
+              เปิดในแท็บเดิม (ไม่เปิดหน้าต่างใหม่) — หลังกด「เข้าสู่ระบบด้วยแอป LINE」จะกลับมาหน้านี้และบันทึก LINE Login
             </p>
             {hostMismatchHint && (
               <p className="contact-section__hint contact-section__hint--muted">{hostMismatchHint}</p>

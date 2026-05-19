@@ -139,9 +139,10 @@ export function subscribeLineOAuthBroadcast(
   }
 }
 
-/** แท็บ callback ชั่วคราว — ปิดได้เมื่อไม่ใช่แท็บ keeper (มือถือมักไม่มี window.opener) */
+/** แท็บ callback ซ้ำ (desktop) — ปิดเมื่อมี window.opener หลังซิงก์ผลแล้ว */
 export function tryCloseLineOAuthCallbackTab(): void {
-  if (isLineOAuthKeeperTab()) return
+  const opener = window.opener
+  if (!opener || opener.closed) return
 
   const params = new URLSearchParams(window.location.search)
   const isOAuthReturn =
@@ -149,27 +150,19 @@ export function tryCloseLineOAuthCallbackTab(): void {
     params.has('line_connected') ||
     params.has('line_error') ||
     params.has('error')
+  if (!isOAuthReturn) return
 
-  if (!isOAuthReturn && !window.opener && window.name !== LINE_OAUTH_POPUP_WINDOW_NAME) {
-    return
-  }
-
-  const opener = window.opener
-  if (opener && !opener.closed) {
-    try {
-      opener.focus()
-    } catch {
-      /* ignore */
-    }
+  try {
+    opener.focus()
+  } catch {
+    /* ignore */
   }
 
   window.setTimeout(() => {
-    if (opener && !opener.closed) {
-      try {
-        opener.focus()
-      } catch {
-        /* ignore */
-      }
+    try {
+      if (!opener.closed) opener.focus()
+    } catch {
+      /* ignore */
     }
     try {
       window.close()
