@@ -369,6 +369,9 @@ allow_dynamic_registration = false
 [functions.line-oauth-callback]
 verify_jwt = false
 
+[functions.line-webhook]
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

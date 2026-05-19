@@ -10,6 +10,7 @@ const corsHeaders = {
 interface PushBody {
   to?: string
   text?: string
+  lead_id?: string
 }
 
 function json(body: unknown, status = 200) {
@@ -106,6 +107,21 @@ Deno.serve(async (req) => {
       const errText = await lineRes.text()
       console.error('LINE push failed', lineRes.status, errText)
       return json({ error: 'ส่งข้อความ LINE ไม่สำเร็จ — ตรวจสอบ token และว่าลูกค้าเป็นเพื่อน OA' }, 502)
+    }
+
+    const leadId = body.lead_id?.trim()
+    if (leadId) {
+      const { error: logErr } = await admin.from('lead_line_messages').insert({
+        lead_id: leadId,
+        line_user_id: to,
+        direction: 'outbound',
+        body: text,
+        message_type: 'text',
+        sender_profile_id: caller.id,
+      })
+      if (logErr) {
+        console.error('send-line-push log message', logErr)
+      }
     }
 
     await admin.from('audit_logs').insert({

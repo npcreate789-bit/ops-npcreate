@@ -15,6 +15,8 @@
     "functions:deploy:line-oauth": "npx supabase functions deploy line-oauth-callback",
     "functions:deploy:contact-line-handoff": "npx supabase functions deploy contact-line-handoff",
     "functions:deploy:manage-employee": "npx supabase functions deploy manage-employee",
+    "functions:deploy:line-webhook": "npx supabase functions deploy line-webhook",
+    "functions:deploy:send-line-push": "npx supabase functions deploy send-line-push",
     "db:push": "npx supabase db push",
     "db:wipe": "node scripts/wipe-data-keep-packages-ceo.mjs",
     "db:verify-inquiry": "node scripts/verify-public-inquiry.mjs",

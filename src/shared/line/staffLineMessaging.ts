@@ -135,6 +135,7 @@ export function buildClientPortalCredentialsMessage(input: {
 export async function sendLinePushMessage(
   lineUserId: string,
   text: string,
+  options?: { leadId?: string },
 ): Promise<LineSendResult> {
   const to = lineUserId.trim()
   if (!to) {
@@ -148,7 +149,11 @@ export async function sendLinePushMessage(
   }
 
   const { data, error } = await supabase.functions.invoke('send-line-push', {
-    body: { to, text },
+    body: {
+      to,
+      text,
+      ...(options?.leadId ? { lead_id: options.leadId } : {}),
+    },
   })
 
   if (error) {

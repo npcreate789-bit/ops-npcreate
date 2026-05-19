@@ -21,7 +21,9 @@ import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
 import { canViewLeadAttachments } from '../access'
 import { LeadAttachmentsSection } from '../components/LeadAttachmentsSection'
 import { LeadNextStepsPanel } from '../components/LeadNextStepsPanel'
+import { LeadLineChatPanel } from '../components/LeadLineChatPanel'
 import { LeadPreferredChannelPanel } from '../components/LeadPreferredChannelPanel'
+import { resolveLineMessagingRecipientId } from '../../../../shared/line/lineUserIdResolution'
 import {
   LeadForm,
   formValuesToPayload,
@@ -205,6 +207,20 @@ export function LeadEditorPage() {
           onLeadUpdated={(updated) => setInitial(updated)}
         />
       )}
+
+      {!isNew &&
+        initial &&
+        initial.preferred_contact_channel === 'line' &&
+        resolveLineMessagingRecipientId({
+          line_user_id: initial.line_user_id,
+          line_oa_chat_user_id: initial.line_oa_chat_user_id,
+        }) && (
+          <LeadLineChatPanel
+            lead={initial}
+            senderProfileId={userId}
+            readOnly={readOnly}
+          />
+        )}
 
       {!isNew && initial && <LeadNextStepsPanel lead={initial} />}
 

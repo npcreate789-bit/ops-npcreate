@@ -763,3 +763,120 @@
 .crm-line-ids__open {
   margin-top: 0.5rem;
 }
+
+.crm-line-chat {
+  margin-bottom: 1rem;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  background: rgba(74, 222, 128, 0.04);
+}
+
+.crm-line-chat__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.crm-line-chat__head h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.crm-line-chat__hint {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.crm-line-chat__thread {
+  max-height: 22rem;
+  overflow-y: auto;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--npc-glass-border);
+  margin-bottom: 0.75rem;
+}
+
+.crm-line-chat__empty {
+  margin: 0;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 1.5rem 0.5rem;
+}
+
+.crm-line-chat__messages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.crm-line-chat__msg {
+  max-width: 85%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+.crm-line-chat__msg--inbound {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--npc-glass-border);
+}
+
+.crm-line-chat__msg--outbound {
+  align-self: flex-end;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.crm-line-chat__body {
+  margin: 0 0 0.25rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.crm-line-chat__time {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--npc-text-muted);
+}
+
+.crm-line-chat__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.crm-line-chat__composer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.crm-line-chat__input {
+  flex: 1 1 12rem;
+  min-height: 2.75rem;
+  resize: vertical;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.15);
+  color: inherit;
+  font: inherit;
+}
+
+.crm-line-chat__footnote {
+  margin: 0.65rem 0 0;
+  font-size: 0.75rem;
+}
