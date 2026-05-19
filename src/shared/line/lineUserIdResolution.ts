@@ -4,21 +4,17 @@ import {
 } from './lineChatBizUrl'
 import { isLineMessagingUserId } from './lineStaffOpenUrl'
 
+function truncateLineId(id: string, head = 10, tail = 6): string {
+  const t = id.trim()
+  if (t.length <= head + tail + 1) return t
+  return `${t.slice(0, head)}…${t.slice(-tail)}`
+}
+
+/** บล็อกการบันทึก — รูปแบบผิดจริงๆ */
 export function lineOaChatUserIdSaveError(
   parsedUserId: string,
-  input: string,
   configuredAccountId: string,
 ): string | null {
-  const accountFromInput = parseLineChatBizAccountIdFromInput(input)
-  if (
-    accountFromInput &&
-    configuredAccountId &&
-    accountFromInput.toLowerCase() !== configuredAccountId.toLowerCase()
-  ) {
-    return (
-      'ลิงก์มาจาก OA อื่น (account ใน URL ไม่ตรงกับระบบ) — ตรวจสอบ VITE_LINE_CHAT_BIZ_ACCOUNT_ID หรือเปิดแชทจาก OA ที่ถูกต้อง'
-    )
-  }
   if (
     configuredAccountId &&
     parsedUserId.toLowerCase() === configuredAccountId.toLowerCase()
@@ -26,6 +22,26 @@ export function lineOaChatUserIdSaveError(
     return 'ค่านี้เป็น account id ของ OA ไม่ใช่ user id ของลูกค้า — ใช้ส่วนหลัง /chat/ ใน URL'
   }
   return null
+}
+
+/** ไม่บล็อก — แจ้งเมื่อ account ในลิงก์ไม่ตรง env (มักตั้ง VITE_LINE_CHAT_BIZ_ACCOUNT_ID ผิด) */
+export function lineOaChatUserIdSaveWarning(
+  input: string,
+  configuredAccountId: string,
+): string | null {
+  const accountFromInput = parseLineChatBizAccountIdFromInput(input)
+  if (!accountFromInput) return null
+  if (
+    !configuredAccountId ||
+    accountFromInput.toLowerCase() === configuredAccountId.toLowerCase()
+  ) {
+    return null
+  }
+  return (
+    `account ในลิงก์ (${truncateLineId(accountFromInput)}) ไม่ตรงค่าในระบบ (${truncateLineId(configuredAccountId)}) — ` +
+    `บันทึก user id แล้วและใช้ account จากลิงก์เปิดแชทในเบราว์เซอร์นี้ — ` +
+    `แนะนำตั้ง VITE_LINE_CHAT_BIZ_ACCOUNT_ID=${accountFromInput} บน Vercel`
+  )
 }
 
 /** ดึง LINE Messaging user id จาก URL chat.line.biz / manager.line.biz หรือข้อความที่วาง */

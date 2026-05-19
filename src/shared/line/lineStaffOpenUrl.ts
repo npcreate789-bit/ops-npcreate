@@ -9,7 +9,30 @@ import {
   isLineMessagingUserIdForUrl,
   lineChatBizAccountIdConfigError,
   normalizeLineChatBizAccountId,
+  parseLineChatBizUrl,
 } from './lineChatBizUrl'
+
+const LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY = 'np.line_chat_biz_account_id'
+
+/** จำ account จาก URL ที่วาง (ใช้เมื่อ env ตั้งผิดแต่ลิงก์ถูก) */
+export function rememberLineChatBizAccountFromInput(input: string): void {
+  if (typeof sessionStorage === 'undefined') return
+  const account = parseLineChatBizUrl(input.trim())?.accountId
+  if (account) {
+    sessionStorage.setItem(LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY, account)
+  }
+}
+
+/** account สำหรับสร้างลิงก์ — จำจากลิงก์ที่วางก่อน แล้วค่อย fallback env */
+export function getStaffLineChatBizAccountId(): string {
+  if (typeof sessionStorage !== 'undefined') {
+    const remembered = normalizeLineChatBizAccountId(
+      sessionStorage.getItem(LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY) ?? '',
+    )
+    if (remembered) return remembered
+  }
+  return LINE_CHAT_BIZ_ACCOUNT_ID
+}
 
 function resolveViteEnv(value: string | undefined): string {
   if (value == null) return ''
@@ -86,7 +109,8 @@ export function resolveStaffLineChatOpenUrl(
   const uid = chatUserId?.trim() ?? ''
   const mode = options?.mode ?? 'auto'
 
-  const configErr = lineChatBizAccountIdConfigError(LINE_CHAT_BIZ_ACCOUNT_ID)
+  const accountId = getStaffLineChatBizAccountId()
+  const configErr = lineChatBizAccountIdConfigError(accountId)
   if (configErr) return { ok: false, message: configErr }
 
   if (mode === 'direct') {
@@ -97,14 +121,14 @@ export function resolveStaffLineChatOpenUrl(
           'ต้องบันทึก LINE User ID จาก URL แชท OA (หลัง /chat/) — ใช้ Login ID เปิดแชทตรงไม่ได้',
       }
     }
-    const url = buildLineChatBizDirectUrl(uid, LINE_CHAT_BIZ_ACCOUNT_ID)
+    const url = buildLineChatBizDirectUrl(uid, accountId)
     if (!url) {
       return { ok: false, message: 'สร้างลิงก์แชทไม่สำเร็จ — ตรวจสอบ VITE_LINE_CHAT_BIZ_ACCOUNT_ID' }
     }
     return { ok: true, url }
   }
 
-  const inbox = buildLineChatBizInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
+  const inbox = buildLineChatBizInboxUrl(accountId)
   if (inbox) return { ok: true, url: inbox }
 
   return { ok: true, url: NPCREATE_LINE_OA_URL }
@@ -222,7 +246,7 @@ export function staffLineDirectChatHint(lineUserId?: string | null): string | nu
   if (!isLineMessagingUserIdForUrl(lineUserId)) {
     return 'LINE User ID ไม่ถูกรูปแบบ (U ตามด้วยตัวเลข a-f 32 ตัว)'
   }
-  const configErr = lineChatBizAccountIdConfigError(LINE_CHAT_BIZ_ACCOUNT_ID)
+  const configErr = lineChatBizAccountIdConfigError(getStaffLineChatBizAccountId())
   if (configErr) return configErr
   if (staffDirectUserChatEnabled()) {
     return 'เปิดแชทตรง — ต้องเป็น user id จากแชท OA (หลัง /chat/ ใน URL)'

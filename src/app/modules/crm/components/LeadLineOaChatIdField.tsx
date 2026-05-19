@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
-import { LINE_CHAT_BIZ_ACCOUNT_ID } from '../../../../shared/line/staffLineMessaging'
+import {
+  getStaffLineChatBizAccountId,
+  LINE_CHAT_BIZ_ACCOUNT_ID,
+  rememberLineChatBizAccountFromInput,
+} from '../../../../shared/line/staffLineMessaging'
 import {
   lineLoginAndOaIdsMismatch,
   lineOaChatUserIdSaveError,
+  lineOaChatUserIdSaveWarning,
   parseLineOaChatUserIdFromInput,
 } from '../../../../shared/line/lineUserIdResolution'
 import { updateLead } from '../api/leads'
@@ -80,6 +85,7 @@ export function LeadLineOaChatIdField({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedFlash, setSavedFlash] = useState(false)
+  const [saveWarning, setSaveWarning] = useState<string | null>(null)
 
   useEffect(() => {
     setDraft(lead.line_oa_chat_user_id ?? '')
@@ -98,21 +104,25 @@ export function LeadLineOaChatIdField({
 
   async function handleSave() {
     setError(null)
+    setSaveWarning(null)
     const parsed = parseLineOaChatUserIdFromInput(draft)
     if (!parsed) {
       setError('วางลิงก์ chat.line.biz / manager.line.biz หรือ ID หลัง /chat/ (U + 32 ตัว)')
       return
     }
-    const saveErr = lineOaChatUserIdSaveError(parsed, draft, LINE_CHAT_BIZ_ACCOUNT_ID)
+    const saveErr = lineOaChatUserIdSaveError(parsed, LINE_CHAT_BIZ_ACCOUNT_ID)
     if (saveErr) {
       setError(saveErr)
       return
     }
+    const warning = lineOaChatUserIdSaveWarning(draft, LINE_CHAT_BIZ_ACCOUNT_ID)
+    rememberLineChatBizAccountFromInput(draft)
     setSaving(true)
     try {
       const updated = await updateLead(lead.id, { line_oa_chat_user_id: parsed })
       setDraft(parsed)
       setSavedFlash(true)
+      if (warning) setSaveWarning(warning)
       window.setTimeout(() => setSavedFlash(false), 2500)
       onSaved?.(updated)
     } catch (e) {
@@ -125,8 +135,10 @@ export function LeadLineOaChatIdField({
   function handlePasteFromClipboard() {
     void navigator.clipboard.readText().then((text) => {
       const parsed = parseLineOaChatUserIdFromInput(text)
-      if (parsed) setDraft(parsed)
-      else setDraft(text.trim())
+      if (parsed) {
+        setDraft(parsed)
+        rememberLineChatBizAccountFromInput(text)
+      } else setDraft(text.trim())
     })
   }
 
@@ -167,10 +179,11 @@ export function LeadLineOaChatIdField({
             <code>
               https://chat.line.biz/U2626…/chat/U1bfd708…
             </code>
-            {LINE_CHAT_BIZ_ACCOUNT_ID ? (
+            {getStaffLineChatBizAccountId() ? (
               <>
                 {' '}
-                (account ในระบบ: <code>{LINE_CHAT_BIZ_ACCOUNT_ID.slice(0, 10)}…</code>)
+                (account ที่ใช้เปิดแชท:{' '}
+                <code>{getStaffLineChatBizAccountId().slice(0, 10)}…</code>)
               </>
             ) : (
               ' — ตั้ง VITE_LINE_CHAT_BIZ_ACCOUNT_ID บน Vercel'
@@ -209,6 +222,11 @@ export function LeadLineOaChatIdField({
             </p>
           ) : null}
           {savedFlash ? <p className="crm-line-ids__ok">บันทึกแล้ว</p> : null}
+          {saveWarning ? (
+            <p className="crm-line-ids__note" role="status">
+              {saveWarning}
+            </p>
+          ) : null}
         </details>
       ) : null}
     </div>
