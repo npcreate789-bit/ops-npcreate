@@ -62,6 +62,76 @@ function canAssignCeo(actorRoles: AppRole[]): boolean {
   return actorRoles.includes('ceo')
 }
 
+type AdminClient = ReturnType<typeof createClient>
+
+/** Reassign rows that block profile/auth deletion (FK without ON DELETE CASCADE). */
+async function reassignStaffUserReferences(
+  admin: AdminClient,
+  fromUserId: string,
+  toUserId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (fromUserId === toUserId) {
+    return { ok: false, error: 'ไม่สามารถโอนข้อมูลไปยังผู้ใช้คนเดียวกันได้' }
+  }
+
+  const requiredReassignments: Array<{ table: string; column: string }> = [
+    { table: 'leads', column: 'owner_id' },
+    { table: 'customers', column: 'sales_owner_id' },
+    { table: 'quotations', column: 'owner_id' },
+    { table: 'campaigns', column: 'ads_owner_id' },
+    { table: 'daily_metrics', column: 'created_by' },
+    { table: 'payments', column: 'recorded_by' },
+    { table: 'tasks', column: 'assignee_id' },
+    { table: 'tasks', column: 'created_by' },
+    { table: 'content_jobs', column: 'assignee_id' },
+    { table: 'content_jobs', column: 'created_by' },
+    { table: 'contract_renewals', column: 'owner_id' },
+    { table: 'contract_renewals', column: 'created_by' },
+    { table: 'creators', column: 'created_by' },
+    { table: 'chat_messages', column: 'sender_id' },
+    { table: 'brief_attachments', column: 'uploaded_by' },
+  ]
+
+  const nullableClear: Array<{ table: string; column: string }> = [
+    { table: 'customers', column: 'account_owner_id' },
+    { table: 'customers', column: 'ads_owner_id' },
+    { table: 'projects', column: 'account_owner_id' },
+    { table: 'projects', column: 'ads_owner_id' },
+  ]
+
+  for (const { table, column } of requiredReassignments) {
+    const { error } = await admin
+      .from(table)
+      .update({ [column]: toUserId })
+      .eq(column, fromUserId)
+    if (error) {
+      console.error('reassignStaffUserReferences', table, column, error)
+      return { ok: false, error: error.message }
+    }
+  }
+
+  for (const { table, column } of nullableClear) {
+    const { error } = await admin
+      .from(table)
+      .update({ [column]: null })
+      .eq(column, fromUserId)
+    if (error) {
+      console.error('reassignStaffUserReferences clear', table, column, error)
+      return { ok: false, error: error.message }
+    }
+  }
+
+  return { ok: true }
+}
+
+function mapDeleteUserError(message: string): string {
+  const lower = message.toLowerCase()
+  if (lower.includes('database error deleting user')) {
+    return 'ไม่สามารถลบผู้ใช้ได้ — ยังมีข้อมูลในระบบที่อ้างอิงบัญชีนี้ (ลองใหม่อีกครั้ง หรือติดต่อผู้ดูแลระบบ)'
+  }
+  return message
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -168,9 +238,20 @@ Deno.serve(async (req) => {
         return json({ error: 'ไม่มีสิทธิ์ลบบัญชี Dev' }, 403)
       }
 
+      const reassign = await reassignStaffUserReferences(admin, userId, caller.id)
+      if (!reassign.ok) {
+        return json(
+          {
+            error: `ไม่สามารถโอนข้อมูลที่ผูกกับผู้ใช้นี้ได้ — ${reassign.error}`,
+          },
+          500,
+        )
+      }
+
       const { error: deleteErr } = await admin.auth.admin.deleteUser(userId)
       if (deleteErr) {
-        return json({ error: deleteErr.message }, 400)
+        console.error('manage-employee deleteUser', deleteErr)
+        return json({ error: mapDeleteUserError(deleteErr.message) }, 400)
       }
 
       await admin.from('audit_logs').insert({
@@ -182,6 +263,7 @@ Deno.serve(async (req) => {
           login_id: profile.login_id,
           full_name: profile.full_name,
           roles: targetRoles,
+          reassigned_to: caller.id,
         },
       })
 
