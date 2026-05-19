@@ -9,5 +9,6 @@ export interface LeadLineMessage {
   message_type: string
   line_message_id: string | null
   sender_profile_id: string | null
+  metadata: Record<string, unknown>
   created_at: string
 }

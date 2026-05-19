@@ -17,7 +17,10 @@ export async function listLeadLineMessages(leadId: string): Promise<LeadLineMess
     .order('created_at', { ascending: true })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as LeadLineMessage[]
+  return (data ?? []).map((row) => ({
+    ...(row as LeadLineMessage),
+    metadata: ((row as LeadLineMessage).metadata as Record<string, unknown> | null) ?? {},
+  }))
 }
 
 export async function sendLeadLineChatMessage(
@@ -46,6 +49,7 @@ export async function sendLeadLineChatMessage(
       message_type: 'text',
       line_message_id: null,
       sender_profile_id: senderProfileId ?? null,
+      metadata: {},
     })
     return
   }

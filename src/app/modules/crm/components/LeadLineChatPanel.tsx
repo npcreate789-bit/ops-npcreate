@@ -5,7 +5,9 @@ import {
   resolveLineMessagingRecipientId,
   resolveLineStaffChatOpenUserId,
 } from '../../../../shared/line/lineUserIdResolution'
+import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
+import { LeadLineMessageBody } from './LeadLineMessageBody'
 import type { Lead } from '../types'
 import '../crm.css'
 
@@ -45,6 +47,7 @@ export function LeadLineChatPanel({
     lead,
     senderProfileId,
   )
+  const replyWindow = getLineReplyWindowStatus(messages)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -78,6 +81,32 @@ export function LeadLineChatPanel({
         </p>
       ) : null}
 
+      {canPush && !replyWindow.withinWindow && replyWindow.expiresAt ? (
+        <p className="crm-banner crm-banner--warn">
+          นอกช่วง 24 ชม. หลังลูกค้าทักล่าสุด (
+          {replyWindow.expiresAt.toLocaleString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+          ) — Push อาจถูกจำกัดตามนโยบาย LINE แนะนำให้ลูกค้าทักใหม่หรือใช้ chat.line.biz
+        </p>
+      ) : null}
+
+      {canPush && replyWindow.withinWindow && replyWindow.expiresAt ? (
+        <p className="crm-line-chat__window-ok muted">
+          ส่ง Push ได้จนถึง{' '}
+          {replyWindow.expiresAt.toLocaleString('th-TH', {
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}{' '}
+          (24 ชม. หลังลูกค้าทักล่าสุด)
+        </p>
+      ) : null}
+
       <div className="crm-line-chat__thread" aria-live="polite">
         {loading ? (
           <p className="muted crm-line-chat__empty">กำลังโหลดข้อความ…</p>
@@ -92,7 +121,7 @@ export function LeadLineChatPanel({
                 key={m.id}
                 className={`crm-line-chat__msg crm-line-chat__msg--${m.direction}`}
               >
-                <p className="crm-line-chat__body">{m.body}</p>
+                <LeadLineMessageBody message={m} />
                 <time className="crm-line-chat__time" dateTime={m.created_at}>
                   {formatTime(m.created_at)}
                   {m.direction === 'outbound' ? ' · ทีม' : ' · ลูกค้า'}

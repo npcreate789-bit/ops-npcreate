@@ -880,3 +880,42 @@
   margin: 0.65rem 0 0;
   font-size: 0.75rem;
 }
+
+.crm-line-chat__window-ok {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+}
+
+.crm-line-chat__media {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.crm-line-chat__type-tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--npc-text-muted);
+}
+
+.crm-line-chat__image,
+.crm-line-chat__sticker {
+  max-width: min(12rem, 100%);
+  border-radius: 8px;
+}
+
+.crm-line-chat__sticker {
+  max-height: 8rem;
+  object-fit: contain;
+}
+
+.crm-line-chat__media-fallback {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.crm-line-chat__map-link {
+  font-size: 0.8rem;
+  color: var(--npc-accent);
+}

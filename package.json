@@ -17,6 +17,7 @@
     "functions:deploy:manage-employee": "npx supabase functions deploy manage-employee",
     "functions:deploy:line-webhook": "npx supabase functions deploy line-webhook",
     "functions:deploy:send-line-push": "npx supabase functions deploy send-line-push",
+    "functions:deploy:line-message-content": "npx supabase functions deploy line-message-content",
     "db:push": "npx supabase db push",
     "db:wipe": "node scripts/wipe-data-keep-packages-ceo.mjs",
     "db:verify-inquiry": "node scripts/verify-public-inquiry.mjs",

@@ -15,6 +15,7 @@ import {
   leadNotificationDedupeKey,
   mapNotificationRow,
 } from '../leadNotification'
+import { leadLineMessageNotificationDedupeKey } from '../leadLineMessageNotification'
 import { isStaffAlertNotification } from '../staffAlertNotification'
 
 /** คีย์ที่ระบบสร้างจาก sync — ใช้ลบรายการที่หมดอายุโดยไม่ล้าง inbox ทั้งก้อน */
@@ -183,6 +184,13 @@ export async function markInquiryNotificationReadByLeadId(
 }
 
 /** รับทราบ Lead + คำขอติดต่อเมื่อเปิดหน้า CRM */
+export async function markLeadLineMessageNotificationReadByLeadId(
+  userId: string,
+  leadId: string,
+): Promise<void> {
+  await markNotificationReadByDedupeKey(userId, leadLineMessageNotificationDedupeKey(leadId))
+}
+
 export async function markStaffAlertReadByLeadId(
   userId: string,
   leadId: string,
@@ -190,6 +198,7 @@ export async function markStaffAlertReadByLeadId(
   await Promise.all([
     markLeadNotificationReadByLeadId(userId, leadId),
     markInquiryNotificationReadByLeadId(userId, leadId),
+    markLeadLineMessageNotificationReadByLeadId(userId, leadId),
   ])
 }
 
@@ -206,7 +215,9 @@ export async function listUnreadStaffAlertNotifications(
     .select('*')
     .eq('user_id', userId)
     .is('read_at', null)
-    .or('dedupe_key.like.lead-new-%,dedupe_key.like.inquiry-new-%')
+    .or(
+      'dedupe_key.like.lead-new-%,dedupe_key.like.inquiry-new-%,dedupe_key.like.lead-line-msg-%',
+    )
     .order('created_at', { ascending: false })
 
   if (error) throw new Error(error.message)

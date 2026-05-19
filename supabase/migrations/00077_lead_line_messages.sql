@@ -1,8 +1,14 @@
 -- CRM: แชท LINE ต่อ Lead (Messaging API webhook + push จากทีม)
+-- Idempotent: รองรับกรณี apply ด้วย db query ก่อนบันทึกใน schema_migrations
 
-CREATE TYPE public.lead_line_message_direction AS ENUM ('inbound', 'outbound');
+DO $$
+BEGIN
+  CREATE TYPE public.lead_line_message_direction AS ENUM ('inbound', 'outbound');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE public.lead_line_messages (
+CREATE TABLE IF NOT EXISTS public.lead_line_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lead_id UUID NOT NULL REFERENCES public.leads (id) ON DELETE CASCADE,
   line_user_id TEXT NOT NULL,
@@ -15,14 +21,15 @@ CREATE TABLE public.lead_line_messages (
   CONSTRAINT lead_line_messages_body_len CHECK (char_length(trim(body)) BETWEEN 1 AND 5000)
 );
 
-CREATE INDEX lead_line_messages_lead_created_idx
+CREATE INDEX IF NOT EXISTS lead_line_messages_lead_created_idx
   ON public.lead_line_messages (lead_id, created_at);
 
-CREATE INDEX lead_line_messages_line_user_id_idx
+CREATE INDEX IF NOT EXISTS lead_line_messages_line_user_id_idx
   ON public.lead_line_messages (line_user_id);
 
 ALTER TABLE public.lead_line_messages ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS lead_line_messages_select ON public.lead_line_messages;
 CREATE POLICY lead_line_messages_select ON public.lead_line_messages
   FOR SELECT TO authenticated
   USING (
@@ -40,4 +47,9 @@ CREATE POLICY lead_line_messages_select ON public.lead_line_messages
 
 -- webhook / edge functions ใช้ service_role
 
-ALTER PUBLICATION supabase_realtime ADD TABLE public.lead_line_messages;
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.lead_line_messages;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

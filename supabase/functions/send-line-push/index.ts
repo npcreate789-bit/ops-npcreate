@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
         direction: 'outbound',
         body: text,
         message_type: 'text',
+        metadata: {},
         sender_profile_id: caller.id,
       })
       if (logErr) {

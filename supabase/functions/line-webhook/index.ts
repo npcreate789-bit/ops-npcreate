@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import { summarizeLineInboundMessage, type LineInboundMessage } from './lineMessageSummary.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,17 +31,11 @@ async function verifyLineSignature(
   return expected === signature
 }
 
-interface LineTextMessage {
-  type: string
-  id?: string
-  text?: string
-}
-
 interface LineEvent {
   type: string
   replyToken?: string
   source?: { type?: string; userId?: string }
-  message?: LineTextMessage
+  message?: LineInboundMessage
   timestamp?: number
 }
 
@@ -114,9 +109,10 @@ Deno.serve(async (req) => {
       if (!lineUserId) continue
 
       const msg = event.message
-      if (!msg || msg.type !== 'text') continue
-      const text = msg.text?.trim()
-      if (!text) continue
+      if (!msg?.type) continue
+
+      const summarized = summarizeLineInboundMessage(msg)
+      if (!summarized) continue
 
       const leadId = await findLeadIdForLineUser(admin, lineUserId)
       if (!leadId) {
@@ -128,8 +124,9 @@ Deno.serve(async (req) => {
         lead_id: leadId,
         line_user_id: lineUserId,
         direction: 'inbound',
-        body: text,
-        message_type: 'text',
+        body: summarized.body,
+        message_type: summarized.message_type,
+        metadata: summarized.metadata,
       }
       if (msg.id) row.line_message_id = msg.id
 
