@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { openStaffLineChat } from '../../../../shared/line/staffLineMessaging'
 import {
+  lineLoginAndOaIdsMismatch,
   lineStaffChatIdHint,
   resolveLineMessagingRecipientId,
   resolveLineStaffChatOpenUserId,
@@ -42,6 +43,8 @@ export function LeadLineChatPanel({
   }
   const canPush = Boolean(resolveLineMessagingRecipientId(lineIds))
   const openChatId = resolveLineStaffChatOpenUserId(lineIds)
+  const idMismatch = lineLoginAndOaIdsMismatch(lineIds)
+  const onlyLoginId = Boolean(lineIds.line_user_id?.trim()) && !lineIds.line_oa_chat_user_id?.trim()
 
   const { messages, loading, sending, error, bottomRef, send } = useLeadLineChat(
     lead,
@@ -78,6 +81,14 @@ export function LeadLineChatPanel({
       {!canPush ? (
         <p className="crm-banner crm-banner--warn">
           ยังส่งข้อความจากระบบไม่ได้ — บันทึก LINE User ID จาก URL แชท OA ในส่วนด้านบนก่อน
+        </p>
+      ) : null}
+
+      {canPush && (onlyLoginId || idMismatch) ? (
+        <p className="crm-banner crm-banner--warn">
+          {idMismatch
+            ? 'ID จาก LINE Login ไม่ตรงกับแชท OA — Push อาจล้มเหลว ให้บันทึก ID จาก chat.line.biz (หลัง /chat/) หรือให้ลูกค้าทัก OA อีกครั้ง'
+            : 'มีเฉพาะ ID จากฟอร์มติดต่อ — ถ้าส่งไม่ผ่าน ให้วางลิงก์แชทจาก chat.line.biz แล้วบันทึกด้านบน'}
         </p>
       ) : null}
 

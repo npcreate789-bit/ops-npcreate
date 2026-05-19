@@ -114,10 +114,18 @@ Deno.serve(async (req) => {
       const summarized = summarizeLineInboundMessage(msg)
       if (!summarized) continue
 
-      const leadId = await findLeadIdForLineUser(admin, lineUserId)
+      let leadId = await findLeadIdForLineUser(admin, lineUserId)
       if (!leadId) {
         console.warn('line-webhook: no lead for', lineUserId)
         continue
+      }
+
+      const { error: syncErr } = await admin
+        .from('leads')
+        .update({ line_oa_chat_user_id: lineUserId })
+        .eq('id', leadId)
+      if (syncErr) {
+        console.error('line-webhook sync line_oa_chat_user_id', syncErr)
       }
 
       const row: Record<string, unknown> = {

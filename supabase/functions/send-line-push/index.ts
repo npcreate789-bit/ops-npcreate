@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import { formatLineMessagingApiError } from './lineApiErrors.ts'
 
 const PRIVILEGED = new Set(['ceo', 'operations', 'dev', 'admin', 'account', 'sales'])
 
@@ -91,6 +92,22 @@ Deno.serve(async (req) => {
       return json({ error: 'ข้อความว่างหรือยาวเกินไป' }, 400)
     }
 
+    const profileRes = await fetch(
+      `https://api.line.me/v2/bot/profile/${encodeURIComponent(to)}`,
+      { headers: { Authorization: `Bearer ${lineToken}` } },
+    )
+    if (!profileRes.ok) {
+      const errText = await profileRes.text()
+      console.error('LINE profile check failed', profileRes.status, to, errText)
+      return json(
+        {
+          error: formatLineMessagingApiError(profileRes.status, errText, 'profile'),
+          to,
+        },
+        profileRes.status === 404 ? 400 : 502,
+      )
+    }
+
     const lineRes = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: {
@@ -105,8 +122,14 @@ Deno.serve(async (req) => {
 
     if (!lineRes.ok) {
       const errText = await lineRes.text()
-      console.error('LINE push failed', lineRes.status, errText)
-      return json({ error: 'ส่งข้อความ LINE ไม่สำเร็จ — ตรวจสอบ token และว่าลูกค้าเป็นเพื่อน OA' }, 502)
+      console.error('LINE push failed', lineRes.status, to, errText)
+      return json(
+        {
+          error: formatLineMessagingApiError(lineRes.status, errText, 'push'),
+          to,
+        },
+        502,
+      )
     }
 
     const leadId = body.lead_id?.trim()

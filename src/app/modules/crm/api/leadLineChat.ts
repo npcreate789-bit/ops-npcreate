@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
-import { resolveLineMessagingRecipientId } from '../../../../shared/line/lineUserIdResolution'
+import { resolveLeadLinePushRecipient } from '../../../../shared/line/resolveLeadLinePushRecipient'
 import { parseFunctionInvokeError } from '../../../../shared/supabase/parseFunctionInvokeError'
 import type { Lead } from '../types'
 import type { LeadLineMessage } from '../types/leadLineChat'
@@ -31,12 +31,15 @@ export async function sendLeadLineChatMessage(
   const body = text.trim()
   if (!body) throw new Error('กรุณาพิมพ์ข้อความ')
 
-  const to = resolveLineMessagingRecipientId({
+  const to = await resolveLeadLinePushRecipient({
+    id: lead.id,
     line_user_id: lead.line_user_id,
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
   })
   if (!to) {
-    throw new Error('ยังไม่มี LINE User ID สำหรับส่งข้อความ — บันทึก ID จาก chat.line.biz ก่อน')
+    throw new Error(
+      'ยังไม่มี LINE User ID สำหรับส่งข้อความ — ให้ลูกค้าทัก OA หรือบันทึก ID จาก chat.line.biz (หลัง /chat/)',
+    )
   }
 
   if (!isSupabaseConfigured || !supabase) {
