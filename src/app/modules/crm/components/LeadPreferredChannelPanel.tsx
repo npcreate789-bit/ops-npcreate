@@ -11,7 +11,10 @@ import {
   lineLoginAndOaIdsMismatch,
   resolveLineStaffChatOpenUserId,
 } from '../../../../shared/line/lineUserIdResolution'
-import { openStaffLineChat } from '../../../../shared/line/staffLineMessaging'
+import {
+  openStaffLineChat,
+  resolveStaffLineChatOpenUrl,
+} from '../../../../shared/line/staffLineMessaging'
 import { LeadLineOaChatIdField } from './LeadLineOaChatIdField'
 import '../crm.css'
 
@@ -56,16 +59,30 @@ export function LeadPreferredChannelPanel({
   async function handleOpenLine() {
     setOpenLineError(null)
     const oaOpenId = resolveLineStaffChatOpenUserId(lineIds)
-    const userId = oaOpenId ?? lineIds.line_user_id?.trim() ?? null
-    if (!userId) {
-      setOpenLineError('ยังไม่มี LINE User ID — บันทึกจากแชท OA หรือให้ลูกค้าทัก @npcreate')
+    if (!oaOpenId) {
+      const inbox = resolveStaffLineChatOpenUrl(null, { mode: 'inbox', surface: 'chat' })
+      if (!inbox.ok) {
+        setOpenLineError(inbox.message)
+        return
+      }
+      const opened = await openStaffLineChat(null, { mode: 'inbox', surface: 'chat' })
+      if (!opened) {
+        setOpenLineError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
+      } else if (!hasOaChat) {
+        setOpenLineError(
+          'เปิดรายการแชทแล้ว — วางลิงก์เต็มจาก chat.line.biz แล้วบันทึก ID หลัง /chat/ เพื่อเปิดแชทลูกค้าตรง',
+        )
+      }
       return
     }
-    const opened = await openStaffLineChat(userId, { mode: oaOpenId ? 'direct' : 'auto' })
+    const resolved = resolveStaffLineChatOpenUrl(oaOpenId, { mode: 'direct', surface: 'chat' })
+    if (!resolved.ok) {
+      setOpenLineError(resolved.message)
+      return
+    }
+    const opened = await openStaffLineChat(oaOpenId, { mode: 'direct', surface: 'chat' })
     if (!opened) {
-      setOpenLineError(
-        'เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาตป็อปอัปสำหรับเว็บนี้ หรือเปิด chat.line.biz แล้วค้นหาจาก ID ที่คัดลอก',
-      )
+      setOpenLineError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
     }
   }
 

@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { openStaffLineChat } from '../../../../shared/line/staffLineMessaging'
+import {
+  openStaffLineChat,
+  resolveStaffLineChatOpenUrl,
+} from '../../../../shared/line/staffLineMessaging'
 import {
   lineLoginAndOaIdsMismatch,
   resolveLineMessagingRecipientId,
@@ -102,9 +105,20 @@ export function LeadLineChatPanel({
             className="crm-btn crm-btn--ghost crm-line-chat__open-external"
             onClick={() => {
               setOpenManagerError(null)
-              void openStaffLineChat(openChatId, { mode: 'direct' }).then((opened) => {
+              const resolved = resolveStaffLineChatOpenUrl(openChatId, {
+                mode: 'direct',
+                surface: 'manager',
+              })
+              if (!resolved.ok) {
+                setOpenManagerError(resolved.message)
+                return
+              }
+              void openStaffLineChat(openChatId, {
+                mode: 'direct',
+                surface: 'manager',
+              }).then((opened) => {
                 if (!opened) {
-                  setOpenManagerError('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาตป็อปอัป')
+                  setOpenManagerError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
                 }
               })
             }}

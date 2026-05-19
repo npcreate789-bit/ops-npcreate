@@ -1,5 +1,14 @@
 import { lineOaStarterMessageUrl } from '../contact/channelConnectConfig'
 import { NPCREATE_LINE_OA_URL } from '../crm/preferredContactChannel'
+import {
+  buildLineChatBizDirectUrl,
+  buildLineChatBizInboxUrl,
+  buildLineManagerDirectUrl,
+  buildLineManagerInboxUrl,
+  isLineMessagingUserIdForUrl,
+  lineChatBizAccountIdConfigError,
+  normalizeLineChatBizAccountId,
+} from './lineChatBizUrl'
 
 function resolveViteEnv(value: string | undefined): string {
   if (value == null) return ''
@@ -8,21 +17,22 @@ function resolveViteEnv(value: string | undefined): string {
   return trimmed
 }
 
-/** LINE Official Account id on chat.line.biz (first path segment when staff opens OA chats) */
-export const LINE_CHAT_BIZ_ACCOUNT_ID = resolveViteEnv(
+const RAW_LINE_CHAT_BIZ_ACCOUNT_ID = resolveViteEnv(
   import.meta.env.VITE_LINE_CHAT_BIZ_ACCOUNT_ID,
 )
 
-/** LINE Messaging API user id: U + 32 hex (see LINE Developers docs) */
-const LINE_MESSAGING_USER_ID_RE = /^U[0-9a-f]{32}$/i
+/** account id จาก env (U2626… ไม่ใช่ @npcreate) */
+export const LINE_CHAT_BIZ_ACCOUNT_ID = normalizeLineChatBizAccountId(
+  RAW_LINE_CHAT_BIZ_ACCOUNT_ID,
+)
 
+/** @deprecated ใช้ isLineMessagingUserIdForUrl จาก lineChatBizUrl */
 export function isLineMessagingUserId(id: string | null | undefined): id is string {
-  const trimmed = id?.trim()
-  return Boolean(trimmed && LINE_MESSAGING_USER_ID_RE.test(trimmed))
+  return isLineMessagingUserIdForUrl(id)
 }
 
 export function isValidLineUserId(id: string | null | undefined): id is string {
-  return isLineMessagingUserId(id)
+  return isLineMessagingUserIdForUrl(id)
 }
 
 export function isMobileBrowser(): boolean {
@@ -32,45 +42,32 @@ export function isMobileBrowser(): boolean {
   )
 }
 
-/** Safari / WebKit (ไม่รวม Chrome, Edge, Firefox iOS) */
 export function isSafariBrowser(): boolean {
   if (typeof navigator === 'undefined') return false
   const ua = navigator.userAgent
   return /Safari/i.test(ua) && !/Chrome|CriOS|Chromium|Edg|OPR|FxiOS/i.test(ua)
 }
 
-/** ค้าง /contact เปิด OAuth แท็บใหม่ — มือถือ + iPad Safari */
 export function shouldUseLineOAuthKeeperTab(): boolean {
   if (isMobileBrowser()) return true
   if (typeof navigator === 'undefined') return false
   return isSafariBrowser() && navigator.maxTouchPoints > 1
 }
 
-/** ลิงก์ line.me พร้อมข้อความล่วงหน้า (มือถือ / fallback) */
 export function lineOaMessageUrlWithText(text: string): string {
   return lineOaStarterMessageUrl(text)
 }
 
-/** รายการแชท OA บน chat.line.biz (ไม่ระบุลูกค้า — ไม่ 404 จาก user id ผิดช่องทาง) */
 export function staffLineOaInboxUrl(): string | null {
-  if (!LINE_CHAT_BIZ_ACCOUNT_ID) return null
-  return `https://chat.line.biz/${LINE_CHAT_BIZ_ACCOUNT_ID}/chat`
+  return buildLineChatBizInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
 }
 
-/** LINE Official Account Manager — แชท (ใช้ account id เดียวกับ chat.line.biz) */
 export function staffLineManagerInboxUrl(): string | null {
-  if (!LINE_CHAT_BIZ_ACCOUNT_ID) return null
-  return `https://manager.line.biz/account/${LINE_CHAT_BIZ_ACCOUNT_ID}/chat`
+  return buildLineManagerInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
 }
 
-/**
- * แชทตรงลูกค้าบน chat.line.biz — ใช้ได้เมื่อ userId เป็น Messaging API id ของลูกค้าที่เคยทัก OA แล้ว
- * ID จาก LINE Login (/contact OAuth) มักไม่ตรง → 404 หลังล็อกอิน แม้ URL รูปแบบถูกต้อง
- */
 export function staffLineDirectUserChatUrl(lineUserId: string): string | null {
-  const uid = lineUserId.trim()
-  if (!isLineMessagingUserId(uid) || !LINE_CHAT_BIZ_ACCOUNT_ID) return null
-  return `https://chat.line.biz/${LINE_CHAT_BIZ_ACCOUNT_ID}/chat/${uid}`
+  return buildLineChatBizDirectUrl(lineUserId, LINE_CHAT_BIZ_ACCOUNT_ID)
 }
 
 function staffDirectUserChatEnabled(options?: { directUserChat?: boolean }): boolean {
@@ -80,36 +77,87 @@ function staffDirectUserChatEnabled(options?: { directUserChat?: boolean }): boo
 }
 
 export type StaffLineChatOpenMode = 'auto' | 'inbox' | 'direct'
+export type StaffLineChatSurface = 'chat' | 'manager'
 
-/**
- * URL สำหรับทีมเปิดแชท LINE กับลูกค้า
- * - default (auto): เปิด inbox OA + คัดลอก user id (ถ้ามี) — หลีกเลี่ยง 404 จาก Login id
- * - direct: .../chat/{userId} — เปิดเมื่อยืนยันว่า id ตรงกับแชท OA แล้ว
- */
+export type ResolveStaffLineChatOpenResult =
+  | { ok: true; url: string }
+  | { ok: false; message: string }
+
+export function resolveStaffLineChatOpenUrl(
+  chatUserId: string | null | undefined,
+  options?: {
+    mode?: StaffLineChatOpenMode
+    surface?: StaffLineChatSurface
+  },
+): ResolveStaffLineChatOpenResult {
+  const uid = chatUserId?.trim() ?? ''
+  const mode = options?.mode ?? 'auto'
+  const surface = options?.surface ?? 'chat'
+
+  const configErr = lineChatBizAccountIdConfigError(LINE_CHAT_BIZ_ACCOUNT_ID)
+  if (configErr) return { ok: false, message: configErr }
+
+  if (mode === 'direct') {
+    if (!isLineMessagingUserIdForUrl(uid)) {
+      return {
+        ok: false,
+        message:
+          'ต้องบันทึก LINE User ID จาก URL แชท OA (หลัง /chat/) — ใช้ Login ID เปิดแชทตรงไม่ได้',
+      }
+    }
+    const url =
+      surface === 'manager'
+        ? buildLineManagerDirectUrl(uid, LINE_CHAT_BIZ_ACCOUNT_ID)
+        : buildLineChatBizDirectUrl(uid, LINE_CHAT_BIZ_ACCOUNT_ID)
+    if (!url) {
+      return { ok: false, message: 'สร้างลิงก์แชทไม่สำเร็จ — ตรวจสอบ VITE_LINE_CHAT_BIZ_ACCOUNT_ID' }
+    }
+    return { ok: true, url }
+  }
+
+  const inbox =
+    surface === 'manager'
+      ? buildLineManagerInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
+      : buildLineChatBizInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
+  if (inbox) return { ok: true, url: inbox }
+
+  return { ok: true, url: NPCREATE_LINE_OA_URL }
+}
+
 export function staffLineChatUrl(
   lineUserId?: string | null,
-  options?: { text?: string; directUserChat?: boolean; mode?: StaffLineChatOpenMode },
+  options?: {
+    text?: string
+    directUserChat?: boolean
+    mode?: StaffLineChatOpenMode
+    surface?: StaffLineChatSurface
+  },
 ): string {
   const uid = lineUserId?.trim()
   const mode = options?.mode ?? 'auto'
   const useDirect =
     mode === 'direct' ||
-    (mode === 'auto' && staffDirectUserChatEnabled(options) && isLineMessagingUserId(uid))
+    (mode === 'auto' && staffDirectUserChatEnabled(options) && isLineMessagingUserIdForUrl(uid))
 
   if (useDirect && uid) {
-    const direct = staffLineDirectUserChatUrl(uid)
-    if (direct) return direct
+    const resolved = resolveStaffLineChatOpenUrl(uid, {
+      mode: 'direct',
+      surface: options?.surface,
+    })
+    if (resolved.ok) return resolved.url
   }
 
-  const inbox = staffLineOaInboxUrl()
-  if (inbox) return inbox
+  const resolved = resolveStaffLineChatOpenUrl(uid || null, {
+    mode: mode === 'direct' ? 'inbox' : mode,
+    surface: options?.surface,
+  })
+  if (resolved.ok) return resolved.url
 
   const text = options?.text?.trim()
   if (text) return lineOaMessageUrlWithText(text)
   return NPCREATE_LINE_OA_URL
 }
 
-/** เปิดแท็บใหม่ทันที (ต้องเรียกจาก click handler โดยไม่ await ก่อนหน้า) */
 export function openUrlInNewTab(url: string): boolean {
   const win = window.open(url, '_blank', 'noopener,noreferrer')
   if (win) return true
@@ -137,21 +185,30 @@ async function copyLineUserIdForStaffSearch(userId: string): Promise<boolean> {
   }
 }
 
-/**
- * เปิดแชท LINE สำหรับทีม
- * เปิดแท็บก่อนเสมอ (อยู่ใน user gesture) แล้วค่อยคัดลอก ID สำหรับโหมด inbox
- * @returns false ถ้าเบราว์เซอร์บล็อกป็อปอัป
- */
 export async function openStaffLineChat(
   lineUserId?: string | null,
-  options?: { text?: string; directUserChat?: boolean; mode?: StaffLineChatOpenMode },
+  options?: {
+    text?: string
+    directUserChat?: boolean
+    mode?: StaffLineChatOpenMode
+    surface?: StaffLineChatSurface
+  },
 ): Promise<boolean> {
   const uid = lineUserId?.trim()
+  const mode = options?.mode ?? 'auto'
   const useDirect =
-    options?.mode === 'direct' ||
-    (options?.mode !== 'inbox' && staffDirectUserChatEnabled(options) && isLineMessagingUserId(uid))
+    mode === 'direct' ||
+    (mode !== 'inbox' && staffDirectUserChatEnabled(options) && isLineMessagingUserIdForUrl(uid))
 
-  const url = staffLineChatUrl(lineUserId, options)
+  const resolved = resolveStaffLineChatOpenUrl(uid || null, {
+    mode: useDirect && uid ? 'direct' : mode === 'direct' ? 'inbox' : mode,
+    surface: options?.surface,
+  })
+
+  const url = resolved.ok
+    ? resolved.url
+    : staffLineChatUrl(lineUserId, { ...options, mode: 'inbox' })
+
   const opened = openUrlInNewTab(url)
 
   if (uid && !useDirect) {
@@ -161,19 +218,17 @@ export async function openStaffLineChat(
   return opened
 }
 
-/** เตือนเมื่อยังเปิดแชทตรงลูกค้าไม่ได้หรือใช้โหมด inbox */
 export function staffLineDirectChatHint(lineUserId?: string | null): string | null {
   if (!lineUserId?.trim()) {
     return 'ยังไม่มี LINE User ID — ให้ลูกค้าเชื่อมต่อ LINE จากฟอร์มติดต่อหรือเพิ่มเพื่อน OA'
   }
-  if (!isLineMessagingUserId(lineUserId)) {
+  if (!isLineMessagingUserIdForUrl(lineUserId)) {
     return 'LINE User ID ไม่ถูกรูปแบบ (U ตามด้วยตัวเลข a-f 32 ตัว)'
   }
-  if (!LINE_CHAT_BIZ_ACCOUNT_ID) {
-    return 'ตั้ง VITE_LINE_CHAT_BIZ_ACCOUNT_ID เพื่อเปิดรายการแชท OA บน desktop'
-  }
+  const configErr = lineChatBizAccountIdConfigError(LINE_CHAT_BIZ_ACCOUNT_ID)
+  if (configErr) return configErr
   if (staffDirectUserChatEnabled()) {
-    return 'เปิดแชทตรงลูกค้า (ตั้ง VITE_LINE_STAFF_DIRECT_USER_CHAT) — ต้องเป็น user id จากแชท OA ไม่ใช่แค่ LINE Login'
+    return 'เปิดแชทตรง — ต้องเป็น user id จากแชท OA (หลัง /chat/ ใน URL)'
   }
-  return 'เปิดรายการแชท OA — คัดลอก LINE User ID แล้วค้นหาใน chat.line.biz (ID จากฟอร์มติดต่อ = LINE Login อาจไม่ตรงแชท OA จนกว่าลูกค้าทัก @npcreate)'
+  return 'เปิดรายการแชท OA — คัดลอก user id จาก URL แชทลูกค้าแล้วค้นหา'
 }

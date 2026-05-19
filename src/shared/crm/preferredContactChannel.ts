@@ -1,4 +1,6 @@
 import type { Project } from '../../app/modules/projects/types'
+import { buildLineChatBizDirectUrl } from '../line/lineChatBizUrl'
+import { LINE_CHAT_BIZ_ACCOUNT_ID } from '../line/lineStaffOpenUrl'
 import type { LeadLineIds } from '../line/lineUserIdResolution'
 import { resolveLineStaffChatOpenUserId } from '../line/lineUserIdResolution'
 import { staffLineChatUrl } from '../line/lineStaffOpenUrl'
@@ -54,8 +56,11 @@ export function openUrlForPreferredChannel(
   if (channel !== 'line') return NPCREATE_FACEBOOK_MESSENGER_URL
   const ids = normalizeLineStaffIds(lineIds)
   const oaOpenId = resolveLineStaffChatOpenUserId(ids)
-  if (oaOpenId) return staffLineChatUrl(oaOpenId, { mode: 'direct' })
-  return staffLineChatUrl(ids.line_user_id)
+  if (oaOpenId) {
+    const direct = buildLineChatBizDirectUrl(oaOpenId, LINE_CHAT_BIZ_ACCOUNT_ID)
+    if (direct) return direct
+  }
+  return staffLineChatUrl(ids.line_user_id, { mode: 'inbox' })
 }
 
 export function staffOpenChannelLabel(channel: PreferredContactChannel): string {

@@ -17,6 +17,7 @@ export {
   isValidLineUserId,
   LINE_CHAT_BIZ_ACCOUNT_ID,
   openStaffLineChat,
+  resolveStaffLineChatOpenUrl,
   staffLineChatUrl,
   staffLineDirectChatHint,
   staffLineDirectUserChatUrl,

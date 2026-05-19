@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { LINE_CHAT_BIZ_ACCOUNT_ID } from '../../../../shared/line/staffLineMessaging'
 import {
   lineLoginAndOaIdsMismatch,
   parseLineOaChatUserIdFromInput,
@@ -156,7 +157,18 @@ export function LeadLineOaChatIdField({
         <details className="crm-line-ids__edit" open={needsSetup}>
           <summary>{hasOaId ? 'แก้ไข ID แชท OA' : 'บันทึก ID จากแชท OA'}</summary>
           <p className="crm-line-ids__edit-hint muted">
-            คัดลอกจาก URL บน chat.line.biz ส่วนหลัง <code>/chat/</code>
+            วางลิงก์เต็ม เช่น{' '}
+            <code>
+              https://chat.line.biz/U2626…/chat/U1bfd708…
+            </code>
+            {LINE_CHAT_BIZ_ACCOUNT_ID ? (
+              <>
+                {' '}
+                (account ในระบบ: <code>{LINE_CHAT_BIZ_ACCOUNT_ID.slice(0, 10)}…</code>)
+              </>
+            ) : (
+              ' — ตั้ง VITE_LINE_CHAT_BIZ_ACCOUNT_ID บน Vercel'
+            )}
           </p>
           <div className="crm-line-ids__controls">
             <input

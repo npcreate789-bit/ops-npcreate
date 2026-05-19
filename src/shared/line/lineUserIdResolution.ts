@@ -1,9 +1,18 @@
+import {
+  isLineMessagingUserIdForUrl,
+  parseLineChatBizUrl,
+} from './lineChatBizUrl'
 import { isLineMessagingUserId } from './lineStaffOpenUrl'
 
 /** ดึง LINE Messaging user id จาก URL chat.line.biz หรือข้อความที่วาง */
 export function parseLineOaChatUserIdFromInput(input: string): string | null {
   const raw = input.trim()
   if (!raw) return null
+
+  const parsed = parseLineChatBizUrl(raw)
+  if (parsed?.chatUserId && isLineMessagingUserIdForUrl(parsed.chatUserId)) {
+    return parsed.chatUserId
+  }
 
   const chatPathMatch = raw.match(/\/chat\/(U[0-9a-f]{32})\b/i)
   if (chatPathMatch?.[1] && isLineMessagingUserId(chatPathMatch[1])) {
@@ -16,6 +25,11 @@ export function parseLineOaChatUserIdFromInput(input: string): string | null {
   }
 
   return null
+}
+
+/** account id จาก URL chat.line.biz (segment แรกหลังโดเมน) */
+export function parseLineChatBizAccountIdFromInput(input: string): string | null {
+  return parseLineChatBizUrl(input)?.accountId ?? null
 }
 
 export interface LeadLineIds {
