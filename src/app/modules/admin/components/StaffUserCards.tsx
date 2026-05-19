@@ -5,14 +5,17 @@ import type { AdminUserRow } from '../types'
 interface StaffUserCardsProps {
   users: AdminUserRow[]
   actorId: string | undefined
+  mixedOnly?: boolean
   onEdit: (user: AdminUserRow) => void
 }
 
-export function StaffUserCards({ users, actorId, onEdit }: StaffUserCardsProps) {
+export function StaffUserCards({ users, actorId, mixedOnly, onEdit }: StaffUserCardsProps) {
   if (users.length === 0) {
     return (
       <p className="muted admin-staff-empty">
-        ยังไม่มีบัญชีพนักงาน — กด「เพิ่มพนักงานใหม่」ด้านบน
+        {mixedOnly
+          ? 'ไม่มีบัญชีผสมบทบาทในรายการ — ดีแล้ว'
+          : 'ยังไม่มีบัญชีพนักงาน — กด「เพิ่มพนักงาน」ด้านบน'}
       </p>
     )
   }
@@ -25,7 +28,16 @@ export function StaffUserCards({ users, actorId, onEdit }: StaffUserCardsProps) 
         const staffRoles = user.roles.filter((r) => r !== 'client') as AppRole[]
 
         return (
-          <li key={user.id} className={`admin-staff-card${!user.is_active ? ' is-inactive' : ''}`}>
+          <li
+            key={user.id}
+            className={[
+              'admin-staff-card',
+              !user.is_active ? 'is-inactive' : '',
+              kind === 'mixed' ? 'admin-staff-card--mixed' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             <div className="admin-staff-card__head">
               <span className={`admin-audience-badge admin-audience-badge--${kind}`}>
                 {adminUserKindLabel(kind)}
@@ -54,6 +66,11 @@ export function StaffUserCards({ users, actorId, onEdit }: StaffUserCardsProps) 
               <p className="admin-staff-card__hint">รอตั้งรหัสผ่านใหม่</p>
             )}
             {isSelf && <p className="muted admin-staff-card__hint">บัญชีของคุณ</p>}
+            {kind === 'mixed' && (
+              <p className="admin-staff-card__hint admin-staff-card__hint--warn">
+                ควรถอนบทบาทลูกค้าหรือแยกบัญชี
+              </p>
+            )}
             <button
               type="button"
               className="crm-btn crm-btn--ghost admin-staff-card__edit"

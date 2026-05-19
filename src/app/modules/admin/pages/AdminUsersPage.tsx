@@ -6,22 +6,19 @@ import { listCustomersForSelect } from '../../finance/api/payments'
 import { clientWorkspaceUrl } from '../../customers/customerLinks'
 import { canManageCeoUserStatus, canViewStaffPasswords } from '../access'
 import { listAdminUsers, setClientCustomerAccess, setUserActive } from '../api/users'
-import { AdminAudienceFilterBar } from '../components/AdminAudienceFilterBar'
 import { AdminRoleGuide } from '../components/AdminRoleGuide'
 import { CreateClientAccountWizard } from '../components/CreateClientAccountWizard'
-import { AdminFlowTabs, type AdminFlowSection } from '../components/AdminFlowTabs'
+import {
+  AdminFlowTabs,
+  parseAdminFlowSection,
+  type AdminFlowSection,
+} from '../components/AdminFlowTabs'
 import { CreateEmployeeForm } from '../components/CreateEmployeeForm'
 import { EmployeeEditSheet } from '../components/EmployeeEditSheet'
 import { StaffUserCards } from '../components/StaffUserCards'
 import { ChatTemplatesAdmin } from '../components/ChatTemplatesAdmin'
 import { DefaultLeadOwnerSettingCard } from '../components/DefaultLeadOwnerSetting'
-import {
-  adminUserKind,
-  type AdminUserKind,
-  countAdminAudience,
-  matchesAdminAudience,
-  type AdminAudienceFilter,
-} from '../userAudience'
+import { adminUserKind, type AdminUserKind, countAdminAudience } from '../userAudience'
 import type { AdminUserRow } from '../types'
 import '../../crm/crm.css'
 import '../../tasks/tasks.css'
@@ -30,23 +27,43 @@ import '../admin.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
+type StaffListFilter = 'all' | 'mixed'
+
 export function AdminUsersPage() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const presetCustomerId = searchParams.get('customerId')
+  const tabParam = searchParams.get('tab')
+
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const canManage = canManageAdminUsers(roles) || !configured
   const showPasswords = canViewStaffPasswords(roles) || !configured
 
+  const defaultSection = presetCustomerId ? 'client' : 'staff'
+  const section = parseAdminFlowSection(tabParam, defaultSection)
+
   const [rows, setRows] = useState<AdminUserRow[]>([])
   const [query, setQuery] = useState('')
-  const [audienceFilter, setAudienceFilter] = useState<AdminAudienceFilter>('staff')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [customers, setCustomers] = useState<{ id: string; brand_name: string }[]>([])
-  const [section, setSection] = useState<AdminFlowSection>('staff')
+  const [staffFilter, setStaffFilter] = useState<StaffListFilter>('all')
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null)
+
+  const setSection = useCallback(
+    (next: AdminFlowSection) => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev)
+          p.set('tab', next)
+          return p
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -67,14 +84,12 @@ export function AdminUsersPage() {
   useEffect(() => {
     if (!presetCustomerId) return
     setSection('client')
-    const el = document.getElementById('admin-create-client')
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [presetCustomerId, loading])
+  }, [presetCustomerId, setSection])
 
   useEffect(() => {
-    if (section === 'client') setAudienceFilter('client')
-    else if (section === 'staff') setAudienceFilter('staff')
-  }, [section])
+    if (!presetCustomerId || loading || section !== 'client') return
+    document.getElementById('admin-create-client')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [presetCustomerId, loading, section])
 
   useEffect(() => {
     listCustomersForSelect()
@@ -84,10 +99,10 @@ export function AdminUsersPage() {
 
   const audienceCounts = useMemo(() => countAdminAudience(rows), [rows])
 
-  const filtered = useMemo(() => {
+  const clientUsers = useMemo(() => {
     const q = query.trim().toLowerCase()
     return rows.filter((u) => {
-      if (!matchesAdminAudience(u, audienceFilter)) return false
+      if (adminUserKind(u) !== 'client') return false
       if (!q) return true
       const brand =
         customers.find((c) => c.id === u.client_customer_id)?.brand_name?.toLowerCase() ?? ''
@@ -98,11 +113,12 @@ export function AdminUsersPage() {
         brand.includes(q)
       )
     })
-  }, [rows, query, audienceFilter, customers])
+  }, [rows, query, customers])
 
   const staffForCards = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const staffKinds: AdminUserKind[] = ['staff', 'mixed', 'none']
+    const staffKinds: AdminUserKind[] =
+      staffFilter === 'mixed' ? ['mixed'] : ['staff', 'mixed', 'none']
     return rows.filter((u) => {
       if (!staffKinds.includes(adminUserKind(u))) return false
       if (!q) return true
@@ -112,7 +128,12 @@ export function AdminUsersPage() {
         (u.full_name?.toLowerCase().includes(q) ?? false)
       )
     })
-  }, [rows, query])
+  }, [rows, query, staffFilter])
+
+  const editingUserLive = useMemo(() => {
+    if (!editingUser) return null
+    return rows.find((r) => r.id === editingUser.id) ?? editingUser
+  }, [rows, editingUser])
 
   async function handleToggleActive(user: AdminUserRow) {
     if (!canManage || user.id === profile?.id) return
@@ -151,6 +172,12 @@ export function AdminUsersPage() {
     return customers.find((c) => c.id === user.client_customer_id)?.brand_name ?? null
   }
 
+  function showMixedAccounts() {
+    setSection('staff')
+    setStaffFilter('mixed')
+    document.getElementById('admin-staff-list')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   if (!canManage) {
     return (
       <div className="page">
@@ -167,7 +194,7 @@ export function AdminUsersPage() {
         <div>
           <h1>จัดการผู้ใช้</h1>
           <p className="muted">
-            แยกบัญชีพนักงานกับลูกค้าพอร์ทัล — สร้างคนละขั้นตอน ไม่ปนกัน
+            แยกบัญชีพนักงานกับลูกค้าพอร์ทัล — สร้าง · แก้ไข · ลบ ตาม Flow ด้านล่าง
           </p>
           <nav className="phase2-subnav admin-page__subnav" aria-label="เมนู admin">
             <Link to="/app/admin/logs">Audit ผู้ดูแล</Link>
@@ -178,39 +205,53 @@ export function AdminUsersPage() {
 
       <AdminRoleGuide />
 
-      {mixedCount > 0 && audienceFilter !== 'mixed' && (
+      {mixedCount > 0 && staffFilter !== 'mixed' && (
         <p className="crm-banner crm-banner--warn admin-mixed-banner">
           มีบัญชีผสมบทบาท {mixedCount} รายการ —{' '}
-          <button
-            type="button"
-            className="crm-btn crm-btn--ghost"
-            onClick={() => setAudienceFilter('mixed')}
-          >
+          <button type="button" className="crm-btn crm-btn--ghost" onClick={showMixedAccounts}>
             ดูและแยกบัญชี
           </button>
         </p>
       )}
 
       <div className="admin-summary-grid">
-        <div className="admin-summary-card">
+        <button
+          type="button"
+          className={`admin-summary-card admin-summary-card--btn${section === 'staff' ? ' admin-summary-card--active' : ''}`}
+          onClick={() => {
+            setSection('staff')
+            setStaffFilter('all')
+          }}
+        >
           <span className="muted">พนักงาน</span>
-          <strong>{audienceCounts.staff ?? 0}</strong>
-        </div>
-        <div className="admin-summary-card admin-summary-card--client">
+          <strong>{(audienceCounts.staff ?? 0) + (audienceCounts.none ?? 0)}</strong>
+        </button>
+        <button
+          type="button"
+          className={`admin-summary-card admin-summary-card--btn admin-summary-card--client${section === 'client' ? ' admin-summary-card--active' : ''}`}
+          onClick={() => setSection('client')}
+        >
           <span className="muted">ลูกค้าพอร์ทัล</span>
           <strong>{audienceCounts.client ?? 0}</strong>
-        </div>
+        </button>
         {mixedCount > 0 && (
-          <div className="admin-summary-card admin-summary-card--warn">
+          <button
+            type="button"
+            className={`admin-summary-card admin-summary-card--btn admin-summary-card--warn${staffFilter === 'mixed' ? ' admin-summary-card--active' : ''}`}
+            onClick={showMixedAccounts}
+          >
             <span className="muted">ผสมบทบาท</span>
             <strong>{mixedCount}</strong>
-          </div>
+          </button>
         )}
       </div>
 
       <AdminFlowTabs
         active={section}
-        onSelect={setSection}
+        onSelect={(tab) => {
+          setSection(tab)
+          if (tab === 'staff') setStaffFilter('all')
+        }}
         staffCount={staffForCards.length}
         clientCount={audienceCounts.client ?? 0}
       />
@@ -225,7 +266,7 @@ export function AdminUsersPage() {
             />
           </section>
 
-          <section className="card card--wide admin-staff-list-panel">
+          <section className="card card--wide admin-staff-list-panel" id="admin-staff-list">
             <header className="admin-panel-head">
               <div>
                 <h2 className="crm-section-title">รายการพนักงาน</h2>
@@ -233,16 +274,33 @@ export function AdminUsersPage() {
                   กดการ์ดเพื่อแก้ไขชื่อ บทบาท รหัสผ่าน หรือลบบัญชี
                 </p>
               </div>
-              <button
-                type="button"
-                className="crm-btn crm-btn--ghost"
-                onClick={() => {
-                  document.getElementById('admin-create-staff')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-              >
-                + เพิ่มพนักงาน
-              </button>
+              <div className="admin-panel-head__actions">
+                {staffFilter === 'mixed' && (
+                  <button
+                    type="button"
+                    className="crm-btn crm-btn--ghost"
+                    onClick={() => setStaffFilter('all')}
+                  >
+                    แสดงทั้งหมด
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="crm-btn crm-btn--ghost"
+                  onClick={() => {
+                    document.getElementById('admin-create-staff')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                >
+                  + เพิ่มพนักงาน
+                </button>
+              </div>
             </header>
+
+            {staffFilter === 'mixed' && (
+              <p className="crm-banner crm-banner--warn">
+                แสดงเฉพาะบัญชีที่มีทั้งบทบาทพนักงานและลูกค้า — เปิดแก้ไขแล้วถอนบทบาท client หรือลบบทบาทพนักงานที่ไม่ใช้
+              </p>
+            )}
 
             <div className="admin-toolbar">
               <input
@@ -263,6 +321,7 @@ export function AdminUsersPage() {
               <StaffUserCards
                 users={staffForCards}
                 actorId={profile?.id}
+                mixedOnly={staffFilter === 'mixed'}
                 onEdit={setEditingUser}
               />
             )}
@@ -286,12 +345,6 @@ export function AdminUsersPage() {
             <p className="muted admin-list-intro">
               ลูกค้าเข้าระบบที่ <Link to="/client/login">/client/login</Link> — ผูก 1 แบรนด์ต่อบัญชี
             </p>
-
-            <AdminAudienceFilterBar
-              active="client"
-              onSelect={setAudienceFilter}
-              counts={audienceCounts}
-            />
 
             <div className="admin-toolbar">
               <input
@@ -320,7 +373,7 @@ export function AdminUsersPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((user) => {
+                    {clientUsers.map((user) => {
                       const busy = savingId === user.id
                       const isSelf = user.id === profile?.id
                       const brand = brandNameFor(user)
@@ -395,7 +448,7 @@ export function AdminUsersPage() {
                     })}
                   </tbody>
                 </table>
-                {filtered.length === 0 && (
+                {clientUsers.length === 0 && (
                   <p className="muted admin-empty">
                     {query.trim()
                       ? 'ไม่พบผู้ใช้ที่ตรงกับคำค้น'
@@ -421,19 +474,21 @@ export function AdminUsersPage() {
       )}
 
       <EmployeeEditSheet
-        user={editingUser}
-        open={editingUser != null}
+        user={editingUserLive}
+        open={editingUserLive != null}
         actorId={profile?.id}
         creatorRoles={roles}
         configured={configured}
         onClose={() => setEditingUser(null)}
         onSaved={() => void load()}
-        onDeleted={() => void load()}
+        onDeleted={() => {
+          setEditingUser(null)
+          void load()
+        }}
       />
 
       <p className="muted admin-hint admin-page__footer-hint">
-        บัญชี CEO จัดการได้เฉพาะ CEO · production ต้อง deploy{' '}
-        <code>manage-employee</code> สำหรับแก้ไข/ลบ
+        บัญชี CEO จัดการได้เฉพาะ CEO
       </p>
     </div>
   )

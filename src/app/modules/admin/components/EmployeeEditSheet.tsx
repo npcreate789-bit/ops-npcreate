@@ -14,7 +14,7 @@ import {
   updateEmployeeProfile,
 } from '../api/manageEmployee'
 import { setUserActive, setUserRoles } from '../api/users'
-import { assertValidRoleMix } from '../userAudience'
+import { adminUserKind, assertValidRoleMix } from '../userAudience'
 import type { AdminUserRow } from '../types'
 
 function copyText(text: string) {
@@ -65,11 +65,14 @@ export function EmployeeEditSheet({
     : false
   const showPasswords = canViewStaffPasswords(creatorRoles) || !configured
 
+  const userKind = user ? adminUserKind(user) : null
+  const isMixed = userKind === 'mixed'
+
   useEffect(() => {
     if (!user || !open) return
     setFullName(user.full_name ?? '')
     setLoginId(user.login_id)
-    setDraftRoles([...user.roles])
+    setDraftRoles(user.roles.filter((r) => r !== 'client'))
     setError(null)
     setResetPw(null)
     setConfirmDelete(false)
@@ -78,11 +81,16 @@ export function EmployeeEditSheet({
 
   useEffect(() => {
     if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape' && !busy) onClose()
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      window.removeEventListener('keydown', onKey)
+    }
   }, [open, busy, onClose])
 
   if (!open || !user) return null
@@ -233,6 +241,12 @@ export function EmployeeEditSheet({
         </header>
 
         <form className="admin-sheet__body" onSubmit={(e) => void handleSave(e)}>
+          {isMixed && (
+            <p className="crm-banner crm-banner--warn admin-sheet__mixed-banner">
+              บัญชีผสมบทบาท — บันทึกจะถอนบทบาทลูกค้าออก เหลือเฉพาะบทบาทพนักงานที่เลือกด้านล่าง
+            </p>
+          )}
+
           <label className="task-field">
             <span className="task-field__label">ชื่อ-นามสกุล</span>
             <input

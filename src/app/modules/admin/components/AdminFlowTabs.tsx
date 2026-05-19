@@ -1,5 +1,13 @@
 export type AdminFlowSection = 'staff' | 'client' | 'settings'
 
+export function parseAdminFlowSection(
+  raw: string | null,
+  fallback: AdminFlowSection = 'staff',
+): AdminFlowSection {
+  if (raw === 'staff' || raw === 'client' || raw === 'settings') return raw
+  return fallback
+}
+
 const TABS: { id: AdminFlowSection; label: string; hint: string }[] = [
   { id: 'staff', label: 'พนักงาน', hint: 'สร้าง · แก้ไข · ลบ' },
   { id: 'client', label: 'ลูกค้าพอร์ทัล', hint: 'บัญชีแบรนด์' },

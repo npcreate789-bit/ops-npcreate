@@ -53,13 +53,15 @@ export function matchesAdminAudience(
 
 export function countAdminAudience(
   rows: AdminUserRow[],
-): Partial<Record<AdminAudienceFilter, number>> {
+): Partial<Record<AdminAudienceFilter | 'none', number>> {
   let staff = 0
   let client = 0
   let mixed = 0
+  let none = 0
   for (const row of rows) {
     const kind = adminUserKind(row)
-    if (kind === 'staff' || kind === 'none') staff += 1
+    if (kind === 'staff') staff += 1
+    else if (kind === 'none') none += 1
     else if (kind === 'client') client += 1
     else if (kind === 'mixed') mixed += 1
   }
@@ -68,5 +70,6 @@ export function countAdminAudience(
     staff,
     client,
     mixed,
+    none,
   }
 }

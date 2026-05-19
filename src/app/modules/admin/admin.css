@@ -29,6 +29,45 @@
   margin-top: 0.2rem;
 }
 
+.admin-summary-card--btn {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.admin-summary-card--btn:hover {
+  border-color: rgba(110, 231, 255, 0.35);
+  background: rgba(110, 231, 255, 0.06);
+}
+
+.admin-summary-card--active {
+  border-color: rgba(110, 231, 255, 0.55);
+  background: rgba(110, 231, 255, 0.1);
+}
+
+.admin-panel-head__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-staff-card--mixed {
+  border-color: rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.admin-staff-card__hint--warn {
+  color: #fcd34d;
+}
+
+.admin-sheet__mixed-banner {
+  margin: 0;
+}
+
 .admin-summary-card--client {
   border-color: rgba(110, 231, 255, 0.35);
 }
