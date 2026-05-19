@@ -6,8 +6,6 @@ const NPCREATE_LINE_OA_URL =
 import {
   buildLineChatBizDirectUrl,
   buildLineChatBizInboxUrl,
-  buildLineManagerDirectUrl,
-  buildLineManagerInboxUrl,
   isLineMessagingUserIdForUrl,
   lineChatBizAccountIdConfigError,
   normalizeLineChatBizAccountId,
@@ -65,10 +63,6 @@ export function staffLineOaInboxUrl(): string | null {
   return buildLineChatBizInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
 }
 
-export function staffLineManagerInboxUrl(): string | null {
-  return buildLineManagerInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
-}
-
 export function staffLineDirectUserChatUrl(lineUserId: string): string | null {
   return buildLineChatBizDirectUrl(lineUserId, LINE_CHAT_BIZ_ACCOUNT_ID)
 }
@@ -80,7 +74,6 @@ function staffDirectUserChatEnabled(options?: { directUserChat?: boolean }): boo
 }
 
 export type StaffLineChatOpenMode = 'auto' | 'inbox' | 'direct'
-export type StaffLineChatSurface = 'chat' | 'manager'
 
 export type ResolveStaffLineChatOpenResult =
   | { ok: true; url: string }
@@ -88,14 +81,10 @@ export type ResolveStaffLineChatOpenResult =
 
 export function resolveStaffLineChatOpenUrl(
   chatUserId: string | null | undefined,
-  options?: {
-    mode?: StaffLineChatOpenMode
-    surface?: StaffLineChatSurface
-  },
+  options?: { mode?: StaffLineChatOpenMode },
 ): ResolveStaffLineChatOpenResult {
   const uid = chatUserId?.trim() ?? ''
   const mode = options?.mode ?? 'auto'
-  const surface = options?.surface ?? 'chat'
 
   const configErr = lineChatBizAccountIdConfigError(LINE_CHAT_BIZ_ACCOUNT_ID)
   if (configErr) return { ok: false, message: configErr }
@@ -108,20 +97,14 @@ export function resolveStaffLineChatOpenUrl(
           'ต้องบันทึก LINE User ID จาก URL แชท OA (หลัง /chat/) — ใช้ Login ID เปิดแชทตรงไม่ได้',
       }
     }
-    const url =
-      surface === 'manager'
-        ? buildLineManagerDirectUrl(uid, LINE_CHAT_BIZ_ACCOUNT_ID)
-        : buildLineChatBizDirectUrl(uid, LINE_CHAT_BIZ_ACCOUNT_ID)
+    const url = buildLineChatBizDirectUrl(uid, LINE_CHAT_BIZ_ACCOUNT_ID)
     if (!url) {
       return { ok: false, message: 'สร้างลิงก์แชทไม่สำเร็จ — ตรวจสอบ VITE_LINE_CHAT_BIZ_ACCOUNT_ID' }
     }
     return { ok: true, url }
   }
 
-  const inbox =
-    surface === 'manager'
-      ? buildLineManagerInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
-      : buildLineChatBizInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
+  const inbox = buildLineChatBizInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
   if (inbox) return { ok: true, url: inbox }
 
   return { ok: true, url: NPCREATE_LINE_OA_URL }
@@ -133,7 +116,6 @@ export function staffLineChatUrl(
     text?: string
     directUserChat?: boolean
     mode?: StaffLineChatOpenMode
-    surface?: StaffLineChatSurface
   },
 ): string {
   const uid = lineUserId?.trim()
@@ -143,16 +125,12 @@ export function staffLineChatUrl(
     (mode === 'auto' && staffDirectUserChatEnabled(options) && isLineMessagingUserIdForUrl(uid))
 
   if (useDirect && uid) {
-    const resolved = resolveStaffLineChatOpenUrl(uid, {
-      mode: 'direct',
-      surface: options?.surface,
-    })
+    const resolved = resolveStaffLineChatOpenUrl(uid, { mode: 'direct' })
     if (resolved.ok) return resolved.url
   }
 
   const resolved = resolveStaffLineChatOpenUrl(uid || null, {
     mode: mode === 'direct' ? 'inbox' : mode,
-    surface: options?.surface,
   })
   if (resolved.ok) return resolved.url
 
@@ -163,7 +141,6 @@ export function staffLineChatUrl(
 
 export type StaffLineChatOpenOptions = {
   mode?: StaffLineChatOpenMode
-  surface?: StaffLineChatSurface
 }
 
 export type OpenStaffLineChatFromUserIdResult =
@@ -183,7 +160,6 @@ export function openStaffLineChatFromUserId(
 
   const resolved = resolveStaffLineChatOpenUrl(uid || null, {
     mode: useDirect && uid ? 'direct' : mode === 'direct' ? 'inbox' : mode,
-    surface: options?.surface,
   })
 
   if (!resolved.ok) {
@@ -230,13 +206,9 @@ export async function openStaffLineChat(
     text?: string
     directUserChat?: boolean
     mode?: StaffLineChatOpenMode
-    surface?: StaffLineChatSurface
   },
 ): Promise<boolean> {
-  const result = openStaffLineChatFromUserId(lineUserId, {
-    mode: options?.mode,
-    surface: options?.surface,
-  })
+  const result = openStaffLineChatFromUserId(lineUserId, { mode: options?.mode })
   if (result.ok) return result.opened
 
   const url = staffLineChatUrl(lineUserId, { ...options, mode: 'inbox' })

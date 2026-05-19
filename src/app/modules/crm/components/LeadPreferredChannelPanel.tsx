@@ -56,22 +56,19 @@ export function LeadPreferredChannelPanel({
   function handleOpenLine() {
     setOpenLineError(null)
     const oaOpenId = resolveLineStaffChatOpenUserId(lineIds)
-    const result = openStaffLineChatFromUserId(oaOpenId, {
-      mode: oaOpenId ? 'direct' : 'inbox',
-      surface: 'chat',
-    })
+    if (!oaOpenId) {
+      setOpenLineError(
+        'บันทึก LINE User ID จาก URL แชท OA ก่อน (วางลิงก์เต็ม chat.line.biz/…/chat/U…)',
+      )
+      return
+    }
+    const result = openStaffLineChatFromUserId(oaOpenId, { mode: 'direct' })
     if (!result.ok) {
       setOpenLineError(result.message)
       return
     }
     if (!result.opened) {
       setOpenLineError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
-      return
-    }
-    if (!oaOpenId) {
-      setOpenLineError(
-        'เปิดรายการแชทแล้ว — วางลิงก์เต็มจาก chat.line.biz แล้วบันทึก ID หลัง /chat/ เพื่อเปิดแชทลูกค้าตรง',
-      )
     }
   }
 

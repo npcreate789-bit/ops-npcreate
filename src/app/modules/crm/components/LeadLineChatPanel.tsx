@@ -1,9 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { openStaffLineChatFromUserId } from '../../../../shared/line/staffLineMessaging'
 import {
   lineLoginAndOaIdsMismatch,
   resolveLineMessagingRecipientId,
-  resolveLineStaffChatOpenUserId,
 } from '../../../../shared/line/lineUserIdResolution'
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
@@ -50,11 +48,8 @@ export function LeadLineChatPanel({
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
   }
   const canPush = Boolean(resolveLineMessagingRecipientId(lineIds))
-  const openChatId = resolveLineStaffChatOpenUserId(lineIds)
   const idMismatch = lineLoginAndOaIdsMismatch(lineIds)
   const onlyLoginId = Boolean(lineIds.line_user_id?.trim()) && !lineIds.line_oa_chat_user_id?.trim()
-
-  const [openManagerError, setOpenManagerError] = useState<string | null>(null)
 
   const { messages, loading, sending, error, bottomRef, send } = useLeadLineChat(
     lead,
@@ -96,35 +91,7 @@ export function LeadLineChatPanel({
             </p>
           </div>
         </div>
-        {openChatId ? (
-          <button
-            type="button"
-            className="crm-btn crm-btn--ghost crm-line-chat__open-external"
-            onClick={() => {
-              setOpenManagerError(null)
-              const result = openStaffLineChatFromUserId(openChatId, {
-                mode: 'direct',
-                surface: 'manager',
-              })
-              if (!result.ok) {
-                setOpenManagerError(result.message)
-                return
-              }
-              if (!result.opened) {
-                setOpenManagerError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
-              }
-            }}
-          >
-            เปิดใน Manager
-          </button>
-        ) : null}
       </header>
-
-      {openManagerError ? (
-        <p className="crm-line-chat__open-error" role="alert">
-          {openManagerError}
-        </p>
-      ) : null}
 
       <div className="crm-line-chat__status-row" role="status">
         {lineChatLinked ? (

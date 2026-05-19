@@ -22,7 +22,6 @@ export {
   staffLineChatUrl,
   staffLineDirectChatHint,
   staffLineDirectUserChatUrl,
-  staffLineManagerInboxUrl,
   staffLineOaInboxUrl,
 } from './lineStaffOpenUrl'
 
