@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { openStaffLineChat } from '../../../../shared/line/staffLineMessaging'
 import {
   lineLoginAndOaIdsMismatch,
-  lineStaffChatIdHint,
   resolveLineMessagingRecipientId,
   resolveLineStaffChatOpenUserId,
 } from '../../../../shared/line/lineUserIdResolution'
@@ -31,6 +30,15 @@ function formatTime(iso: string): string {
   }
 }
 
+function formatWindowExpiry(date: Date): string {
+  return date.toLocaleString('th-TH', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function LeadLineChatPanel({
   lead,
   senderProfileId,
@@ -52,6 +60,16 @@ export function LeadLineChatPanel({
   )
   const replyWindow = getLineReplyWindowStatus(messages)
 
+  const hasInbound = messages.some((m) => m.direction === 'inbound')
+  const hasOutbound = messages.some((m) => m.direction === 'outbound')
+  const lineChatLinked = hasInbound && (hasOutbound || Boolean(lineIds.line_oa_chat_user_id?.trim()))
+
+  const showSetupBanner = !canPush
+  const showIdSetupHint =
+    canPush && !lineChatLinked && (onlyLoginId || idMismatch) && !hasOutbound
+  const showOutsideWindow =
+    canPush && lineChatLinked && !replyWindow.withinWindow && replyWindow.expiresAt
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const text = draft.trim()
@@ -63,67 +81,70 @@ export function LeadLineChatPanel({
   return (
     <section className="card card--wide crm-line-chat" aria-label="แชท LINE">
       <header className="crm-line-chat__head">
-        <div>
-          <h2>แชท LINE ในระบบ</h2>
-          <p className="muted crm-line-chat__hint">{lineStaffChatIdHint(lineIds)}</p>
+        <div className="crm-line-chat__title-row">
+          <span className="crm-line-chat__line-badge" aria-hidden>
+            LINE
+          </span>
+          <div>
+            <h2>แชทกับลูกค้า</h2>
+            <p className="crm-line-chat__subtitle">
+              {lineChatLinked
+                ? 'ส่งและรับข้อความผ่าน Official Account'
+                : 'เชื่อมต่อเมื่อลูกค้าทัก OA หรือบันทึก ID จาก chat.line.biz'}
+            </p>
+          </div>
         </div>
         {openChatId ? (
           <button
             type="button"
-            className="crm-btn crm-btn--ghost"
+            className="crm-btn crm-btn--ghost crm-line-chat__open-external"
             onClick={() => void openStaffLineChat(openChatId, { mode: 'direct' })}
           >
-            เปิด chat.line.biz
+            เปิดใน Manager
           </button>
         ) : null}
       </header>
 
-      {!canPush ? (
-        <p className="crm-banner crm-banner--warn">
-          ยังส่งข้อความจากระบบไม่ได้ — บันทึก LINE User ID จาก URL แชท OA ในส่วนด้านบนก่อน
-        </p>
+      <div className="crm-line-chat__status-row" role="status">
+        {lineChatLinked ? (
+          <span className="crm-line-chat__pill crm-line-chat__pill--ok">เชื่อมต่อแล้ว</span>
+        ) : canPush ? (
+          <span className="crm-line-chat__pill crm-line-chat__pill--muted">รอข้อความจากลูกค้า</span>
+        ) : null}
+        {canPush && replyWindow.withinWindow && replyWindow.expiresAt ? (
+          <span className="crm-line-chat__pill crm-line-chat__pill--window">
+            Push ได้ถึง {formatWindowExpiry(replyWindow.expiresAt)}
+          </span>
+        ) : null}
+        {showOutsideWindow && replyWindow.expiresAt ? (
+          <span className="crm-line-chat__pill crm-line-chat__pill--warn">
+            นอกช่วง 24 ชม. — ให้ลูกค้าทักใหม่
+          </span>
+        ) : null}
+      </div>
+
+      {showSetupBanner ? (
+        <div className="crm-line-chat__notice crm-line-chat__notice--warn">
+          <p>ยังส่งจากระบบไม่ได้ — บันทึก LINE User ID จาก URL แชท OA ในส่วนด้านบน</p>
+        </div>
       ) : null}
 
-      {canPush && (onlyLoginId || idMismatch) ? (
-        <p className="crm-banner crm-banner--warn">
-          {idMismatch
-            ? 'ID จาก LINE Login ไม่ตรงกับแชท OA — Push อาจล้มเหลว ให้บันทึก ID จาก chat.line.biz (หลัง /chat/) หรือให้ลูกค้าทัก OA อีกครั้ง'
-            : 'มีเฉพาะ ID จากฟอร์มติดต่อ — ถ้าส่งไม่ผ่าน ให้วางลิงก์แชทจาก chat.line.biz แล้วบันทึกด้านบน'}
-        </p>
-      ) : null}
-
-      {canPush && !replyWindow.withinWindow && replyWindow.expiresAt ? (
-        <p className="crm-banner crm-banner--warn">
-          นอกช่วง 24 ชม. หลังลูกค้าทักล่าสุด (
-          {replyWindow.expiresAt.toLocaleString('th-TH', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-          ) — Push อาจถูกจำกัดตามนโยบาย LINE แนะนำให้ลูกค้าทักใหม่หรือใช้ chat.line.biz
-        </p>
-      ) : null}
-
-      {canPush && replyWindow.withinWindow && replyWindow.expiresAt ? (
-        <p className="crm-line-chat__window-ok muted">
-          ส่ง Push ได้จนถึง{' '}
-          {replyWindow.expiresAt.toLocaleString('th-TH', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}{' '}
-          (24 ชม. หลังลูกค้าทักล่าสุด)
-        </p>
+      {showIdSetupHint ? (
+        <div className="crm-line-chat__notice crm-line-chat__notice--info">
+          <p>
+            {idMismatch
+              ? 'มี ID จากฟอร์มติดต่อกับแชท OA คนละตัว — ให้ลูกค้าทัก OA หนึ่งครั้ง หรือบันทึก ID จาก chat.line.biz'
+              : 'มีเฉพาะ ID จากฟอร์ม — ถ้าส่งไม่ผ่าน ให้บันทึก ID จาก chat.line.biz'}
+          </p>
+        </div>
       ) : null}
 
       <div className="crm-line-chat__thread" aria-live="polite">
         {loading ? (
-          <p className="muted crm-line-chat__empty">กำลังโหลดข้อความ…</p>
+          <p className="crm-line-chat__empty">กำลังโหลดข้อความ…</p>
         ) : messages.length === 0 ? (
-          <p className="muted crm-line-chat__empty">
-            ยังไม่มีข้อความในระบบ — ข้อความจากลูกค้าจะปรากฏหลังตั้ง Webhook LINE และลูกค้าทัก OA
+          <p className="crm-line-chat__empty">
+            ยังไม่มีข้อความ — ข้อความจากลูกค้าจะแสดงที่นี่หลังทัก OA
           </p>
         ) : (
           <ul className="crm-line-chat__messages">
@@ -132,10 +153,12 @@ export function LeadLineChatPanel({
                 key={m.id}
                 className={`crm-line-chat__msg crm-line-chat__msg--${m.direction}`}
               >
+                <span className="crm-line-chat__sender">
+                  {m.direction === 'outbound' ? 'ทีม' : 'ลูกค้า'}
+                </span>
                 <LeadLineMessageBody message={m} />
                 <time className="crm-line-chat__time" dateTime={m.created_at}>
                   {formatTime(m.created_at)}
-                  {m.direction === 'outbound' ? ' · ทีม' : ' · ลูกค้า'}
                 </time>
               </li>
             ))}
@@ -144,35 +167,34 @@ export function LeadLineChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      {error ? <p className="crm-error">{error}</p> : null}
+      {error ? <p className="crm-line-chat__error">{error}</p> : null}
 
       {!readOnly && canPush ? (
         <form className="crm-line-chat__composer" onSubmit={(e) => void handleSubmit(e)}>
           <label className="crm-line-chat__label" htmlFor={`lead-line-draft-${lead.id}`}>
             ข้อความ LINE
           </label>
-          <textarea
-            id={`lead-line-draft-${lead.id}`}
-            className="crm-line-chat__input"
-            rows={2}
-            placeholder="พิมพ์ข้อความส่งลูกค้าทาง LINE…"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            disabled={sending}
-          />
-          <button
-            type="submit"
-            className="crm-btn crm-btn--primary"
-            disabled={sending || !draft.trim()}
-          >
-            {sending ? 'กำลังส่ง…' : 'ส่ง'}
-          </button>
+          <div className="crm-line-chat__composer-row">
+            <textarea
+              id={`lead-line-draft-${lead.id}`}
+              className="crm-line-chat__input"
+              rows={2}
+              placeholder="พิมพ์ข้อความ…"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={sending}
+            />
+            <button
+              type="submit"
+              className="crm-line-chat__send"
+              disabled={sending || !draft.trim()}
+              aria-label="ส่งข้อความ"
+            >
+              {sending ? '…' : 'ส่ง'}
+            </button>
+          </div>
         </form>
       ) : null}
-
-      <p className="crm-line-chat__footnote muted">
-        ข้อความเข้าจาก LINE Webhook · ข้อความออกผ่าน Messaging API (ต้องเป็นเพื่อน OA)
-      </p>
     </section>
   )
 }
