@@ -42,6 +42,7 @@ import {
 } from '../../../../shared/contact/channelConnectConfig'
 import {
   applyLineOAuthCallbackFromUrl,
+  closeLineOAuthAuxWindow,
   completeLineOAuthFromCallback,
   clearLineOAuthBroadcastResult,
   consumeLineOAuthBroadcastResult,
@@ -146,6 +147,7 @@ export function ContactPage() {
     function applyBroadcastLineOAuth(): boolean {
       const broadcast = consumeLineOAuthBroadcastResult()
       if (!broadcast) return false
+      closeLineOAuthAuxWindow()
       if (broadcast.ok) {
         setLineUserId(broadcast.userId)
         setLineDisplayName(broadcast.displayName)
@@ -204,7 +206,12 @@ export function ContactPage() {
 
     const unsubscribeBroadcast = subscribeLineOAuthBroadcast((payload) => {
       if (cancelled) return
+      if (payload.type === 'close_aux') {
+        closeLineOAuthAuxWindow()
+        return
+      }
       clearLineOAuthBroadcastResult()
+      closeLineOAuthAuxWindow()
       if (payload.type === 'success') {
         setLineUserId(payload.userId)
         setLineDisplayName(payload.displayName)

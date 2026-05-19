@@ -8,6 +8,41 @@ const CALLBACK_OWNER_MAX_MS = 2 * 60 * 1000
 const RESULT_MAX_AGE_MS = 5 * 60 * 1000
 
 let tabInstanceId: string | null = null
+let registeredAuxWindow: Window | null = null
+
+/** เก็บ reference แท็บ access.line.me ที่ keeper เปิดด้วย window.open */
+export function registerLineOAuthAuxWindow(win: Window | null): void {
+  if (win && win !== window && !win.closed) {
+    registeredAuxWindow = win
+  }
+}
+
+/** ปิดแท็บ OAuth ที่เปิดจาก keeper (callback มักปิด opener ไม่ได้) */
+export function closeLineOAuthAuxWindow(): void {
+  const seen = new Set<Window>()
+  const tryClose = (w: Window | null | undefined) => {
+    if (!w || w === window || w.closed || seen.has(w)) return
+    seen.add(w)
+    try {
+      w.close()
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const auxRef = registeredAuxWindow
+  registeredAuxWindow = null
+  tryClose(auxRef)
+
+  if (!auxRef) return
+
+  try {
+    const named = window.open('', LINE_OAUTH_POPUP_WINDOW_NAME)
+    tryClose(named)
+  } catch {
+    /* ignore */
+  }
+}
 
 function getTabInstanceId(): string {
   if (!tabInstanceId) tabInstanceId = crypto.randomUUID()
@@ -26,10 +61,6 @@ export function isOAuthCallbackLocation(href = window.location.href): boolean {
   } catch {
     return false
   }
-}
-
-function isLineHost(hostname: string): boolean {
-  return hostname === 'access.line.me' || hostname.endsWith('.line.me')
 }
 
 function canHandoffOAuthCallbackToOpener(): boolean {
@@ -54,6 +85,32 @@ export type LineOAuthBroadcastPayload =
       error: string
       at: number
     }
+  | {
+      type: 'close_aux'
+      at: number
+    }
+
+function isOAuthResultPayload(
+  payload: LineOAuthBroadcastPayload,
+): payload is Extract<LineOAuthBroadcastPayload, { type: 'success' | 'error' }> {
+  return payload.type === 'success' || payload.type === 'error'
+}
+
+/** สั่งให้แท็บ keeper ปิด access.line.me (เรียกจากแท็บ callback หลัง OAuth) */
+export function requestCloseLineOAuthAuxWindow(): void {
+  if (isLineOAuthKeeperTab() && !isOAuthCallbackLocation()) {
+    closeLineOAuthAuxWindow()
+  }
+
+  const payload: LineOAuthBroadcastPayload = { type: 'close_aux', at: Date.now() }
+  try {
+    const channel = new BroadcastChannel(LINE_OAUTH_BROADCAST_CHANNEL)
+    channel.postMessage(payload)
+    channel.close()
+  } catch {
+    /* ignore */
+  }
+}
 
 export function markLineOAuthKeeperTab(): void {
   try {
@@ -97,6 +154,8 @@ export function closeLineOAuthPopupWindow(popupRef?: Window | null): void {
 }
 
 export function publishLineOAuthResult(payload: LineOAuthBroadcastPayload): void {
+  if (!isOAuthResultPayload(payload)) return
+
   try {
     localStorage.setItem(LINE_OAUTH_RESULT_LS_KEY, JSON.stringify(payload))
   } catch {
@@ -118,6 +177,8 @@ export function publishLineOAuthResult(payload: LineOAuthBroadcastPayload): void
       /* ignore */
     }
   }
+
+  requestCloseLineOAuthAuxWindow()
 }
 
 export function readLineOAuthBroadcastResult(): LineOAuthBroadcastPayload | null {
@@ -126,6 +187,7 @@ export function readLineOAuthBroadcastResult(): LineOAuthBroadcastPayload | null
     if (!raw) return null
     const parsed = JSON.parse(raw) as LineOAuthBroadcastPayload
     if (!parsed?.at || Date.now() - parsed.at > RESULT_MAX_AGE_MS) return null
+    if (!isOAuthResultPayload(parsed)) return null
     return parsed
   } catch {
     return null
@@ -155,7 +217,7 @@ export function subscribeLineOAuthBroadcast(
   const onWindowMessage = (event: MessageEvent) => {
     const data = event.data as LineOAuthBroadcastPayload & { source?: string }
     if (data?.source !== 'npc_line_oauth' || !data?.type) return
-    handler(data)
+    if (data.type === 'close_aux' || isOAuthResultPayload(data)) handler(data)
   }
 
   let channel: BroadcastChannel | null = null
@@ -270,8 +332,9 @@ export function dismissDuplicateOAuthCallbackTab(): void {
  * แท็บ /contact (keeper) รับผลจาก broadcast
  */
 export function finalizeOAuthCallbackTabs(): void {
-  const opener = window.opener
+  requestCloseLineOAuthAuxWindow()
 
+  const opener = window.opener
   if (opener && !opener.closed) {
     try {
       if (canHandoffOAuthCallbackToOpener()) {
@@ -280,15 +343,9 @@ export function finalizeOAuthCallbackTabs(): void {
         opener.focus()
       } else {
         try {
-          if (isLineHost(opener.location.hostname)) {
-            opener.close()
-          }
+          opener.close()
         } catch {
-          try {
-            opener.close()
-          } catch {
-            /* ignore */
-          }
+          /* ignore */
         }
       }
     } catch {

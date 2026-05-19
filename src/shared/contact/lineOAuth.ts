@@ -15,9 +15,11 @@ import {
   clearLineOAuthKeeperTab,
   dismissDuplicateOAuthCallbackTab,
   finalizeOAuthCallbackTabs,
+  LINE_OAUTH_POPUP_WINDOW_NAME,
   markLineOAuthKeeperTab,
   publishLineOAuthResult,
   readLineOAuthBroadcastResult,
+  registerLineOAuthAuxWindow,
   resolveOAuthCallbackTabRole,
 } from './lineOAuthBroadcast'
 import { isMobileBrowser } from '../line/lineStaffOpenUrl'
@@ -119,8 +121,25 @@ export function startLineLogin(): void {
 
   if (isMobileBrowser()) {
     markLineOAuthKeeperTab()
-    const oauthTab = window.open(url, '_blank')
+    let oauthTab: Window | null = null
+    try {
+      oauthTab = window.open('about:blank', LINE_OAUTH_POPUP_WINDOW_NAME)
+      if (oauthTab && oauthTab !== window) {
+        registerLineOAuthAuxWindow(oauthTab)
+        oauthTab.location.replace(url)
+        try {
+          oauthTab.focus()
+        } catch {
+          /* ignore */
+        }
+        return
+      }
+    } catch {
+      /* fall through */
+    }
+    oauthTab = window.open(url, LINE_OAUTH_POPUP_WINDOW_NAME)
     if (oauthTab && oauthTab !== window) {
+      registerLineOAuthAuxWindow(oauthTab)
       try {
         oauthTab.focus()
       } catch {
@@ -314,14 +333,19 @@ export function applyLineOAuthBroadcastPayload(
     clearLineOAuthInProgress()
     return { userId: payload.userId, displayName: payload.displayName }
   }
+  if (payload.type === 'error') {
+    clearLineOAuthInProgress()
+    return { error: payload.error }
+  }
   clearLineOAuthInProgress()
-  return { error: payload.error }
+  return { error: 'เชื่อมต่อ LINE ไม่สำเร็จ' }
 }
 
 export type { LineOAuthBroadcastPayload, OAuthCallbackTabRole } from './lineOAuthBroadcast'
 export {
   clearLineOAuthBroadcastResult,
   clearLineOAuthKeeperTab,
+  closeLineOAuthAuxWindow,
   isLineOAuthKeeperTab,
   readLineOAuthBroadcastResult,
   resolveOAuthCallbackTabRole,
