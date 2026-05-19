@@ -12,12 +12,15 @@ import type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
 import {
   clearOAuthCallbackOwner,
   clearLineOAuthBroadcastResult,
+  clearLineOAuthKeeperTab,
   dismissDuplicateOAuthCallbackTab,
+  finalizeOAuthCallbackTabs,
+  markLineOAuthKeeperTab,
   publishLineOAuthResult,
   readLineOAuthBroadcastResult,
   resolveOAuthCallbackTabRole,
-  tryCloseLineOAuthCallbackTab,
 } from './lineOAuthBroadcast'
+import { isMobileBrowser } from '../line/lineStaffOpenUrl'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
@@ -105,13 +108,29 @@ function applyOAuthError(message: string): void {
 }
 
 /**
- * LINE Login แท็บเดียว: /contact → access.line.me → /contact?code=...
- * ไม่ใช้ window.open — ถ้า LINE เปิดแท็บ callback แยก ใช้ broadcast ซิงก์กลับแท็บ /contact
+ * LINE Login —
+ * มือถือ: ค้าง /contact (keeper) เปิด access.line.me ในแท็บใหม่ → broadcast กลับ
+ * เดสก์ท็อป: แท็บเดียว location.replace
  */
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
   markLineOAuthInProgress()
   clearOAuthCallbackOwner()
+
+  if (isMobileBrowser()) {
+    markLineOAuthKeeperTab()
+    const oauthTab = window.open(url, '_blank')
+    if (oauthTab && oauthTab !== window) {
+      try {
+        oauthTab.focus()
+      } catch {
+        /* ignore */
+      }
+      return
+    }
+    clearLineOAuthKeeperTab()
+  }
+
   window.location.replace(url)
 }
 
@@ -124,9 +143,7 @@ export async function completeLineOAuthFromCallback(
   { ok: true; userId: string; displayName: string | null } | { ok: false; error: string } | null
 > {
   const tabRole = resolveOAuthCallbackTabRole()
-  if (tabRole === 'handoff') return null
   if (tabRole === 'duplicate') {
-    consumeLineOAuthBroadcastResult()
     dismissDuplicateOAuthCallbackTab()
     return null
   }
@@ -135,6 +152,7 @@ export async function completeLineOAuthFromCallback(
   if (oauthError) {
     const message = mapLineOAuthError(oauthError)
     applyOAuthError(message)
+    finalizeOAuthCallbackTabs()
     return { ok: false, error: message }
   }
 
@@ -146,12 +164,14 @@ export async function completeLineOAuthFromCallback(
   if (!storedState || storedState !== stateParam) {
     const message = 'เซสชัน LINE Login หมดอายุ — กรุณากดเชื่อมต่อใหม่'
     applyOAuthError(message)
+    finalizeOAuthCallbackTabs()
     return { ok: false, error: message }
   }
 
   if (!isSupabaseConfigured || !supabase) {
     const message = 'ระบบยังไม่พร้อม — ลองใหม่ภายหลัง'
     applyOAuthError(message)
+    finalizeOAuthCallbackTabs()
     return { ok: false, error: message }
   }
 
@@ -167,6 +187,7 @@ export async function completeLineOAuthFromCallback(
     const message = await parseFunctionInvokeError(error, data)
     const friendly = message || 'เชื่อมต่อ LINE ไม่สำเร็จ'
     applyOAuthError(friendly)
+    finalizeOAuthCallbackTabs()
     return { ok: false, error: friendly }
   }
 
@@ -180,13 +201,14 @@ export async function completeLineOAuthFromCallback(
   if (!result?.ok || !result.user_id) {
     const message = mapLineOAuthError(result?.error ?? 'token_exchange_failed')
     applyOAuthError(message)
+    finalizeOAuthCallbackTabs()
     return { ok: false, error: message }
   }
 
   const displayName = result.display_name ?? null
   applyOAuthSuccess(result.user_id, displayName)
   stripLineOAuthParamsFromUrl()
-  tryCloseLineOAuthCallbackTab()
+  finalizeOAuthCallbackTabs()
 
   return {
     ok: true,
@@ -200,9 +222,7 @@ export function applyLineOAuthCallbackFromUrl(
   searchParams: URLSearchParams,
 ): { ok: true; userId: string; displayName: string | null } | { ok: false; error: string } | null {
   const tabRole = resolveOAuthCallbackTabRole()
-  if (tabRole === 'handoff') return null
   if (tabRole === 'duplicate') {
-    consumeLineOAuthBroadcastResult()
     dismissDuplicateOAuthCallbackTab()
     return null
   }
@@ -211,6 +231,7 @@ export function applyLineOAuthCallbackFromUrl(
   if (error) {
     const message = mapLineOAuthError(error)
     applyOAuthError(message)
+    finalizeOAuthCallbackTabs()
     return { ok: false, error: message }
   }
 
@@ -220,13 +241,14 @@ export function applyLineOAuthCallbackFromUrl(
   if (!userId) {
     const message = 'ไม่พบ LINE user ID — ลองเชื่อมต่อใหม่'
     applyOAuthError(message)
+    finalizeOAuthCallbackTabs()
     return { ok: false, error: message }
   }
 
   const displayName = searchParams.get('line_name')?.trim() || null
   applyOAuthSuccess(userId, displayName)
   stripLineOAuthParamsFromUrl()
-  tryCloseLineOAuthCallbackTab()
+  finalizeOAuthCallbackTabs()
   return { ok: true, userId, displayName }
 }
 
@@ -299,6 +321,8 @@ export function applyLineOAuthBroadcastPayload(
 export type { LineOAuthBroadcastPayload, OAuthCallbackTabRole } from './lineOAuthBroadcast'
 export {
   clearLineOAuthBroadcastResult,
+  clearLineOAuthKeeperTab,
+  isLineOAuthKeeperTab,
   readLineOAuthBroadcastResult,
   resolveOAuthCallbackTabRole,
   subscribeLineOAuthBroadcast,

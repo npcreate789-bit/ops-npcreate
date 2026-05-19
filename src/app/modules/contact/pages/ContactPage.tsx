@@ -45,11 +45,16 @@ import {
   completeLineOAuthFromCallback,
   clearLineOAuthBroadcastResult,
   consumeLineOAuthBroadcastResult,
+  isLineOAuthInProgress,
   resolveOAuthCallbackTabRole,
   stripLineOAuthParamsFromUrl,
   subscribeLineOAuthBroadcast,
 } from '../../../../shared/contact/lineOAuth'
-import { dismissDuplicateOAuthCallbackTab } from '../../../../shared/contact/lineOAuthBroadcast'
+import {
+  clearLineOAuthKeeperTab,
+  dismissDuplicateOAuthCallbackTab,
+  isLineOAuthKeeperTab,
+} from '../../../../shared/contact/lineOAuthBroadcast'
 import '../contact.css'
 
 const HERO_POINTS = [
@@ -126,6 +131,12 @@ export function ContactPage() {
   }, [])
 
   useEffect(() => {
+    if (isLineOAuthKeeperTab() && isLineOAuthInProgress()) {
+      setLineOAuthCompleting(true)
+    }
+  }, [])
+
+  useEffect(() => {
     const storedLine = readLineConnection()
     if (storedLine) {
       setLineUserId(storedLine.userId)
@@ -140,9 +151,11 @@ export function ContactPage() {
         setLineDisplayName(broadcast.displayName)
         setChannelConnectError(null)
         setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+        clearLineOAuthKeeperTab()
       } else {
         setChannelConnectError(broadcast.error)
         setFieldErrors((e) => ({ ...e, channelConnect: broadcast.error }))
+        clearLineOAuthKeeperTab()
       }
       setLineOAuthCompleting(false)
       return true
@@ -158,17 +171,7 @@ export function ContactPage() {
       if (!hasOAuthReturn) return
 
       const tabRole = resolveOAuthCallbackTabRole()
-      if (tabRole === 'handoff') return
       if (tabRole === 'duplicate') {
-        const broadcast = consumeLineOAuthBroadcastResult()
-        if (broadcast?.ok) {
-          setLineUserId(broadcast.userId)
-          setLineDisplayName(broadcast.displayName)
-          setChannelConnectError(null)
-          setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
-        } else if (broadcast && !broadcast.ok) {
-          setChannelConnectError(broadcast.error)
-        }
         dismissDuplicateOAuthCallbackTab()
         return
       }
@@ -207,9 +210,11 @@ export function ContactPage() {
         setLineDisplayName(payload.displayName)
         setChannelConnectError(null)
         setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+        clearLineOAuthKeeperTab()
       } else {
         setChannelConnectError(payload.error)
         setFieldErrors((e) => ({ ...e, channelConnect: payload.error }))
+        clearLineOAuthKeeperTab()
       }
       setLineOAuthCompleting(false)
       stripLineOAuthParamsFromUrl()

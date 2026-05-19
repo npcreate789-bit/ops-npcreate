@@ -1,7 +1,6 @@
 /** ส่งผล LINE Login จากแท็บ callback กลับแท็บ /contact เดิม */
 export const LINE_OAUTH_BROADCAST_CHANNEL = 'npc_contact_line_oauth'
 export const LINE_OAUTH_RESULT_LS_KEY = 'npc_contact_line_oauth_result'
-/** ชื่อหน้าต่างจาก window.open — ใช้ปิดแท็บ access.line.me ที่ค้าง */
 export const LINE_OAUTH_POPUP_WINDOW_NAME = 'npc_line_oauth'
 const LINE_OAUTH_KEEPER_TAB_KEY = 'npc_contact_line_oauth_keeper'
 const LINE_OAUTH_CALLBACK_OWNER_KEY = 'npc_contact_line_oauth_callback_owner'
@@ -24,6 +23,20 @@ export function isOAuthCallbackLocation(href = window.location.href): boolean {
       params.has('line_error') ||
       params.has('error')
     )
+  } catch {
+    return false
+  }
+}
+
+function isLineHost(hostname: string): boolean {
+  return hostname === 'access.line.me' || hostname.endsWith('.line.me')
+}
+
+function canHandoffOAuthCallbackToOpener(): boolean {
+  const opener = window.opener
+  if (!opener || opener.closed) return false
+  try {
+    return opener.location.origin === window.location.origin
   } catch {
     return false
   }
@@ -74,10 +87,6 @@ export function clearOAuthCallbackOwner(): void {
   }
 }
 
-/**
- * ปิดหน้าต่าง OAuth ที่ keeper เปิดไว้เท่านั้น — ไม่ใช้ window.open('', name)
- * เพราะบางเบราว์เซอร์อาจปิด/เปลี่ยนแท็บ /contact ผิดตัว
- */
 export function closeLineOAuthPopupWindow(popupRef?: Window | null): void {
   if (!popupRef || popupRef === window || popupRef.closed) return
   try {
@@ -170,16 +179,11 @@ export function subscribeLineOAuthBroadcast(
   }
 }
 
-/**
- * แท็บ callback ที่ LINE เปิดเพิ่ม — ส่ง URL กลับแท็บเดิม (access.line.me /contact) แล้วปิดตัวเอง
- * ใช้ก่อนแลก token เพื่อไม่ให้ค้างสองแท็บ
- */
-export function redirectOAuthCallbackToOpener(): boolean {
-  if (!isOAuthCallbackLocation()) return false
+/** ส่ง callback ไปแท็บ /contact เดิม (origin เดียวกัน) — ใช้เมื่อ opener เป็นแอปเรา */
+function handoffOAuthCallbackToSameOriginOpener(): boolean {
+  if (!isOAuthCallbackLocation() || !canHandoffOAuthCallbackToOpener()) return false
 
-  const opener = window.opener
-  if (!opener || opener.closed) return false
-
+  const opener = window.opener!
   const target = window.location.href
   try {
     opener.location.replace(target)
@@ -204,13 +208,20 @@ export function redirectOAuthCallbackToOpener(): boolean {
   return true
 }
 
-export type OAuthCallbackTabRole = 'primary' | 'handoff' | 'duplicate'
+export type OAuthCallbackTabRole = 'primary' | 'duplicate'
 
-/** จัดการแท็บ callback — handoff ไปแท็บเดิม หรือข้ามถ้าแท็บอื่นแลก code แล้ว */
+/** แท็บ callback — ข้ามถ้าแท็บอื่นแลก code แล้ว (ไม่ handoff ไป access.line.me) */
 export function resolveOAuthCallbackTabRole(): OAuthCallbackTabRole {
   if (!isOAuthCallbackLocation()) return 'primary'
 
-  if (redirectOAuthCallbackToOpener()) return 'handoff'
+  if (isLineOAuthKeeperTab()) {
+    return 'primary'
+  }
+
+  if (canHandoffOAuthCallbackToOpener()) {
+    handoffOAuthCallbackToSameOriginOpener()
+    return 'duplicate'
+  }
 
   try {
     const existing = readLineOAuthBroadcastResult()
@@ -254,8 +265,50 @@ export function dismissDuplicateOAuthCallbackTab(): void {
   }, 200)
 }
 
-/** หลังแลก token สำเร็จ — ปิดแท็บ callback ถ้ามี opener (desktop) */
+/**
+ * หลังแลก token — ปิดแท็บ callback และแท็บ access.line.me ที่ค้าง
+ * แท็บ /contact (keeper) รับผลจาก broadcast
+ */
+export function finalizeOAuthCallbackTabs(): void {
+  const opener = window.opener
+
+  if (opener && !opener.closed) {
+    try {
+      if (canHandoffOAuthCallbackToOpener()) {
+        const clean = new URL('/contact', window.location.origin)
+        opener.location.replace(clean.href)
+        opener.focus()
+      } else {
+        try {
+          if (isLineHost(opener.location.hostname)) {
+            opener.close()
+          }
+        } catch {
+          try {
+            opener.close()
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    } catch {
+      try {
+        opener.close()
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  dismissDuplicateOAuthCallbackTab()
+}
+
+/** @deprecated ใช้ finalizeOAuthCallbackTabs */
 export function tryCloseLineOAuthCallbackTab(): void {
-  if (!isOAuthCallbackLocation()) return
-  redirectOAuthCallbackToOpener()
+  finalizeOAuthCallbackTabs()
+}
+
+/** @deprecated */
+export function redirectOAuthCallbackToOpener(): boolean {
+  return handoffOAuthCallbackToSameOriginOpener()
 }
