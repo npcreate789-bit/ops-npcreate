@@ -12,6 +12,7 @@ interface ContactLineLoginStepProps {
   lineDisplayName: string | null
   lineOAuthCompleting?: boolean
   onLineDisconnected: () => void
+  onLoginStart?: () => void
   onLoginError?: (message: string) => void
   error?: string
 }
@@ -21,6 +22,7 @@ export function ContactLineLoginStep({
   lineDisplayName,
   lineOAuthCompleting = false,
   onLineDisconnected,
+  onLoginStart,
   onLoginError,
   error,
 }: ContactLineLoginStepProps) {
@@ -31,6 +33,7 @@ export function ContactLineLoginStep({
   const hostMismatchHint = lineOAuthHostMismatchHint()
 
   function handleLineLogin() {
+    onLoginStart?.()
     try {
       startLineLogin()
     } catch (err) {

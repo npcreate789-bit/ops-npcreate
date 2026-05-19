@@ -41,6 +41,7 @@ import {
   takeLineOaContactPendingReturn,
 } from '../../../../shared/contact/channelConnectConfig'
 import {
+  abandonLineOAuthSession,
   applyLineOAuthCallbackFromUrl,
   closeLineOAuthAuxWindow,
   completeLineOAuthFromCallback,
@@ -102,9 +103,11 @@ export function ContactPage() {
     channelConnect?: string
   }>({})
   const [handedOff, setHandedOff] = useState(false)
-  const [lineOAuthCompleting, setLineOAuthCompleting] = useState(
-    () => searchParams.has('code') || searchParams.has('line_connected'),
-  )
+  const [lineOAuthCompleting, setLineOAuthCompleting] = useState(() => {
+    if (readLineConnection()) return false
+    if (searchParams.has('code') || searchParams.has('line_connected')) return true
+    return isLineOAuthKeeperTab() && isLineOAuthInProgress()
+  })
 
   const lineLoginReady = isContactLineLoginReady(lineUserId)
 
@@ -134,13 +137,16 @@ export function ContactPage() {
   }, [])
 
   useEffect(() => {
-    if (isLineOAuthKeeperTab() && isLineOAuthInProgress()) {
-      setLineOAuthCompleting(true)
+    if (lineUserId) {
+      setLineOAuthCompleting(false)
     }
-  }, [])
+  }, [lineUserId])
 
   useEffect(() => {
-    if (!isLineOAuthKeeperTab() || !isLineOAuthInProgress()) return
+    if (!isLineOAuthKeeperTab()) return
+    if (!isLineOAuthInProgress() && !readLineOAuthBroadcastResult()) return
+
+    setLineOAuthCompleting(true)
 
     function syncKeeperFromStorage(): boolean {
       if (consumeCloseLineOAuthAuxSignal()) {
@@ -169,17 +175,27 @@ export function ContactPage() {
 
     const startedAt = Date.now()
     const intervalId = window.setInterval(() => {
-      if (Date.now() - startedAt > 3 * 60 * 1000 || !isLineOAuthInProgress()) {
+      if (syncKeeperFromStorage()) {
         window.clearInterval(intervalId)
         return
       }
-      if (syncKeeperFromStorage()) {
+      if (Date.now() - startedAt > 3 * 60 * 1000) {
         window.clearInterval(intervalId)
+        abandonLineOAuthSession()
+        setLineOAuthCompleting(false)
+        setChannelConnectError('เชื่อมต่อ LINE ไม่สำเร็จ — กรุณากดเชื่อมต่อใหม่')
+        setFieldErrors((e) => ({
+          ...e,
+          channelConnect: 'เชื่อมต่อ LINE ไม่สำเร็จ — กรุณากดเชื่อมต่อใหม่',
+        }))
       }
     }, 500)
 
     function onPageShow() {
-      syncKeeperFromStorage()
+      if (syncKeeperFromStorage()) return
+      if (!isLineOAuthInProgress() && !readLineOAuthBroadcastResult()) {
+        setLineOAuthCompleting(false)
+      }
     }
     window.addEventListener('pageshow', onPageShow)
 
@@ -282,6 +298,16 @@ export function ContactPage() {
     function onVisibility() {
       if (document.visibilityState !== 'visible') return
       if (applyBroadcastLineOAuth()) return
+      if (
+        isLineOAuthKeeperTab() &&
+        !searchParams.has('code') &&
+        !searchParams.has('line_connected') &&
+        !isLineOAuthInProgress() &&
+        !readLineOAuthBroadcastResult()
+      ) {
+        setLineOAuthCompleting(false)
+        return
+      }
       void finishOAuthReturn()
     }
     document.addEventListener('visibilitychange', onVisibility)
@@ -515,11 +541,16 @@ export function ContactPage() {
                 lineUserId={lineUserId || null}
                 lineDisplayName={lineDisplayName}
                 lineOAuthCompleting={lineOAuthCompleting}
+                onLoginStart={() => setLineOAuthCompleting(true)}
                 onLineDisconnected={() => {
                   setLineUserId('')
                   setLineDisplayName(null)
+                  abandonLineOAuthSession()
+                  setLineOAuthCompleting(false)
                 }}
                 onLoginError={(message) => {
+                  abandonLineOAuthSession()
+                  setLineOAuthCompleting(false)
                   setChannelConnectError(message)
                   setFieldErrors((e) => ({ ...e, channelConnect: message }))
                 }}

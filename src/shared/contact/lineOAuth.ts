@@ -27,6 +27,7 @@ import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 
 const LINE_AUTH_URL = 'https://access.line.me/oauth2/v2.1/authorize'
 const LINE_OAUTH_IN_PROGRESS_KEY = 'npc_contact_line_oauth_in_progress'
+const LINE_OAUTH_IN_PROGRESS_MAX_MS = 10 * 60 * 1000
 
 export interface LineOAuthCallbackParams {
   line_user_id?: string
@@ -82,10 +83,24 @@ export function clearLineOAuthInProgress(): void {
 
 export function isLineOAuthInProgress(): boolean {
   try {
-    return Boolean(sessionStorage.getItem(LINE_OAUTH_IN_PROGRESS_KEY))
+    const raw = sessionStorage.getItem(LINE_OAUTH_IN_PROGRESS_KEY)
+    if (!raw) return false
+    const started = Number(raw)
+    if (!Number.isFinite(started) || Date.now() - started > LINE_OAUTH_IN_PROGRESS_MAX_MS) {
+      sessionStorage.removeItem(LINE_OAUTH_IN_PROGRESS_KEY)
+      return false
+    }
+    return true
   } catch {
     return false
   }
+}
+
+/** ยกเลิก OAuth ค้าง — ใช้เมื่อ timeout หรือ UI ต้อง reset */
+export function abandonLineOAuthSession(): void {
+  clearLineOAuthInProgress()
+  clearLineOAuthKeeperTab()
+  clearOAuthCallbackOwner()
 }
 
 function applyOAuthSuccess(userId: string, displayName: string | null): void {
