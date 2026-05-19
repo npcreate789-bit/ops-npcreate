@@ -6,6 +6,29 @@ export function canCreateEmployeeUser(roles: AppRole[]): boolean {
   return hasDbPrivilegedRole(roles)
 }
 
+/** แก้ไขชื่อ/รหัสผู้ใช้พนักงาน */
+export function canEditEmployeeUser(
+  actorRoles: AppRole[],
+  targetUserRoles: AppRole[],
+  isSelf: boolean,
+): boolean {
+  if (!canCreateEmployeeUser(actorRoles)) return false
+  if (isSelf) return true
+  return canEditCeoUserRoles(actorRoles, targetUserRoles)
+}
+
+/** ลบบัญชีพนักงาน (ไม่รวม client-only) */
+export function canDeleteEmployeeUser(
+  actorRoles: AppRole[],
+  targetUserRoles: AppRole[],
+  isSelf: boolean,
+): boolean {
+  if (isSelf) return false
+  if (!canCreateEmployeeUser(actorRoles)) return false
+  if (targetUserRoles.includes('dev') && !actorRoles.includes('dev')) return false
+  return canEditCeoUserRoles(actorRoles, targetUserRoles)
+}
+
 /** ดูรหัสผ่านชั่วคราวของพนักงาน — เฉพาะ CEO */
 export function canViewStaffPasswords(roles: AppRole[]): boolean {
   return roles.includes('ceo')

@@ -94,6 +94,53 @@ export const mockAdminApi = {
     }
   },
 
+  async updateEmployee(input: {
+    user_id: string
+    full_name?: string
+    login_id?: string
+  }): Promise<{
+    id: string
+    full_name: string | null
+    login_id: string
+    email: string
+  }> {
+    const u = MOCK_USERS.find((x) => x.id === input.user_id)
+    if (!u) throw new Error('ไม่พบผู้ใช้')
+    if (input.full_name !== undefined) u.full_name = input.full_name.trim()
+    if (input.login_id) {
+      const loginId = normalizeLoginId(input.login_id)
+      if (MOCK_USERS.some((x) => x.id !== u.id && x.login_id === loginId)) {
+        throw new Error('รหัสผู้ใช้นี้ถูกใช้แล้ว')
+      }
+      u.login_id = loginId
+      u.email = staffAuthEmail(loginId)
+    }
+    return {
+      id: u.id,
+      full_name: u.full_name,
+      login_id: u.login_id,
+      email: u.email,
+    }
+  },
+
+  async deleteEmployee(userId: string): Promise<void> {
+    const idx = MOCK_USERS.findIndex((x) => x.id === userId)
+    if (idx === -1) throw new Error('ไม่พบผู้ใช้')
+    if (MOCK_USERS[idx].roles.includes('ceo')) {
+      throw new Error('ไม่สามารถลบบัญชี CEO ในโหมดพัฒนาได้')
+    }
+    MOCK_USERS.splice(idx, 1)
+  },
+
+  async resetEmployeePassword(userId: string): Promise<{ temporary_password: string }> {
+    const u = MOCK_USERS.find((x) => x.id === userId)
+    if (!u) throw new Error('ไม่พบผู้ใช้')
+    const tempPassword = generateTempPassword(12)
+    u.temporary_password = tempPassword
+    u.must_change_password = true
+    return { temporary_password: tempPassword }
+  },
+
   async createEmployee(input: CreateEmployeeInput): Promise<CreateEmployeeResult> {
     const loginId = normalizeLoginId(input.login_id)
     if (MOCK_USERS.some((u) => u.login_id === loginId)) {

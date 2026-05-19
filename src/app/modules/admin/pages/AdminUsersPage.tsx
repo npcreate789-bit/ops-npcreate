@@ -2,33 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canManageAdminUsers } from '../../../../shared/auth/access'
-import { ROLE_LABELS, type AppRole } from '../../../../shared/types/roles'
 import { listCustomersForSelect } from '../../finance/api/payments'
 import { clientWorkspaceUrl } from '../../customers/customerLinks'
-import {
-  canManageCeoUserStatus,
-  canModifyUserRole,
-  canViewStaffPasswords,
-} from '../access'
-import {
-  listAdminUsers,
-  setClientCustomerAccess,
-  setUserActive,
-  setUserRoles,
-} from '../api/users'
+import { canManageCeoUserStatus, canViewStaffPasswords } from '../access'
+import { listAdminUsers, setClientCustomerAccess, setUserActive } from '../api/users'
 import { AdminAudienceFilterBar } from '../components/AdminAudienceFilterBar'
 import { AdminRoleGuide } from '../components/AdminRoleGuide'
 import { CreateClientAccountWizard } from '../components/CreateClientAccountWizard'
+import { AdminFlowTabs, type AdminFlowSection } from '../components/AdminFlowTabs'
 import { CreateEmployeeForm } from '../components/CreateEmployeeForm'
+import { EmployeeEditSheet } from '../components/EmployeeEditSheet'
+import { StaffUserCards } from '../components/StaffUserCards'
 import { ChatTemplatesAdmin } from '../components/ChatTemplatesAdmin'
 import { DefaultLeadOwnerSettingCard } from '../components/DefaultLeadOwnerSetting'
 import {
   adminUserKind,
-  adminUserKindLabel,
-  assertValidRoleMix,
+  type AdminUserKind,
   countAdminAudience,
   matchesAdminAudience,
-  STAFF_MANAGEABLE_ROLES,
   type AdminAudienceFilter,
 } from '../userAudience'
 import type { AdminUserRow } from '../types'
@@ -54,6 +45,8 @@ export function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [customers, setCustomers] = useState<{ id: string; brand_name: string }[]>([])
+  const [section, setSection] = useState<AdminFlowSection>('staff')
+  const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -73,9 +66,15 @@ export function AdminUsersPage() {
 
   useEffect(() => {
     if (!presetCustomerId) return
+    setSection('client')
     const el = document.getElementById('admin-create-client')
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [presetCustomerId, loading])
+
+  useEffect(() => {
+    if (section === 'client') setAudienceFilter('client')
+    else if (section === 'staff') setAudienceFilter('staff')
+  }, [section])
 
   useEffect(() => {
     listCustomersForSelect()
@@ -101,6 +100,20 @@ export function AdminUsersPage() {
     })
   }, [rows, query, audienceFilter, customers])
 
+  const staffForCards = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const staffKinds: AdminUserKind[] = ['staff', 'mixed', 'none']
+    return rows.filter((u) => {
+      if (!staffKinds.includes(adminUserKind(u))) return false
+      if (!q) return true
+      return (
+        u.login_id.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.full_name?.toLowerCase().includes(q) ?? false)
+      )
+    })
+  }, [rows, query])
+
   async function handleToggleActive(user: AdminUserRow) {
     if (!canManage || user.id === profile?.id) return
     if (!canManageCeoUserStatus(roles, user.roles)) {
@@ -114,53 +127,6 @@ export function AdminUsersPage() {
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
-    } finally {
-      setSavingId(null)
-    }
-  }
-
-  async function handleRoleToggle(user: AdminUserRow, role: AppRole, checked: boolean) {
-    if (!canManage) return
-    const kind = adminUserKind(user)
-
-    if (kind === 'client' && role !== 'client') {
-      setError(
-        'บัญชีลูกค้าพอร์ทัลไม่ควรมีบทบาทพนักงาน — สร้างบัญชีพนักงานแยกถ้าต้องการทีมภายใน',
-      )
-      return
-    }
-    if (kind === 'staff' && role === 'client' && checked) {
-      setError('บัญชีลูกค้าให้สร้างจาก「สร้างบัญชีลูกค้า (พอร์ทัล)」ด้านบน ไม่ใช่มอบบทบาท client ให้พนักงาน')
-      return
-    }
-    if (!canModifyUserRole(roles, user.roles, role)) {
-      setError(
-        user.roles.includes('ceo') || role === 'ceo'
-          ? 'เฉพาะ CEO เท่านั้นที่จัดการบทบาท CEO ได้'
-          : 'ไม่มีสิทธิ์แก้ไขบทบาทนี้',
-      )
-      return
-    }
-    const next = checked
-      ? [...new Set([...user.roles, role])]
-      : user.roles.filter((r) => r !== role)
-    if (next.length === 0) {
-      setError('ต้องมีอย่างน้อย 1 บทบาท')
-      return
-    }
-    try {
-      assertValidRoleMix(next)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'บทบาทไม่ถูกต้อง')
-      return
-    }
-    setSavingId(user.id)
-    setError(null)
-    try {
-      await setUserRoles(user.id, next, roles)
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'บันทึกบทบาทไม่สำเร็จ')
     } finally {
       setSavingId(null)
     }
@@ -193,10 +159,6 @@ export function AdminUsersPage() {
     )
   }
 
-  const showStaffRolesColumn =
-    audienceFilter === 'staff' || audienceFilter === 'mixed' || audienceFilter === 'all'
-  const showClientColumn =
-    audienceFilter === 'client' || audienceFilter === 'mixed' || audienceFilter === 'all'
   const mixedCount = audienceCounts.mixed ?? 0
 
   return (
@@ -246,185 +208,162 @@ export function AdminUsersPage() {
         )}
       </div>
 
-      <section className="card card--wide admin-create-card admin-create-card--client" id="admin-create-client">
-        <CreateClientAccountWizard
-          creatorRoles={roles}
-          configured={configured}
-          initialCustomerId={presetCustomerId}
-          onCreated={() => void load()}
-        />
-      </section>
+      <AdminFlowTabs
+        active={section}
+        onSelect={setSection}
+        staffCount={staffForCards.length}
+        clientCount={audienceCounts.client ?? 0}
+      />
 
-      <section className="card card--wide admin-create-card admin-create-card--staff" id="admin-create-staff">
-        <CreateEmployeeForm
-          creatorRoles={roles}
-          configured={configured}
-          onCreated={() => void load()}
-        />
-      </section>
+      {section === 'staff' && (
+        <>
+          <section className="card card--wide admin-create-card admin-create-card--staff" id="admin-create-staff">
+            <CreateEmployeeForm
+              creatorRoles={roles}
+              configured={configured}
+              onCreated={() => void load()}
+            />
+          </section>
 
-      <details className="card card--wide admin-settings-details">
-        <summary>การตั้งค่าระบบ (Lead, แชท)</summary>
-        <DefaultLeadOwnerSettingCard actorId={profile?.id ?? DEV_OWNER} disabled={!canManage} />
-        <ChatTemplatesAdmin disabled={!canManage} />
-      </details>
+          <section className="card card--wide admin-staff-list-panel">
+            <header className="admin-panel-head">
+              <div>
+                <h2 className="crm-section-title">รายการพนักงาน</h2>
+                <p className="muted admin-list-intro">
+                  กดการ์ดเพื่อแก้ไขชื่อ บทบาท รหัสผ่าน หรือลบบัญชี
+                </p>
+              </div>
+              <button
+                type="button"
+                className="crm-btn crm-btn--ghost"
+                onClick={() => {
+                  document.getElementById('admin-create-staff')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+              >
+                + เพิ่มพนักงาน
+              </button>
+            </header>
 
-      <section className="card card--wide">
-        <h2 className="crm-section-title">รายการบัญชีในระบบ</h2>
-        <p className="muted admin-list-intro">
-          แท็บพนักงาน/ลูกค้าแสดงเฉพาะประเภทนั้น — บัญชีผสมบทบาทอยู่แท็บ「ผสมบทบาท」เท่านั้น
-        </p>
+            <div className="admin-toolbar">
+              <input
+                type="search"
+                className="crm-input"
+                placeholder="ค้นหารหัสผู้ใช้ อีเมล หรือชื่อ..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
+                รีเฟรช
+              </button>
+            </div>
 
-        <AdminAudienceFilterBar
-          active={audienceFilter}
-          onSelect={setAudienceFilter}
-          counts={audienceCounts}
-        />
+            {error && <p className="crm-error">{error}</p>}
+            {loading && <p className="muted">กำลังโหลด...</p>}
+            {!loading && (
+              <StaffUserCards
+                users={staffForCards}
+                actorId={profile?.id}
+                onEdit={setEditingUser}
+              />
+            )}
+          </section>
+        </>
+      )}
 
-        <div className="admin-toolbar">
-          <input
-            type="search"
-            className="crm-input"
-            placeholder="ค้นหารหัสผู้ใช้ อีเมล ชื่อ หรือแบรนด์..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
-            รีเฟรช
-          </button>
-        </div>
+      {section === 'client' && (
+        <>
+          <section className="card card--wide admin-create-card admin-create-card--client" id="admin-create-client">
+            <CreateClientAccountWizard
+              creatorRoles={roles}
+              configured={configured}
+              initialCustomerId={presetCustomerId}
+              onCreated={() => void load()}
+            />
+          </section>
 
-        {error && <p className="crm-error">{error}</p>}
-        {loading && <p className="muted">กำลังโหลด...</p>}
+          <section className="card card--wide">
+            <h2 className="crm-section-title">บัญชีลูกค้าพอร์ทัล</h2>
+            <p className="muted admin-list-intro">
+              ลูกค้าเข้าระบบที่ <Link to="/client/login">/client/login</Link> — ผูก 1 แบรนด์ต่อบัญชี
+            </p>
 
-        {!loading && (
-          <div className="crm-table-wrap">
-            <table className="admin-user-table">
-              <thead>
-                <tr>
-                  <th>ประเภท</th>
-                  <th>ผู้ใช้</th>
-                  {showPasswords && <th>รหัสชั่วคราว</th>}
-                  {showStaffRolesColumn && <th>บทบาทพนักงาน</th>}
-                  {showClientColumn && <th>ลูกค้า / พอร์ทัล</th>}
-                  <th>สถานะ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((user) => {
-                  const busy = savingId === user.id
-                  const isSelf = user.id === profile?.id
-                  const kind = adminUserKind(user)
-                  const statusLocked = !canManageCeoUserStatus(roles, user.roles)
-                  const brand = brandNameFor(user)
+            <AdminAudienceFilterBar
+              active="client"
+              onSelect={setAudienceFilter}
+              counts={audienceCounts}
+            />
 
-                  return (
-                    <tr
-                      key={user.id}
-                      className={[
-                        !user.is_active ? 'is-inactive' : '',
-                        kind === 'mixed' ? 'is-mixed-audience' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <td>
-                        <span className={`admin-audience-badge admin-audience-badge--${kind}`}>
-                          {adminUserKindLabel(kind)}
-                        </span>
-                        {kind === 'mixed' && (
-                          <p className="admin-mixed-hint">ควรแยกบัญชีพนักงาน/ลูกค้า</p>
-                        )}
-                      </td>
-                      <td>
-                        <strong>{user.full_name || user.login_id}</strong>
-                        <br />
-                        <code className="admin-user-login-id">{user.login_id}</code>
-                        <br />
-                        <span className="muted">{user.email}</span>
-                        {isSelf && (
-                          <>
+            <div className="admin-toolbar">
+              <input
+                type="search"
+                className="crm-input"
+                placeholder="ค้นหารหัสผู้ใช้ อีเมล ชื่อ หรือแบรนด์..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <button type="button" className="crm-btn crm-btn--ghost" onClick={() => void load()}>
+                รีเฟรช
+              </button>
+            </div>
+
+            {error && <p className="crm-error">{error}</p>}
+            {loading && <p className="muted">กำลังโหลด...</p>}
+            {!loading && (
+              <div className="crm-table-wrap">
+                <table className="admin-user-table">
+                  <thead>
+                    <tr>
+                      <th>ผู้ใช้</th>
+                      {showPasswords && <th>รหัสชั่วคราว</th>}
+                      <th>แบรนด์ / พอร์ทัล</th>
+                      <th>สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((user) => {
+                      const busy = savingId === user.id
+                      const isSelf = user.id === profile?.id
+                      const brand = brandNameFor(user)
+                      const statusLocked = !canManageCeoUserStatus(roles, user.roles)
+                      return (
+                        <tr key={user.id} className={!user.is_active ? 'is-inactive' : ''}>
+                          <td>
+                            <strong>{user.full_name || user.login_id}</strong>
                             <br />
-                            <small className="muted">(บัญชีของคุณ)</small>
-                          </>
-                        )}
-                        {user.must_change_password && (
-                          <>
+                            <code className="admin-user-login-id">{user.login_id}</code>
                             <br />
-                            <small className="admin-user-pending-pw">รอตั้งรหัสผ่านใหม่</small>
-                          </>
-                        )}
-                      </td>
-                      {showPasswords && (
-                        <td>
-                          {kind !== 'client' && user.temporary_password ? (
-                            <code className="admin-user-temp-pw">{user.temporary_password}</code>
-                          ) : kind === 'client' && user.temporary_password ? (
-                            <code className="admin-user-temp-pw">{user.temporary_password}</code>
-                          ) : (
-                            <span className="muted">—</span>
+                            <span className="muted">{user.email}</span>
+                            {isSelf && (
+                              <>
+                                <br />
+                                <small className="muted">(บัญชีของคุณ)</small>
+                              </>
+                            )}
+                          </td>
+                          {showPasswords && (
+                            <td>
+                              {user.temporary_password ? (
+                                <code className="admin-user-temp-pw">{user.temporary_password}</code>
+                              ) : (
+                                <span className="muted">—</span>
+                              )}
+                            </td>
                           )}
-                        </td>
-                      )}
-                      {showStaffRolesColumn && (
-                        <td>
-                          {kind === 'client' ? (
-                            <span className="muted">บัญชีพอร์ทัล — ไม่มีบทบาทพนักงาน</span>
-                          ) : kind === 'none' ? (
-                            <span className="muted">ยังไม่มีบทบาท — เลือกบทบาทพนักงาน</span>
-                          ) : (
-                            <div className="admin-roles">
-                              {STAFF_MANAGEABLE_ROLES.map((role) => {
-                                const on = user.roles.includes(role)
-                                const roleLocked = !canModifyUserRole(roles, user.roles, role)
-                                return (
-                                  <label
-                                    key={role}
-                                    className={`admin-role-chip${on ? ' admin-role-chip--on' : ''}${roleLocked ? ' admin-role-chip--locked' : ''}`}
-                                    title={
-                                      roleLocked
-                                        ? 'เฉพาะ CEO เท่านั้นที่จัดการบัญชี CEO ได้'
-                                        : undefined
-                                    }
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={on}
-                                      disabled={busy || isSelf || roleLocked}
-                                      onChange={(e) =>
-                                        void handleRoleToggle(user, role, e.target.checked)
-                                      }
-                                    />
-                                    {ROLE_LABELS[role]}
-                                  </label>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </td>
-                      )}
-                      {showClientColumn && (
-                        <td>
-                          {kind === 'staff' ? (
-                            <span className="muted">— ใช้วิซาร์ดสร้างลูกค้าด้านบน</span>
-                          ) : (
+                          <td>
                             <div className="admin-client-cell">
-                              <label className="task-field admin-client-field">
-                                <span className="task-field__label">แบรนด์</span>
-                                <select
-                                  className="task-select crm-select"
-                                  disabled={busy || !user.roles.includes('client')}
-                                  value={user.client_customer_id ?? ''}
-                                  onChange={(e) => void handleClientLink(user, e.target.value)}
-                                >
-                                  <option value="">— เลือกลูกค้า —</option>
-                                  {customers.map((c) => (
-                                    <option key={c.id} value={c.id}>
-                                      {c.brand_name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
+                              <select
+                                className="task-select crm-select"
+                                disabled={busy}
+                                value={user.client_customer_id ?? ''}
+                                onChange={(e) => void handleClientLink(user, e.target.value)}
+                              >
+                                <option value="">— เลือกลูกค้า —</option>
+                                {customers.map((c) => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.brand_name}
+                                  </option>
+                                ))}
+                              </select>
                               {user.client_customer_id && (
                                 <Link
                                   to={clientWorkspaceUrl(user.client_customer_id)}
@@ -437,52 +376,65 @@ export function AdminUsersPage() {
                                 <p className="muted admin-client-brand-hint">ผูกกับ {brand}</p>
                               )}
                             </div>
-                          )}
-                        </td>
-                      )}
-                      <td>
-                        <label
-                          className={`admin-toggle${statusLocked ? ' admin-toggle--locked' : ''}`}
-                          title={
-                            statusLocked
-                              ? 'เฉพาะ CEO เท่านั้นที่เปิด/ปิดบัญชี CEO ได้'
-                              : undefined
-                          }
-                        >
-                          <input
-                            type="checkbox"
-                            checked={user.is_active}
-                            disabled={busy || isSelf || statusLocked}
-                            onChange={() => void handleToggleActive(user)}
-                          />
-                          {user.is_active ? 'ใช้งาน' : 'ปิด'}
-                        </label>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {filtered.length === 0 && (
-              <p className="muted admin-empty">
-                {query.trim()
-                  ? 'ไม่พบผู้ใช้ที่ตรงกับคำค้น'
-                  : audienceFilter === 'client'
-                    ? 'ยังไม่มีบัญชีลูกค้าพอร์ทัล — สร้างจากวิซาร์ด「สร้างบัญชีลูกค้า (พอร์ทัล)」ด้านบน'
-                    : audienceFilter === 'staff'
-                      ? 'ยังไม่มีบัญชีพนักงาน — สร้างจาก「สร้างบัญชีพนักงาน」ด้านบน'
-                      : audienceFilter === 'mixed'
-                        ? 'ไม่มีบัญชีผสมบทบาท — ดีแล้ว'
-                        : 'ยังไม่มีผู้ใช้ในระบบ'}
-              </p>
+                          </td>
+                          <td>
+                            <label
+                              className={`admin-toggle${statusLocked ? ' admin-toggle--locked' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={user.is_active}
+                                disabled={busy || isSelf || statusLocked}
+                                onChange={() => void handleToggleActive(user)}
+                              />
+                              {user.is_active ? 'ใช้งาน' : 'ปิด'}
+                            </label>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                {filtered.length === 0 && (
+                  <p className="muted admin-empty">
+                    {query.trim()
+                      ? 'ไม่พบผู้ใช้ที่ตรงกับคำค้น'
+                      : 'ยังไม่มีบัญชีลูกค้าพอร์ทัล — สร้างจากวิซาร์ดด้านบน'}
+                  </p>
+                )}
+              </div>
             )}
-          </div>
-        )}
 
-        <p className="muted admin-hint">
-          บัญชี CEO จัดการได้เฉพาะ CEO · ลูกค้าพอร์ทัลผูกได้ 1 แบรนด์ต่อบัญชี
-        </p>
-      </section>
+            <p className="muted admin-hint">
+              บัญชีลูกค้าพอร์ทัลผูกได้ 1 แบรนด์ต่อบัญชี
+            </p>
+          </section>
+        </>
+      )}
+
+      {section === 'settings' && (
+        <section className="card card--wide admin-settings-panel">
+          <h2 className="crm-section-title">การตั้งค่าระบบ</h2>
+          <DefaultLeadOwnerSettingCard actorId={profile?.id ?? DEV_OWNER} disabled={!canManage} />
+          <ChatTemplatesAdmin disabled={!canManage} />
+        </section>
+      )}
+
+      <EmployeeEditSheet
+        user={editingUser}
+        open={editingUser != null}
+        actorId={profile?.id}
+        creatorRoles={roles}
+        configured={configured}
+        onClose={() => setEditingUser(null)}
+        onSaved={() => void load()}
+        onDeleted={() => void load()}
+      />
+
+      <p className="muted admin-hint admin-page__footer-hint">
+        บัญชี CEO จัดการได้เฉพาะ CEO · production ต้อง deploy{' '}
+        <code>manage-employee</code> สำหรับแก้ไข/ลบ
+      </p>
     </div>
   )
 }
