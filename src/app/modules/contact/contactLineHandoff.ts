@@ -1,5 +1,10 @@
 import { appUrl } from '../../../shared/config/appUrl'
 import {
+  DEFAULT_ACTIVE_SERVICE_PACKAGES,
+  formatServiceInterests,
+  type ServicePackageOption,
+} from '../../../shared/packages/serviceInterests'
+import {
   lineOaStarterMessageUrl,
   markLineOaContactPending,
 } from '../../../shared/contact/channelConnectConfig'
@@ -21,11 +26,16 @@ export function createContactLeadId(): string {
 export function buildContactLineInquiryMessage(input: {
   contactName: string
   phone: string
-  serviceLabels: string[]
+  serviceCodes: string[]
+  serviceOptions?: ServicePackageOption[]
 }): string {
   const lines = ['สนใจบริการ NP Create', `ชื่อ: ${input.contactName.trim()}`, `โทร: ${input.phone.trim()}`]
-  if (input.serviceLabels.length > 0) {
-    lines.push(`บริการที่สนใจ: ${input.serviceLabels.join(', ')}`)
+  const servicesText = formatServiceInterests(
+    input.serviceCodes,
+    input.serviceOptions ?? DEFAULT_ACTIVE_SERVICE_PACKAGES,
+  )
+  if (servicesText) {
+    lines.push(`บริการที่สนใจ: ${servicesText}`)
   }
   return lines.join('\n')
 }
@@ -39,12 +49,14 @@ export function buildContactLineOaPrefillMessage(input: {
   leadId: string
   contactName: string
   phone: string
-  serviceLabels: string[]
+  serviceCodes: string[]
+  serviceOptions?: ServicePackageOption[]
 }): string {
   const inquiry = buildContactLineInquiryMessage({
     contactName: input.contactName,
     phone: input.phone,
-    serviceLabels: input.serviceLabels,
+    serviceCodes: input.serviceCodes,
+    serviceOptions: input.serviceOptions,
   })
   return ['--- ข้อความลูกค้า ---', inquiry, `CRM:  ${contactCrmLeadUrl(input.leadId)}`].join('\n')
 }
@@ -164,13 +176,15 @@ export function prepareContactLineHandoffLaunch(input: {
   leadId: string
   contactName: string
   phone: string
-  serviceLabels: string[]
+  serviceCodes: string[]
+  serviceOptions?: ServicePackageOption[]
 }): ContactLineHandoffLaunch | null {
   const oaPrefill = buildContactLineOaPrefillMessage({
     leadId: input.leadId,
     contactName: input.contactName,
     phone: input.phone,
-    serviceLabels: input.serviceLabels,
+    serviceCodes: input.serviceCodes,
+    serviceOptions: input.serviceOptions,
   })
   const chatUrl = contactLineHandoffUrl(oaPrefill)
   const ok = persistContactLineHandoffState({

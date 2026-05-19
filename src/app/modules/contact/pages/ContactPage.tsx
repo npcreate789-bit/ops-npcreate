@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { listPublicServicePackages } from '../../sales/api/packages'
-import type { ServicePackageOption } from '../../../../shared/packages/serviceInterests'
+import {
+  serviceInterestLabel,
+  type ServicePackageOption,
+} from '../../../../shared/packages/serviceInterests'
 import { isLocalDevHost } from '../../../../shared/config/appUrl'
 import {
   COMPANY_BRAND_NAME,
@@ -72,13 +75,6 @@ const HANDOFF_STEPS = [
   'กดปุ่มส่งในแอป LINE — ทีมจะเห็นแชทและข้อความใน chat.line.biz',
   'ทีม Sales ติดต่อกลับภายใน 1–2 วันทำการ',
 ] as const
-
-function serviceLabelsForCodes(
-  codes: string[],
-  options: ServicePackageOption[],
-): string[] {
-  return codes.map((code) => options.find((o) => o.code === code)?.name ?? code)
-}
 
 export function ContactPage() {
   const [searchParams] = useSearchParams()
@@ -378,13 +374,13 @@ export function ContactPage() {
     setFormError(null)
 
     const name = contactName.trim()
-    const labels = serviceLabelsForCodes(services, serviceOptions)
     const leadId = createContactLeadId()
     const launch = prepareContactLineHandoffLaunch({
       leadId,
       contactName: name,
       phone: phone.trim(),
-      serviceLabels: labels,
+      serviceCodes: services,
+      serviceOptions,
     })
 
     if (!launch) {
@@ -621,7 +617,7 @@ export function ContactPage() {
                         onClick={() => toggleService(pkg.code)}
                         aria-pressed={services.includes(pkg.code)}
                       >
-                        {pkg.name}
+                        {serviceInterestLabel(pkg.code, serviceOptions)}
                       </button>
                     ))}
                   </div>

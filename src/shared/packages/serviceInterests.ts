@@ -5,16 +5,28 @@ export interface ServicePackageOption {
   name: string
 }
 
+/** ป้ายภาษาไทยตามรหัส — ใช้ใน /contact และข้อความ LINE (ไม่พึ่งชื่อจาก DB ที่อาจเป็นภาษาอังกฤษ) */
+export const SERVICE_PACKAGE_TH_LABELS: Record<string, string> = {
+  gmv_max: 'ดูแล GMV Max',
+  gmv_course: 'คอร์ส GMV Max',
+  tiktok_one: 'TikTok One / ครีเอเตอร์',
+  content: 'ผลิตคอนเทนต์',
+  live: 'ไลฟ์คอมเมิร์ซ',
+  consulting: 'ที่ปรึกษาแบบส่วนตัว',
+  software: 'ซอฟต์แวร์ / ลิขสิทธิ์',
+  other: 'บริการอื่น ๆ',
+}
+
 /** ตรงกับ supabase/migrations/00065_seed_sales_packages.sql — fallback เมื่อโหลดจาก DB ไม่ได้ */
 export const DEFAULT_ACTIVE_SERVICE_PACKAGES: ServicePackageOption[] = [
-  { code: 'gmv_max', name: 'ดูแล GMV Max' },
-  { code: 'gmv_course', name: 'คอร์ส GMV Max' },
-  { code: 'tiktok_one', name: 'TikTok One / Creator' },
-  { code: 'content', name: 'ผลิตคอนเทนต์' },
-  { code: 'live', name: 'Live Commerce' },
-  { code: 'consulting', name: 'Private Consulting' },
-  { code: 'software', name: 'Software / License' },
-  { code: 'other', name: 'บริการอื่น ๆ' },
+  { code: 'gmv_max', name: SERVICE_PACKAGE_TH_LABELS.gmv_max },
+  { code: 'gmv_course', name: SERVICE_PACKAGE_TH_LABELS.gmv_course },
+  { code: 'tiktok_one', name: SERVICE_PACKAGE_TH_LABELS.tiktok_one },
+  { code: 'content', name: SERVICE_PACKAGE_TH_LABELS.content },
+  { code: 'live', name: SERVICE_PACKAGE_TH_LABELS.live },
+  { code: 'consulting', name: SERVICE_PACKAGE_TH_LABELS.consulting },
+  { code: 'software', name: SERVICE_PACKAGE_TH_LABELS.software },
+  { code: 'other', name: SERVICE_PACKAGE_TH_LABELS.other },
 ]
 
 /** ป้ายเก่าจาก SERVICE_PACKAGES / ข้อมูลก่อนรวมรหัส */
@@ -70,7 +82,9 @@ export function serviceInterestLabel(
   options: ServicePackageOption[] = DEFAULT_ACTIVE_SERVICE_PACKAGES,
 ): string {
   const normalized = normalizeServiceInterestCode(code, options)
-  return options.find((o) => o.code === normalized)?.name ?? code
+  const thai = SERVICE_PACKAGE_TH_LABELS[normalized]
+  if (thai) return thai
+  return options.find((o) => o.code === normalized)?.name ?? normalized
 }
 
 export function formatServiceInterests(
