@@ -15,7 +15,7 @@ export function StaffUserCards({ users, actorId, mixedOnly, onEdit }: StaffUserC
       <p className="muted admin-staff-empty">
         {mixedOnly
           ? 'ไม่มีบัญชีผสมบทบาทในรายการ — ดีแล้ว'
-          : 'ยังไม่มีบัญชีพนักงาน — กด「เพิ่มพนักงาน」ด้านบน'}
+          : 'ยังไม่มีบัญชีพนักงาน — กด + เพิ่มพนักงาน'}
       </p>
     )
   }

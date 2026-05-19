@@ -13,7 +13,7 @@ import {
   parseAdminFlowSection,
   type AdminFlowSection,
 } from '../components/AdminFlowTabs'
-import { CreateEmployeeForm } from '../components/CreateEmployeeForm'
+import { CreateEmployeeSheet } from '../components/CreateEmployeeSheet'
 import { EmployeeEditSheet } from '../components/EmployeeEditSheet'
 import { StaffUserCards } from '../components/StaffUserCards'
 import { ChatTemplatesAdmin } from '../components/ChatTemplatesAdmin'
@@ -50,6 +50,7 @@ export function AdminUsersPage() {
   const [customers, setCustomers] = useState<{ id: string; brand_name: string }[]>([])
   const [staffFilter, setStaffFilter] = useState<StaffListFilter>('all')
   const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null)
+  const [createEmployeeOpen, setCreateEmployeeOpen] = useState(false)
 
   const setSection = useCallback(
     (next: AdminFlowSection) => {
@@ -258,14 +259,6 @@ export function AdminUsersPage() {
 
       {section === 'staff' && (
         <>
-          <section className="card card--wide admin-create-card admin-create-card--staff" id="admin-create-staff">
-            <CreateEmployeeForm
-              creatorRoles={roles}
-              configured={configured}
-              onCreated={() => void load()}
-            />
-          </section>
-
           <section className="card card--wide admin-staff-list-panel" id="admin-staff-list">
             <header className="admin-panel-head">
               <div>
@@ -286,10 +279,8 @@ export function AdminUsersPage() {
                 )}
                 <button
                   type="button"
-                  className="crm-btn crm-btn--ghost"
-                  onClick={() => {
-                    document.getElementById('admin-create-staff')?.scrollIntoView({ behavior: 'smooth' })
-                  }}
+                  className="crm-btn crm-btn--primary admin-btn-add-staff"
+                  onClick={() => setCreateEmployeeOpen(true)}
                 >
                   + เพิ่มพนักงาน
                 </button>
@@ -472,6 +463,14 @@ export function AdminUsersPage() {
           <ChatTemplatesAdmin disabled={!canManage} />
         </section>
       )}
+
+      <CreateEmployeeSheet
+        open={createEmployeeOpen}
+        creatorRoles={roles}
+        configured={configured}
+        onClose={() => setCreateEmployeeOpen(false)}
+        onCreated={() => void load()}
+      />
 
       <EmployeeEditSheet
         user={editingUserLive}

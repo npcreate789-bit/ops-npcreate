@@ -697,6 +697,73 @@
 }
 
 /* —— Edit sheet —— */
+.admin-btn-add-staff {
+  font-weight: 600;
+}
+
+.admin-flow-steps {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-flow-steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--npc-glass-border);
+  font-size: 0.78rem;
+  color: var(--npc-text-muted);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.admin-flow-steps li.is-active {
+  border-color: rgba(74, 222, 128, 0.55);
+  background: rgba(74, 222, 128, 0.1);
+  color: var(--npc-text);
+  font-weight: 600;
+}
+
+.admin-flow-steps li.is-done {
+  border-color: rgba(74, 222, 128, 0.35);
+  color: #86efac;
+}
+
+.admin-flow-steps__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-flow-steps li.is-active .admin-flow-steps__num {
+  background: rgba(74, 222, 128, 0.35);
+}
+
+.admin-field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.admin-sheet--create .admin-sheet__panel {
+  border-left-color: rgba(74, 222, 128, 0.35);
+}
+
+.admin-sheet__body--success {
+  gap: 1.25rem;
+}
+
 .admin-sheet {
   position: fixed;
   inset: 0;
