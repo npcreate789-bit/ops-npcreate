@@ -64,7 +64,147 @@ function canAssignCeo(actorRoles: AppRole[]): boolean {
 
 type AdminClient = ReturnType<typeof createClient>
 
+const REQUIRED_REASSIGNMENTS: Array<{ table: string; column: string }> = [
+  { table: 'leads', column: 'owner_id' },
+  { table: 'customers', column: 'sales_owner_id' },
+  { table: 'quotations', column: 'owner_id' },
+  { table: 'campaigns', column: 'ads_owner_id' },
+  { table: 'daily_metrics', column: 'created_by' },
+  { table: 'payments', column: 'recorded_by' },
+  { table: 'tasks', column: 'assignee_id' },
+  { table: 'tasks', column: 'created_by' },
+  { table: 'content_jobs', column: 'assignee_id' },
+  { table: 'content_jobs', column: 'created_by' },
+  { table: 'contract_renewals', column: 'owner_id' },
+  { table: 'contract_renewals', column: 'created_by' },
+  { table: 'creators', column: 'created_by' },
+  { table: 'chat_messages', column: 'sender_id' },
+  { table: 'brief_attachments', column: 'uploaded_by' },
+]
+
+const STORAGE_BUCKETS = ['leads', 'payments', 'briefs', 'chat-attachments'] as const
+
+const NULLABLE_CLEAR: Array<{ table: string; column: string }> = [
+  { table: 'customers', column: 'account_owner_id' },
+  { table: 'customers', column: 'ads_owner_id' },
+  { table: 'projects', column: 'account_owner_id' },
+  { table: 'projects', column: 'ads_owner_id' },
+]
+
 /** Reassign rows that block profile/auth deletion (FK without ON DELETE CASCADE). */
+async function listStorageObjectPaths(
+  admin: AdminClient,
+  bucket: string,
+  prefix: string,
+): Promise<string[]> {
+  const { data, error } = await admin.storage.from(bucket).list(prefix, {
+    limit: 1000,
+  })
+  if (error || !data?.length) {
+    return []
+  }
+
+  const paths: string[] = []
+  for (const item of data) {
+    const path = prefix ? `${prefix}/${item.name}` : item.name
+    if (item.id === null) {
+      paths.push(...(await listStorageObjectPaths(admin, bucket, path)))
+    } else {
+      paths.push(path)
+    }
+  }
+  return paths
+}
+
+async function removeStoragePaths(
+  admin: AdminClient,
+  bucket: string,
+  paths: string[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const chunkSize = 100
+  for (let i = 0; i < paths.length; i += chunkSize) {
+    const chunk = paths.slice(i, i + chunkSize)
+    const { error } = await admin.storage.from(bucket).remove(chunk)
+    if (error) {
+      console.error('removeStoragePaths', bucket, error)
+      return { ok: false, error: error.message }
+    }
+  }
+  return { ok: true }
+}
+
+/** Supabase forbids DELETE on storage.objects — list by owner, remove via Storage API. */
+async function purgeStaffUserStorage(
+  admin: AdminClient,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: owned, error: listErr } = await admin
+    .schema('storage')
+    .from('objects')
+    .select('bucket_id, name')
+    .eq('owner', userId)
+
+  if (!listErr && owned?.length) {
+    const byBucket = new Map<string, string[]>()
+    for (const row of owned) {
+      const bucket = row.bucket_id as string
+      const name = row.name as string
+      const paths = byBucket.get(bucket) ?? []
+      paths.push(name)
+      byBucket.set(bucket, paths)
+    }
+
+    for (const [bucket, paths] of byBucket) {
+      const removed = await removeStoragePaths(admin, bucket, paths)
+      if (!removed.ok) return removed
+    }
+    return { ok: true }
+  }
+
+  if (listErr) {
+    console.warn('purgeStaffUserStorage list by owner failed; using prefix scan', listErr)
+  }
+
+  for (const bucket of STORAGE_BUCKETS) {
+    const paths = await listStorageObjectPaths(admin, bucket, userId)
+    if (!paths.length) continue
+    const removed = await removeStoragePaths(admin, bucket, paths)
+    if (!removed.ok) return removed
+  }
+
+  return { ok: true }
+}
+
+async function reassignStaffUserReferencesViaApi(
+  admin: AdminClient,
+  fromUserId: string,
+  toUserId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  for (const { table, column } of REQUIRED_REASSIGNMENTS) {
+    const { error } = await admin
+      .from(table)
+      .update({ [column]: toUserId })
+      .eq(column, fromUserId)
+    if (error) {
+      console.error('reassignStaffUserReferencesViaApi', table, column, error)
+      return { ok: false, error: error.message }
+    }
+  }
+
+  for (const { table, column } of NULLABLE_CLEAR) {
+    const { error } = await admin
+      .from(table)
+      .update({ [column]: null })
+      .eq(column, fromUserId)
+    if (error) {
+      console.error('reassignStaffUserReferencesViaApi clear', table, column, error)
+      return { ok: false, error: error.message }
+    }
+  }
+
+  return { ok: true }
+}
+
 async function reassignStaffUserReferences(
   admin: AdminClient,
   fromUserId: string,
@@ -74,53 +214,38 @@ async function reassignStaffUserReferences(
     return { ok: false, error: 'ไม่สามารถโอนข้อมูลไปยังผู้ใช้คนเดียวกันได้' }
   }
 
-  const requiredReassignments: Array<{ table: string; column: string }> = [
-    { table: 'leads', column: 'owner_id' },
-    { table: 'customers', column: 'sales_owner_id' },
-    { table: 'quotations', column: 'owner_id' },
-    { table: 'campaigns', column: 'ads_owner_id' },
-    { table: 'daily_metrics', column: 'created_by' },
-    { table: 'payments', column: 'recorded_by' },
-    { table: 'tasks', column: 'assignee_id' },
-    { table: 'tasks', column: 'created_by' },
-    { table: 'content_jobs', column: 'assignee_id' },
-    { table: 'content_jobs', column: 'created_by' },
-    { table: 'contract_renewals', column: 'owner_id' },
-    { table: 'contract_renewals', column: 'created_by' },
-    { table: 'creators', column: 'created_by' },
-    { table: 'chat_messages', column: 'sender_id' },
-    { table: 'brief_attachments', column: 'uploaded_by' },
-  ]
+  const { error: rpcErr } = await admin.rpc('reassign_staff_user_references', {
+    p_from_user_id: fromUserId,
+    p_to_user_id: toUserId,
+  })
 
-  const nullableClear: Array<{ table: string; column: string }> = [
-    { table: 'customers', column: 'account_owner_id' },
-    { table: 'customers', column: 'ads_owner_id' },
-    { table: 'projects', column: 'account_owner_id' },
-    { table: 'projects', column: 'ads_owner_id' },
-  ]
-
-  for (const { table, column } of requiredReassignments) {
-    const { error } = await admin
-      .from(table)
-      .update({ [column]: toUserId })
-      .eq(column, fromUserId)
-    if (error) {
-      console.error('reassignStaffUserReferences', table, column, error)
-      return { ok: false, error: error.message }
-    }
+  if (!rpcErr) {
+    return { ok: true }
   }
 
-  for (const { table, column } of nullableClear) {
-    const { error } = await admin
-      .from(table)
-      .update({ [column]: null })
-      .eq(column, fromUserId)
-    if (error) {
-      console.error('reassignStaffUserReferences clear', table, column, error)
-      return { ok: false, error: error.message }
-    }
+  const rpcMissing =
+    rpcErr.message.includes('reassign_staff_user_references') &&
+    (rpcErr.message.includes('does not exist') ||
+      rpcErr.message.includes('Could not find the function'))
+
+  if (!rpcMissing) {
+    console.error('reassignStaffUserReferences rpc', rpcErr)
+    return { ok: false, error: rpcErr.message }
   }
 
+  console.warn('reassign_staff_user_references RPC missing; using API fallback')
+  return reassignStaffUserReferencesViaApi(admin, fromUserId, toUserId)
+}
+
+async function deleteStaffProfile(
+  admin: AdminClient,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await admin.from('profiles').delete().eq('id', userId)
+  if (error) {
+    console.error('deleteStaffProfile', error)
+    return { ok: false, error: error.message }
+  }
   return { ok: true }
 }
 
@@ -238,6 +363,14 @@ Deno.serve(async (req) => {
         return json({ error: 'ไม่มีสิทธิ์ลบบัญชี Dev' }, 403)
       }
 
+      const storagePurge = await purgeStaffUserStorage(admin, userId)
+      if (!storagePurge.ok) {
+        return json(
+          { error: `ไม่สามารถลบไฟล์แนบของผู้ใช้ได้ — ${storagePurge.error}` },
+          500,
+        )
+      }
+
       const reassign = await reassignStaffUserReferences(admin, userId, caller.id)
       if (!reassign.ok) {
         return json(
@@ -245,6 +378,16 @@ Deno.serve(async (req) => {
             error: `ไม่สามารถโอนข้อมูลที่ผูกกับผู้ใช้นี้ได้ — ${reassign.error}`,
           },
           500,
+        )
+      }
+
+      const profileDelete = await deleteStaffProfile(admin, userId)
+      if (!profileDelete.ok) {
+        return json(
+          {
+            error: `ยังลบโปรไฟล์ไม่ได้ — มีข้อมูลอ้างอิงอยู่: ${profileDelete.error}`,
+          },
+          400,
         )
       }
 

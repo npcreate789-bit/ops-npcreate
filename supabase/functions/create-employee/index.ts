@@ -225,7 +225,15 @@ Deno.serve(async (req) => {
       })
     } catch (inner) {
       await admin.auth.admin.deleteUser(userId)
-      throw inner
+      console.error('create-employee rollback', inner)
+      const msg =
+        inner && typeof inner === 'object' && 'message' in inner
+          ? String((inner as { message: string }).message)
+          : 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์'
+      if (msg.includes('CEO')) {
+        return json({ error: msg }, 403)
+      }
+      return json({ error: msg }, 500)
     }
 
     return json({
@@ -236,7 +244,9 @@ Deno.serve(async (req) => {
       roles,
       temporary_password: password,
     })
-  } catch {
-    return json({ error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์' }, 500)
+  } catch (e) {
+    console.error('create-employee', e)
+    const msg = e instanceof Error ? e.message : 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์'
+    return json({ error: msg }, 500)
   }
 })
