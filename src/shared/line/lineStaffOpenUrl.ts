@@ -1,5 +1,8 @@
 import { lineOaStarterMessageUrl } from '../contact/channelConnectConfig'
-import { NPCREATE_LINE_OA_URL } from '../crm/preferredContactChannel'
+
+const NPCREATE_LINE_OA_URL =
+  (import.meta.env.VITE_NPCREATE_LINE_OA_URL as string | undefined)?.trim() ||
+  'https://line.me/R/ti/p/@npcreate'
 import {
   buildLineChatBizDirectUrl,
   buildLineChatBizInboxUrl,
@@ -158,6 +161,42 @@ export function staffLineChatUrl(
   return NPCREATE_LINE_OA_URL
 }
 
+export type StaffLineChatOpenOptions = {
+  mode?: StaffLineChatOpenMode
+  surface?: StaffLineChatSurface
+}
+
+export type OpenStaffLineChatFromUserIdResult =
+  | { ok: true; opened: boolean; url: string }
+  | { ok: false; message: string }
+
+/** เปิดแท็บทันทีใน user gesture (ไม่ async ก่อน window.open) */
+export function openStaffLineChatFromUserId(
+  chatUserId: string | null | undefined,
+  options?: StaffLineChatOpenOptions,
+): OpenStaffLineChatFromUserIdResult {
+  const uid = chatUserId?.trim() ?? ''
+  const mode = options?.mode ?? 'auto'
+  const useDirect =
+    mode === 'direct' ||
+    (mode === 'auto' && staffDirectUserChatEnabled() && isLineMessagingUserIdForUrl(uid))
+
+  const resolved = resolveStaffLineChatOpenUrl(uid || null, {
+    mode: useDirect && uid ? 'direct' : mode === 'direct' ? 'inbox' : mode,
+    surface: options?.surface,
+  })
+
+  if (!resolved.ok) {
+    return { ok: false, message: resolved.message }
+  }
+
+  const opened = openUrlInNewTab(resolved.url)
+  if (uid && !useDirect) {
+    void copyLineUserIdForStaffSearch(uid)
+  }
+  return { ok: true, opened, url: resolved.url }
+}
+
 export function openUrlInNewTab(url: string): boolean {
   const win = window.open(url, '_blank', 'noopener,noreferrer')
   if (win) return true
@@ -194,28 +233,14 @@ export async function openStaffLineChat(
     surface?: StaffLineChatSurface
   },
 ): Promise<boolean> {
-  const uid = lineUserId?.trim()
-  const mode = options?.mode ?? 'auto'
-  const useDirect =
-    mode === 'direct' ||
-    (mode !== 'inbox' && staffDirectUserChatEnabled(options) && isLineMessagingUserIdForUrl(uid))
-
-  const resolved = resolveStaffLineChatOpenUrl(uid || null, {
-    mode: useDirect && uid ? 'direct' : mode === 'direct' ? 'inbox' : mode,
+  const result = openStaffLineChatFromUserId(lineUserId, {
+    mode: options?.mode,
     surface: options?.surface,
   })
+  if (result.ok) return result.opened
 
-  const url = resolved.ok
-    ? resolved.url
-    : staffLineChatUrl(lineUserId, { ...options, mode: 'inbox' })
-
-  const opened = openUrlInNewTab(url)
-
-  if (uid && !useDirect) {
-    void copyLineUserIdForStaffSearch(uid)
-  }
-
-  return opened
+  const url = staffLineChatUrl(lineUserId, { ...options, mode: 'inbox' })
+  return openUrlInNewTab(url)
 }
 
 export function staffLineDirectChatHint(lineUserId?: string | null): string | null {

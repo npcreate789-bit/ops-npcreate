@@ -1,8 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import {
-  openStaffLineChat,
-  resolveStaffLineChatOpenUrl,
-} from '../../../../shared/line/staffLineMessaging'
+import { openStaffLineChatFromUserId } from '../../../../shared/line/staffLineMessaging'
 import {
   lineLoginAndOaIdsMismatch,
   resolveLineMessagingRecipientId,
@@ -105,22 +102,17 @@ export function LeadLineChatPanel({
             className="crm-btn crm-btn--ghost crm-line-chat__open-external"
             onClick={() => {
               setOpenManagerError(null)
-              const resolved = resolveStaffLineChatOpenUrl(openChatId, {
+              const result = openStaffLineChatFromUserId(openChatId, {
                 mode: 'direct',
                 surface: 'manager',
               })
-              if (!resolved.ok) {
-                setOpenManagerError(resolved.message)
+              if (!result.ok) {
+                setOpenManagerError(result.message)
                 return
               }
-              void openStaffLineChat(openChatId, {
-                mode: 'direct',
-                surface: 'manager',
-              }).then((opened) => {
-                if (!opened) {
-                  setOpenManagerError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
-                }
-              })
+              if (!result.opened) {
+                setOpenManagerError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
+              }
             }}
           >
             เปิดใน Manager

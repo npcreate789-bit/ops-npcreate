@@ -11,10 +11,7 @@ import {
   lineLoginAndOaIdsMismatch,
   resolveLineStaffChatOpenUserId,
 } from '../../../../shared/line/lineUserIdResolution'
-import {
-  openStaffLineChat,
-  resolveStaffLineChatOpenUrl,
-} from '../../../../shared/line/staffLineMessaging'
+import { openStaffLineChatFromUserId } from '../../../../shared/line/staffLineMessaging'
 import { LeadLineOaChatIdField } from './LeadLineOaChatIdField'
 import '../crm.css'
 
@@ -56,33 +53,25 @@ export function LeadPreferredChannelPanel({
 
   const [openLineError, setOpenLineError] = useState<string | null>(null)
 
-  async function handleOpenLine() {
+  function handleOpenLine() {
     setOpenLineError(null)
     const oaOpenId = resolveLineStaffChatOpenUserId(lineIds)
-    if (!oaOpenId) {
-      const inbox = resolveStaffLineChatOpenUrl(null, { mode: 'inbox', surface: 'chat' })
-      if (!inbox.ok) {
-        setOpenLineError(inbox.message)
-        return
-      }
-      const opened = await openStaffLineChat(null, { mode: 'inbox', surface: 'chat' })
-      if (!opened) {
-        setOpenLineError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
-      } else if (!hasOaChat) {
-        setOpenLineError(
-          'เปิดรายการแชทแล้ว — วางลิงก์เต็มจาก chat.line.biz แล้วบันทึก ID หลัง /chat/ เพื่อเปิดแชทลูกค้าตรง',
-        )
-      }
+    const result = openStaffLineChatFromUserId(oaOpenId, {
+      mode: oaOpenId ? 'direct' : 'inbox',
+      surface: 'chat',
+    })
+    if (!result.ok) {
+      setOpenLineError(result.message)
       return
     }
-    const resolved = resolveStaffLineChatOpenUrl(oaOpenId, { mode: 'direct', surface: 'chat' })
-    if (!resolved.ok) {
-      setOpenLineError(resolved.message)
-      return
-    }
-    const opened = await openStaffLineChat(oaOpenId, { mode: 'direct', surface: 'chat' })
-    if (!opened) {
+    if (!result.opened) {
       setOpenLineError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
+      return
+    }
+    if (!oaOpenId) {
+      setOpenLineError(
+        'เปิดรายการแชทแล้ว — วางลิงก์เต็มจาก chat.line.biz แล้วบันทึก ID หลัง /chat/ เพื่อเปิดแชทลูกค้าตรง',
+      )
     }
   }
 
@@ -124,7 +113,7 @@ export function LeadPreferredChannelPanel({
             <button
               type="button"
               className="crm-btn crm-btn--primary crm-preferred-channel__cta"
-              onClick={() => void handleOpenLine()}
+              onClick={handleOpenLine}
             >
               {staffOpenChannelLabel(ch)}
             </button>

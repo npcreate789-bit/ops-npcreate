@@ -4,7 +4,31 @@ import {
 } from './lineChatBizUrl'
 import { isLineMessagingUserId } from './lineStaffOpenUrl'
 
-/** ดึง LINE Messaging user id จาก URL chat.line.biz หรือข้อความที่วาง */
+export function lineOaChatUserIdSaveError(
+  parsedUserId: string,
+  input: string,
+  configuredAccountId: string,
+): string | null {
+  const accountFromInput = parseLineChatBizAccountIdFromInput(input)
+  if (
+    accountFromInput &&
+    configuredAccountId &&
+    accountFromInput.toLowerCase() !== configuredAccountId.toLowerCase()
+  ) {
+    return (
+      'ลิงก์มาจาก OA อื่น (account ใน URL ไม่ตรงกับระบบ) — ตรวจสอบ VITE_LINE_CHAT_BIZ_ACCOUNT_ID หรือเปิดแชทจาก OA ที่ถูกต้อง'
+    )
+  }
+  if (
+    configuredAccountId &&
+    parsedUserId.toLowerCase() === configuredAccountId.toLowerCase()
+  ) {
+    return 'ค่านี้เป็น account id ของ OA ไม่ใช่ user id ของลูกค้า — ใช้ส่วนหลัง /chat/ ใน URL'
+  }
+  return null
+}
+
+/** ดึง LINE Messaging user id จาก URL chat.line.biz / manager.line.biz หรือข้อความที่วาง */
 export function parseLineOaChatUserIdFromInput(input: string): string | null {
   const raw = input.trim()
   if (!raw) return null
@@ -14,14 +38,31 @@ export function parseLineOaChatUserIdFromInput(input: string): string | null {
     return parsed.chatUserId
   }
 
+  // ลิงก์มี /chat/ แต่ไม่มี user id — อย่าเดาว่า segment แรกคือลูกค้า (มักเป็น account id)
+  if (
+    parsed &&
+    (raw.includes('chat.line.biz') || raw.includes('manager.line.biz')) &&
+    raw.includes('/chat') &&
+    !parsed.chatUserId
+  ) {
+    return null
+  }
+
   const chatPathMatch = raw.match(/\/chat\/(U[0-9a-f]{32})\b/i)
-  if (chatPathMatch?.[1] && isLineMessagingUserId(chatPathMatch[1])) {
+  if (chatPathMatch?.[1] && isLineMessagingUserIdForUrl(chatPathMatch[1])) {
     return chatPathMatch[1]
   }
 
-  const tokenMatch = raw.match(/\b(U[0-9a-f]{32})\b/i)
-  if (tokenMatch?.[1] && isLineMessagingUserId(tokenMatch[1])) {
-    return tokenMatch[1]
+  // ID เปล่า (ไม่ใช่ URL ที่มี account + user ปนกัน)
+  if (isLineMessagingUserIdForUrl(raw) && !raw.includes('line.biz')) {
+    return raw
+  }
+
+  if (!raw.includes('line.biz')) {
+    const tokenMatch = raw.match(/\b(U[0-9a-f]{32})\b/i)
+    if (tokenMatch?.[1] && isLineMessagingUserIdForUrl(tokenMatch[1])) {
+      return tokenMatch[1]
+    }
   }
 
   return null

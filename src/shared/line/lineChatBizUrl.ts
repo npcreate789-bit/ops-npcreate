@@ -1,6 +1,9 @@
-/** รูปแบบ URL chat.line.biz ที่ทีมใช้เปิดแชท OA */
+/** รูปแบบ URL chat.line.biz / manager.line.biz ที่ทีมใช้เปิดแชท OA */
 const LINE_CHAT_BIZ_URL_RE =
   /chat\.line\.biz\/(U[0-9a-f]{32})\/chat(?:\/(U[0-9a-f]{32}))?/i
+
+const LINE_MANAGER_CHAT_URL_RE =
+  /manager\.line\.biz\/account\/(U[0-9a-f]{32})\/chat(?:\/(U[0-9a-f]{32}))?/i
 
 const LINE_MESSAGING_USER_ID_RE = /^U[0-9a-f]{32}$/i
 
@@ -19,11 +22,19 @@ export function parseLineChatBizUrl(input: string): ParsedLineChatBizUrl | null 
   const raw = input.trim()
   if (!raw) return null
 
-  const fromUrl = raw.match(LINE_CHAT_BIZ_URL_RE)
-  if (fromUrl?.[1]) {
+  const fromChatBiz = raw.match(LINE_CHAT_BIZ_URL_RE)
+  if (fromChatBiz?.[1]) {
     return {
-      accountId: fromUrl[1],
-      chatUserId: fromUrl[2] ?? null,
+      accountId: fromChatBiz[1],
+      chatUserId: fromChatBiz[2] ?? null,
+    }
+  }
+
+  const fromManager = raw.match(LINE_MANAGER_CHAT_URL_RE)
+  if (fromManager?.[1]) {
+    return {
+      accountId: fromManager[1],
+      chatUserId: fromManager[2] ?? null,
     }
   }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { LINE_CHAT_BIZ_ACCOUNT_ID } from '../../../../shared/line/staffLineMessaging'
 import {
   lineLoginAndOaIdsMismatch,
+  lineOaChatUserIdSaveError,
   parseLineOaChatUserIdFromInput,
 } from '../../../../shared/line/lineUserIdResolution'
 import { updateLead } from '../api/leads'
@@ -99,7 +100,12 @@ export function LeadLineOaChatIdField({
     setError(null)
     const parsed = parseLineOaChatUserIdFromInput(draft)
     if (!parsed) {
-      setError('วางลิงก์ chat.line.biz หรือ ID หลัง /chat/ (รูปแบบ U + 32 ตัว)')
+      setError('วางลิงก์ chat.line.biz / manager.line.biz หรือ ID หลัง /chat/ (U + 32 ตัว)')
+      return
+    }
+    const saveErr = lineOaChatUserIdSaveError(parsed, draft, LINE_CHAT_BIZ_ACCOUNT_ID)
+    if (saveErr) {
+      setError(saveErr)
       return
     }
     setSaving(true)
