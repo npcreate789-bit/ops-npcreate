@@ -55,7 +55,7 @@ export function openUrlForPreferredChannel(
   if (channel !== 'line') return NPCREATE_FACEBOOK_MESSENGER_URL
   const ids = normalizeLineStaffIds(lineIds)
   const oaOpenId = resolveLineStaffChatOpenUserId(ids)
-  const accountId = getStaffLineChatBizAccountId()
+  const accountId = getStaffLineChatBizAccountId({ chatUserId: oaOpenId })
   if (oaOpenId) {
     const direct = buildLineChatBizDirectUrl(oaOpenId, accountId)
     if (direct) return direct

@@ -19,7 +19,10 @@ export function lineOaChatUserIdSaveError(
     configuredAccountId &&
     parsedUserId.toLowerCase() === configuredAccountId.toLowerCase()
   ) {
-    return 'ค่านี้เป็น account id ของ OA ไม่ใช่ user id ของลูกค้า — ใช้ส่วนหลัง /chat/ ใน URL'
+    return (
+      'ค่านี้เป็น user id ลูกค้า ไม่ใช่ account id ของ OA — วางลิงก์เต็ม chat.line.biz/…/chat/U… ' +
+      'หรือตั้ง VITE_LINE_CHAT_BIZ_ACCOUNT_ID เป็น segment แรกของ URL (ไม่ใช่หลัง /chat/)'
+    )
   }
   return null
 }

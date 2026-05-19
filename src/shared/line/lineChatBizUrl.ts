@@ -45,6 +45,13 @@ export function parseLineChatBizUrl(input: string): ParsedLineChatBizUrl | null 
   return null
 }
 
+/** account id จาก URL เต็มเท่านั้น (ไม่เดาจาก U เปล่า — มักเป็น user id ลูกค้า) */
+export function parseLineChatBizAccountFromUrl(input: string): string | null {
+  const raw = input.trim()
+  if (!raw.includes('line.biz')) return null
+  return parseLineChatBizUrl(raw)?.accountId ?? null
+}
+
 /**
  * Account id บน chat.line.biz (U + 32 hex) — ไม่ใช่ @npcreate
  * รับได้ทั้งค่าเปล่า หรือ URL เต็มที่วางผิดใน env
@@ -75,6 +82,7 @@ export function buildLineChatBizDirectUrl(
   const uid = chatUserId.trim()
   const aid = normalizeLineChatBizAccountId(accountId)
   if (!isLineMessagingUserIdForUrl(uid) || !aid) return null
+  if (aid.toLowerCase() === uid.toLowerCase()) return null
   return `https://chat.line.biz/${aid}/chat/${uid}`
 }
 

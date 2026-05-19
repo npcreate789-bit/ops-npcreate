@@ -116,7 +116,9 @@ export function LeadLineOaChatIdField({
       return
     }
     const warning = lineOaChatUserIdSaveWarning(draft, LINE_CHAT_BIZ_ACCOUNT_ID)
-    rememberLineChatBizAccountFromInput(draft)
+    if (draft.includes('line.biz')) {
+      rememberLineChatBizAccountFromInput(draft)
+    }
     setSaving(true)
     try {
       const updated = await updateLead(lead.id, { line_oa_chat_user_id: parsed })
@@ -137,7 +139,9 @@ export function LeadLineOaChatIdField({
       const parsed = parseLineOaChatUserIdFromInput(text)
       if (parsed) {
         setDraft(parsed)
-        rememberLineChatBizAccountFromInput(text)
+        if (text.includes('line.biz')) {
+          rememberLineChatBizAccountFromInput(text)
+        }
       } else setDraft(text.trim())
     })
   }

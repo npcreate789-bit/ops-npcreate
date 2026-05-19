@@ -9,29 +9,51 @@ import {
   isLineMessagingUserIdForUrl,
   lineChatBizAccountIdConfigError,
   normalizeLineChatBizAccountId,
-  parseLineChatBizUrl,
+  parseLineChatBizAccountFromUrl,
 } from './lineChatBizUrl'
 
 const LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY = 'np.line_chat_biz_account_id'
 
-/** จำ account จาก URL ที่วาง (ใช้เมื่อ env ตั้งผิดแต่ลิงก์ถูก) */
+function clearRememberedLineChatBizAccountId(): void {
+  if (typeof sessionStorage === 'undefined') return
+  sessionStorage.removeItem(LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY)
+}
+
+/** จำ account จาก URL เต็ม chat.line.biz / manager.line.biz เท่านั้น */
 export function rememberLineChatBizAccountFromInput(input: string): void {
   if (typeof sessionStorage === 'undefined') return
-  const account = parseLineChatBizUrl(input.trim())?.accountId
+  const account = parseLineChatBizAccountFromUrl(input)
   if (account) {
     sessionStorage.setItem(LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY, account)
   }
 }
 
-/** account สำหรับสร้างลิงก์ — จำจากลิงก์ที่วางก่อน แล้วค่อย fallback env */
-export function getStaffLineChatBizAccountId(): string {
-  if (typeof sessionStorage !== 'undefined') {
-    const remembered = normalizeLineChatBizAccountId(
-      sessionStorage.getItem(LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY) ?? '',
-    )
-    if (remembered) return remembered
+/** account สำหรับสร้างลิงก์ — ห้ามใช้ user id ลูกค้าแทน account */
+export function getStaffLineChatBizAccountId(options?: {
+  chatUserId?: string | null
+}): string {
+  const chatUid = options?.chatUserId?.trim().toLowerCase() ?? ''
+
+  const rejectIfChatUser = (account: string): string => {
+    if (!account) return ''
+    if (chatUid && account.toLowerCase() === chatUid) return ''
+    return account
   }
-  return LINE_CHAT_BIZ_ACCOUNT_ID
+
+  if (typeof sessionStorage !== 'undefined') {
+    const remembered = rejectIfChatUser(
+      normalizeLineChatBizAccountId(
+        sessionStorage.getItem(LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY) ?? '',
+      ),
+    )
+    if (!remembered) {
+      clearRememberedLineChatBizAccountId()
+    } else {
+      return remembered
+    }
+  }
+
+  return rejectIfChatUser(LINE_CHAT_BIZ_ACCOUNT_ID)
 }
 
 function resolveViteEnv(value: string | undefined): string {
@@ -83,11 +105,14 @@ export function lineOaMessageUrlWithText(text: string): string {
 }
 
 export function staffLineOaInboxUrl(): string | null {
-  return buildLineChatBizInboxUrl(LINE_CHAT_BIZ_ACCOUNT_ID)
+  return buildLineChatBizInboxUrl(getStaffLineChatBizAccountId())
 }
 
 export function staffLineDirectUserChatUrl(lineUserId: string): string | null {
-  return buildLineChatBizDirectUrl(lineUserId, LINE_CHAT_BIZ_ACCOUNT_ID)
+  return buildLineChatBizDirectUrl(
+    lineUserId,
+    getStaffLineChatBizAccountId({ chatUserId: lineUserId }),
+  )
 }
 
 function staffDirectUserChatEnabled(options?: { directUserChat?: boolean }): boolean {
@@ -109,7 +134,7 @@ export function resolveStaffLineChatOpenUrl(
   const uid = chatUserId?.trim() ?? ''
   const mode = options?.mode ?? 'auto'
 
-  const accountId = getStaffLineChatBizAccountId()
+  const accountId = getStaffLineChatBizAccountId({ chatUserId: uid })
   const configErr = lineChatBizAccountIdConfigError(accountId)
   if (configErr) return { ok: false, message: configErr }
 
@@ -123,7 +148,14 @@ export function resolveStaffLineChatOpenUrl(
     }
     const url = buildLineChatBizDirectUrl(uid, accountId)
     if (!url) {
-      return { ok: false, message: 'สร้างลิงก์แชทไม่สำเร็จ — ตรวจสอบ VITE_LINE_CHAT_BIZ_ACCOUNT_ID' }
+      const sameId =
+        accountId && uid && accountId.toLowerCase() === uid.toLowerCase()
+      return {
+        ok: false,
+        message: sameId
+          ? 'VITE_LINE_CHAT_BIZ_ACCOUNT_ID ตั้งเป็น user id ลูกค้า — ต้องเป็น account id หลัง chat.line.biz/ (เช่น U2626213…) หรือวางลิงก์แชทเต็มแล้วบันทึก'
+          : 'สร้างลิงก์แชทไม่สำเร็จ — ตรวจสอบ VITE_LINE_CHAT_BIZ_ACCOUNT_ID',
+      }
     }
     return { ok: true, url }
   }
@@ -246,7 +278,9 @@ export function staffLineDirectChatHint(lineUserId?: string | null): string | nu
   if (!isLineMessagingUserIdForUrl(lineUserId)) {
     return 'LINE User ID ไม่ถูกรูปแบบ (U ตามด้วยตัวเลข a-f 32 ตัว)'
   }
-  const configErr = lineChatBizAccountIdConfigError(getStaffLineChatBizAccountId())
+  const configErr = lineChatBizAccountIdConfigError(
+    getStaffLineChatBizAccountId({ chatUserId: lineUserId }),
+  )
   if (configErr) return configErr
   if (staffDirectUserChatEnabled()) {
     return 'เปิดแชทตรง — ต้องเป็น user id จากแชท OA (หลัง /chat/ ใน URL)'
