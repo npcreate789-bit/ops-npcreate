@@ -45,9 +45,11 @@ import {
   completeLineOAuthFromCallback,
   clearLineOAuthBroadcastResult,
   consumeLineOAuthBroadcastResult,
+  resolveOAuthCallbackTabRole,
   stripLineOAuthParamsFromUrl,
   subscribeLineOAuthBroadcast,
 } from '../../../../shared/contact/lineOAuth'
+import { dismissDuplicateOAuthCallbackTab } from '../../../../shared/contact/lineOAuthBroadcast'
 import '../contact.css'
 
 const HERO_POINTS = [
@@ -153,7 +155,25 @@ export function ContactPage() {
         searchParams.has('code') ||
         searchParams.has('line_connected') ||
         searchParams.has('line_error')
-      if (hasOAuthReturn) setLineOAuthCompleting(true)
+      if (!hasOAuthReturn) return
+
+      const tabRole = resolveOAuthCallbackTabRole()
+      if (tabRole === 'handoff') return
+      if (tabRole === 'duplicate') {
+        const broadcast = consumeLineOAuthBroadcastResult()
+        if (broadcast?.ok) {
+          setLineUserId(broadcast.userId)
+          setLineDisplayName(broadcast.displayName)
+          setChannelConnectError(null)
+          setFieldErrors((e) => ({ ...e, channelConnect: undefined }))
+        } else if (broadcast && !broadcast.ok) {
+          setChannelConnectError(broadcast.error)
+        }
+        dismissDuplicateOAuthCallbackTab()
+        return
+      }
+
+      setLineOAuthCompleting(true)
 
       try {
         const fromCode = await completeLineOAuthFromCallback(searchParams)

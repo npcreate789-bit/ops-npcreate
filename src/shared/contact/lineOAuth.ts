@@ -10,9 +10,12 @@ import {
 } from './channelConnectConfig'
 import type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
 import {
+  clearOAuthCallbackOwner,
   clearLineOAuthBroadcastResult,
+  dismissDuplicateOAuthCallbackTab,
   publishLineOAuthResult,
   readLineOAuthBroadcastResult,
+  resolveOAuthCallbackTabRole,
   tryCloseLineOAuthCallbackTab,
 } from './lineOAuthBroadcast'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
@@ -108,6 +111,7 @@ function applyOAuthError(message: string): void {
 export function startLineLogin(): void {
   const url = buildLineAuthorizeUrl()
   markLineOAuthInProgress()
+  clearOAuthCallbackOwner()
   window.location.replace(url)
 }
 
@@ -119,6 +123,14 @@ export async function completeLineOAuthFromCallback(
 ): Promise<
   { ok: true; userId: string; displayName: string | null } | { ok: false; error: string } | null
 > {
+  const tabRole = resolveOAuthCallbackTabRole()
+  if (tabRole === 'handoff') return null
+  if (tabRole === 'duplicate') {
+    consumeLineOAuthBroadcastResult()
+    dismissDuplicateOAuthCallbackTab()
+    return null
+  }
+
   const oauthError = searchParams.get('error')
   if (oauthError) {
     const message = mapLineOAuthError(oauthError)
@@ -187,6 +199,14 @@ export async function completeLineOAuthFromCallback(
 export function applyLineOAuthCallbackFromUrl(
   searchParams: URLSearchParams,
 ): { ok: true; userId: string; displayName: string | null } | { ok: false; error: string } | null {
+  const tabRole = resolveOAuthCallbackTabRole()
+  if (tabRole === 'handoff') return null
+  if (tabRole === 'duplicate') {
+    consumeLineOAuthBroadcastResult()
+    dismissDuplicateOAuthCallbackTab()
+    return null
+  }
+
   const error = searchParams.get('line_error')
   if (error) {
     const message = mapLineOAuthError(error)
@@ -276,9 +296,10 @@ export function applyLineOAuthBroadcastPayload(
   return { error: payload.error }
 }
 
-export type { LineOAuthBroadcastPayload } from './lineOAuthBroadcast'
+export type { LineOAuthBroadcastPayload, OAuthCallbackTabRole } from './lineOAuthBroadcast'
 export {
   clearLineOAuthBroadcastResult,
   readLineOAuthBroadcastResult,
+  resolveOAuthCallbackTabRole,
   subscribeLineOAuthBroadcast,
 } from './lineOAuthBroadcast'

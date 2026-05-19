@@ -4,7 +4,30 @@ export const LINE_OAUTH_RESULT_LS_KEY = 'npc_contact_line_oauth_result'
 /** ชื่อหน้าต่างจาก window.open — ใช้ปิดแท็บ access.line.me ที่ค้าง */
 export const LINE_OAUTH_POPUP_WINDOW_NAME = 'npc_line_oauth'
 const LINE_OAUTH_KEEPER_TAB_KEY = 'npc_contact_line_oauth_keeper'
+const LINE_OAUTH_CALLBACK_OWNER_KEY = 'npc_contact_line_oauth_callback_owner'
+const CALLBACK_OWNER_MAX_MS = 2 * 60 * 1000
 const RESULT_MAX_AGE_MS = 5 * 60 * 1000
+
+let tabInstanceId: string | null = null
+
+function getTabInstanceId(): string {
+  if (!tabInstanceId) tabInstanceId = crypto.randomUUID()
+  return tabInstanceId
+}
+
+export function isOAuthCallbackLocation(href = window.location.href): boolean {
+  try {
+    const params = new URL(href).searchParams
+    return (
+      params.has('code') ||
+      params.has('line_connected') ||
+      params.has('line_error') ||
+      params.has('error')
+    )
+  } catch {
+    return false
+  }
+}
 
 export type LineOAuthBroadcastPayload =
   | {
@@ -38,6 +61,14 @@ export function isLineOAuthKeeperTab(): boolean {
 export function clearLineOAuthKeeperTab(): void {
   try {
     sessionStorage.removeItem(LINE_OAUTH_KEEPER_TAB_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearOAuthCallbackOwner(): void {
+  try {
+    sessionStorage.removeItem(LINE_OAUTH_CALLBACK_OWNER_KEY)
   } catch {
     /* ignore */
   }
@@ -139,23 +170,22 @@ export function subscribeLineOAuthBroadcast(
   }
 }
 
-/** แท็บ callback ซ้ำ (desktop) — ปิดเมื่อมี window.opener หลังซิงก์ผลแล้ว */
-export function tryCloseLineOAuthCallbackTab(): void {
+/**
+ * แท็บ callback ที่ LINE เปิดเพิ่ม — ส่ง URL กลับแท็บเดิม (access.line.me /contact) แล้วปิดตัวเอง
+ * ใช้ก่อนแลก token เพื่อไม่ให้ค้างสองแท็บ
+ */
+export function redirectOAuthCallbackToOpener(): boolean {
+  if (!isOAuthCallbackLocation()) return false
+
   const opener = window.opener
-  if (!opener || opener.closed) return
+  if (!opener || opener.closed) return false
 
-  const params = new URLSearchParams(window.location.search)
-  const isOAuthReturn =
-    params.has('code') ||
-    params.has('line_connected') ||
-    params.has('line_error') ||
-    params.has('error')
-  if (!isOAuthReturn) return
-
+  const target = window.location.href
   try {
+    opener.location.replace(target)
     opener.focus()
   } catch {
-    /* ignore */
+    return false
   }
 
   window.setTimeout(() => {
@@ -169,5 +199,63 @@ export function tryCloseLineOAuthCallbackTab(): void {
     } catch {
       /* ignore */
     }
-  }, 300)
+  }, 150)
+
+  return true
+}
+
+export type OAuthCallbackTabRole = 'primary' | 'handoff' | 'duplicate'
+
+/** จัดการแท็บ callback — handoff ไปแท็บเดิม หรือข้ามถ้าแท็บอื่นแลก code แล้ว */
+export function resolveOAuthCallbackTabRole(): OAuthCallbackTabRole {
+  if (!isOAuthCallbackLocation()) return 'primary'
+
+  if (redirectOAuthCallbackToOpener()) return 'handoff'
+
+  try {
+    const existing = readLineOAuthBroadcastResult()
+    if (existing && Date.now() - existing.at < 8000) {
+      return 'duplicate'
+    }
+
+    const raw = sessionStorage.getItem(LINE_OAUTH_CALLBACK_OWNER_KEY)
+    const now = Date.now()
+    const selfId = getTabInstanceId()
+    if (raw) {
+      const parsed = JSON.parse(raw) as { t: number; id: string }
+      if (now - parsed.t < CALLBACK_OWNER_MAX_MS && parsed.id !== selfId) {
+        return 'duplicate'
+      }
+    }
+    sessionStorage.setItem(
+      LINE_OAUTH_CALLBACK_OWNER_KEY,
+      JSON.stringify({ t: now, id: selfId }),
+    )
+  } catch {
+    /* ignore */
+  }
+
+  return 'primary'
+}
+
+export function dismissDuplicateOAuthCallbackTab(): void {
+  window.setTimeout(() => {
+    try {
+      window.close()
+    } catch {
+      /* ignore */
+    }
+    if (!window.closed) {
+      const clean = new URL(window.location.href)
+      clean.search = ''
+      clean.hash = ''
+      window.location.replace(clean.pathname)
+    }
+  }, 200)
+}
+
+/** หลังแลก token สำเร็จ — ปิดแท็บ callback ถ้ามี opener (desktop) */
+export function tryCloseLineOAuthCallbackTab(): void {
+  if (!isOAuthCallbackLocation()) return
+  redirectOAuthCallbackToOpener()
 }
