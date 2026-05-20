@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canAccessNotifications,
@@ -31,6 +31,7 @@ import {
   formValuesToUpdate,
   type LeadFormValues,
 } from '../components/LeadForm'
+import { readFocusLineChatFromState } from '../leadLineChatNavState'
 import type { Lead } from '../types'
 import '../../phase2/phase2.css'
 import '../crm.css'
@@ -41,7 +42,9 @@ export function LeadEditorPage() {
   const { id } = useParams<{ id: string }>()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
+  const location = useLocation()
   const { profile, configured } = useAuth()
+  const focusLineChatOnMount = useRef(readFocusLineChatFromState(location.state)).current
   const roles = profile?.roles ?? []
   const userId = profile?.id ?? DEV_OWNER
   const canDelete = hasDbPrivilegedRole(roles)
@@ -94,6 +97,11 @@ export function LeadEditorPage() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (!focusLineChatOnMount) return
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: {} })
+  }, [focusLineChatOnMount, navigate, location.pathname, location.search])
 
   useEffect(() => {
     if (isNew) {
@@ -327,6 +335,7 @@ export function LeadEditorPage() {
           senderProfileId={userId}
           viewerUserId={userId}
           readOnly={readOnly}
+          focusComposerOnMount={focusLineChatOnMount}
           servicesInterested={servicesInterested}
           serviceOptions={serviceOptions}
           canManageSnippets={canManageLineSnippets(roles)}

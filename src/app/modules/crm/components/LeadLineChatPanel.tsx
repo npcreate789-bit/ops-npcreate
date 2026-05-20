@@ -32,6 +32,8 @@ interface LeadLineChatPanelProps {
   servicesInterested?: string[]
   serviceOptions?: ServicePackageOption[]
   canManageSnippets?: boolean
+  /** โฟกัสช่องพิมพ์เมื่อเปิดจาก toast แจ้งเตือน LINE */
+  focusComposerOnMount?: boolean
 }
 
 function formatTime(iso: string): string {
@@ -68,6 +70,7 @@ export function LeadLineChatPanel({
   servicesInterested = [],
   serviceOptions = [],
   canManageSnippets = false,
+  focusComposerOnMount = false,
 }: LeadLineChatPanelProps) {
   const [draft, setDraft] = useState('')
   const [replyTo, setReplyTo] = useState<LeadLineMessage | null>(null)
@@ -77,6 +80,7 @@ export function LeadLineChatPanel({
   const [attachError, setAttachError] = useState<string | null>(null)
   const [snippetModalOpen, setSnippetModalOpen] = useState(false)
 
+  const chatSectionRef = useRef<HTMLElement>(null)
   const threadRef = useRef<HTMLDivElement>(null)
   const composerInputRef = useRef<HTMLTextAreaElement>(null)
   const prevMessageCountRef = useRef(0)
@@ -132,6 +136,15 @@ export function LeadLineChatPanel({
     setActiveLeadLineChatFocus(lead.id)
     return () => clearActiveLeadLineChatFocus()
   }, [lead.id])
+
+  useEffect(() => {
+    if (!focusComposerOnMount || readOnly || !canPush) return
+    const timer = window.setTimeout(() => {
+      chatSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      composerInputRef.current?.focus({ preventScroll: true })
+    }, 200)
+    return () => window.clearTimeout(timer)
+  }, [focusComposerOnMount, readOnly, canPush])
 
   useEffect(() => {
     const inbound = messages.filter((m) => m.direction === 'inbound' && !m.deleted_at)
@@ -273,7 +286,11 @@ export function LeadLineChatPanel({
   const displayError = attachError ?? error
 
   return (
-    <section className="card card--wide crm-line-chat" aria-label="แชท LINE">
+    <section
+      ref={chatSectionRef}
+      className="card card--wide crm-line-chat"
+      aria-label="แชท LINE"
+    >
       <header className="crm-line-chat__head">
         <div className="crm-line-chat__title-row">
           <span className="crm-line-chat__line-badge" aria-hidden>

@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import type { LeadLineChatNavState } from '../../crm/leadLineChatNavState'
 import { canAccessNotifications } from '../../../../shared/auth/access'
 import type { AppRole } from '../../../../shared/types/roles'
 import { isInquiryNotification } from '../inquiryNotification'
@@ -13,6 +14,7 @@ interface StaffAlertToastsProps {
 }
 
 export function StaffAlertToasts({ userId, roles }: StaffAlertToastsProps) {
+  const navigate = useNavigate()
   const enabled = canAccessNotifications(roles)
   const { toasts, dismiss } = useStaffAlertNotificationToasts(userId, enabled)
   const soundLooping = toasts.length > 0 && isNotificationSoundEnabled()
@@ -46,13 +48,26 @@ export function StaffAlertToasts({ userId, roles }: StaffAlertToastsProps) {
             </div>
             <div className="lead-toast__actions">
               {n.link ? (
-                <Link
-                  to={n.link}
-                  className="crm-btn crm-btn--primary lead-toast__btn"
-                  onClick={() => void dismiss(n.id)}
-                >
-                  {openLabel}
-                </Link>
+                isLineMsg ? (
+                  <button
+                    type="button"
+                    className="crm-btn crm-btn--primary lead-toast__btn"
+                    onClick={() => {
+                      void dismiss(n.id)
+                      navigate(n.link!, { state: { focusLineChat: true } satisfies LeadLineChatNavState })
+                    }}
+                  >
+                    {openLabel}
+                  </button>
+                ) : (
+                  <Link
+                    to={n.link}
+                    className="crm-btn crm-btn--primary lead-toast__btn"
+                    onClick={() => void dismiss(n.id)}
+                  >
+                    {openLabel}
+                  </Link>
+                )
               ) : null}
               <button
                 type="button"
