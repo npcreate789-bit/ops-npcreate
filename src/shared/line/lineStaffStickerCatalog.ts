@@ -13,6 +13,8 @@ export const LINE_FRIENDS_PANIC_PACKAGE: LineStaffStickerPackage = {
   packageId: '11537',
   name: 'LINE Friends',
   tabStickerId: '52002734',
+  /** แท็บ pill ซ้ายสุดแบบ LINE OA (Brown + Cony) */
+  featuredTabStickerIds: ['52002734', '52002738'],
   stickers: range('11537', 52002734, 52002773),
 }
 

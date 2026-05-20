@@ -15,6 +15,8 @@ export interface LineStaffStickerPackage {
   tabIcon?: string
   /** สติกเกอร์แรกใช้แสดงในแท็บ (ถ้าไม่มี tabIcon) */
   tabStickerId?: string
+  /** ไอคอนแท็บแบบ LINE (pill สองตัว) — package 11537 LINE Friends */
+  featuredTabStickerIds?: string[]
   stickers: LineStaffSticker[]
 }
 

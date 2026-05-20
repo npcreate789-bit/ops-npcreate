@@ -7,6 +7,7 @@ import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDis
 import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
 import { validateLineChatImage } from '../api/leadLineChat'
 import { markLeadLineMessageNotificationReadByLeadId } from '../../notifications/api/notifications'
+import { playLineMessageNotificationSound } from '../../notifications/notificationSound'
 import {
   clearActiveLeadLineChatFocus,
   setActiveLeadLineChatFocus,
@@ -136,8 +137,11 @@ export function LeadLineChatPanel({
     const inbound = messages.filter((m) => m.direction === 'inbound' && !m.deleted_at)
     const latest = inbound.at(-1)
     const key = latest ? `${latest.id}:${latest.created_at}` : ''
-    if (lastInboundKeyRef.current && key && key !== lastInboundKeyRef.current && viewerUserId) {
-      void markLeadLineMessageNotificationReadByLeadId(viewerUserId, lead.id).catch(() => {})
+    if (lastInboundKeyRef.current && key && key !== lastInboundKeyRef.current) {
+      playLineMessageNotificationSound()
+      if (viewerUserId) {
+        void markLeadLineMessageNotificationReadByLeadId(viewerUserId, lead.id).catch(() => {})
+      }
     }
     lastInboundKeyRef.current = key
   }, [messages, lead.id, viewerUserId])

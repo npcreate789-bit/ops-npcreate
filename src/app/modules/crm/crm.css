@@ -1802,7 +1802,187 @@ button.crm-line-reply-quote:hover {
   color: rgba(6, 199, 85, 0.98);
 }
 
-/* --- LINE-style unified emoji + sticker picker --- */
+/* --- LINE-style emoji panel (แยกจากสติกเกอร์) --- */
+.crm-line-emoji-panel,
+.crm-line-sticker-panel {
+  position: absolute;
+  bottom: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  max-height: min(24rem, 56vh);
+  border-radius: 14px 14px 10px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #eef1f4;
+  color: #2a2f36;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.crm-line-emoji-panel__tabs,
+.crm-line-sticker-panel__tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.45rem;
+  overflow-x: auto;
+  background: #e8ebef;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  -webkit-overflow-scrolling: touch;
+}
+
+.crm-line-emoji-panel__tab,
+.crm-line-sticker-panel__tab {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.15rem;
+  height: 2.15rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #5c6570;
+  cursor: pointer;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.crm-line-emoji-panel__tab {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.crm-line-sticker-panel__tab--friends {
+  min-width: 2.75rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: #3d4f9f;
+}
+
+.crm-line-sticker-panel__tab--friends.crm-line-sticker-panel__tab--active {
+  background: #3d4f9f;
+  box-shadow: 0 2px 8px rgba(61, 79, 159, 0.45);
+}
+
+.crm-line-sticker-panel__tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.05rem;
+  padding: 0.1rem 0.2rem;
+}
+
+.crm-line-sticker-panel__tab-pill-img {
+  width: 1.35rem;
+  height: 1.35rem;
+  object-fit: contain;
+}
+
+.crm-line-sticker-panel__tab-img {
+  width: 1.65rem;
+  height: 1.65rem;
+  object-fit: contain;
+}
+
+.crm-line-sticker-panel__tab-emoji {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.crm-line-emoji-panel__tab--active,
+.crm-line-sticker-panel__tab--active:not(.crm-line-sticker-panel__tab--friends) {
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  color: #1a1f26;
+}
+
+.crm-line-emoji-panel__grid,
+.crm-line-sticker-panel__grid {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.4rem 0.35rem 0.5rem;
+  overflow-y: auto;
+  max-height: min(20rem, 50vh);
+  background: #f4f6f8;
+  -webkit-overflow-scrolling: touch;
+}
+
+.crm-line-emoji-panel__grid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.crm-line-sticker-panel__grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.crm-line-emoji-panel__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.crm-line-emoji-panel__item:hover {
+  background: rgba(255, 255, 255, 0.85);
+  transform: scale(1.06);
+}
+
+.crm-line-sticker-panel__body {
+  flex: 1;
+  min-height: 0;
+}
+
+.crm-line-sticker-panel__empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #7a8490;
+  background: #f4f6f8;
+}
+
+.crm-line-sticker-panel__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  min-height: 2.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.crm-line-sticker-panel__item:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.crm-line-sticker-panel__item-img {
+  width: 2.65rem;
+  height: 2.65rem;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+@media (max-width: 520px) {
+  .crm-line-emoji-panel__grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  .crm-line-sticker-panel__grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/* @deprecated unified picker — kept for reference */
 .crm-line-expression-picker {
   position: absolute;
   bottom: calc(100% + 0.35rem);

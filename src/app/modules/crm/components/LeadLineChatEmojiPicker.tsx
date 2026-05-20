@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { LINE_CHAT_EMOJI_GROUPS } from '../lineChatEmojis'
+import { pushRecentEmoji } from '../lineChatRecentExpressions'
 
 interface LeadLineChatEmojiPickerProps {
   open: boolean
@@ -13,7 +14,7 @@ export function LeadLineChatEmojiPicker({
   onPick,
 }: LeadLineChatEmojiPickerProps) {
   const groups = LINE_CHAT_EMOJI_GROUPS
-  const [activeGroupId, setActiveGroupId] = useState(groups[0]?.id ?? '')
+  const [activeGroupId, setActiveGroupId] = useState(groups[0]?.id ?? 'smileys')
   const panelRef = useRef<HTMLDivElement>(null)
 
   const activeGroup = groups.find((g) => g.id === activeGroupId) ?? groups[0]
@@ -34,45 +35,35 @@ export function LeadLineChatEmojiPicker({
   return (
     <div
       ref={panelRef}
-      className="crm-line-chat__emoji-picker"
+      className="crm-line-emoji-panel"
       role="dialog"
       aria-label="เลือกอีโมจิ"
     >
-      <div className="crm-line-chat__emoji-picker-head">
-        <span className="crm-line-chat__emoji-picker-title">อีโมจิ</span>
-        <button
-          type="button"
-          className="crm-line-chat__emoji-picker-close"
-          onClick={onClose}
-          aria-label="ปิด"
-        >
-          ×
-        </button>
-      </div>
-      <div className="crm-line-chat__emoji-picker-tabs" role="tablist">
+      <div className="crm-line-emoji-panel__tabs" role="tablist" aria-label="หมวดอีโมจิ">
         {groups.map((group) => (
           <button
             key={group.id}
             type="button"
             role="tab"
             aria-selected={group.id === activeGroup.id}
-            className={`crm-line-chat__emoji-picker-tab${
-              group.id === activeGroup.id ? ' crm-line-chat__emoji-picker-tab--active' : ''
+            className={`crm-line-emoji-panel__tab${
+              group.id === activeGroup.id ? ' crm-line-emoji-panel__tab--active' : ''
             }`}
-            onClick={() => setActiveGroupId(group.id)}
             title={group.label}
+            onClick={() => setActiveGroupId(group.id)}
           >
             {group.icon}
           </button>
         ))}
       </div>
-      <div className="crm-line-chat__emoji-picker-grid">
+      <div className="crm-line-emoji-panel__grid">
         {activeGroup.emojis.map((emoji, i) => (
           <button
             key={`${activeGroup.id}-${emoji}-${i}`}
             type="button"
-            className="crm-line-chat__emoji-picker-item"
+            className="crm-line-emoji-panel__item"
             onClick={() => {
+              pushRecentEmoji(emoji)
               onPick(emoji)
               onClose()
             }}

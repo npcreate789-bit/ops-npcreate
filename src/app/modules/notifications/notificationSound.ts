@@ -1,5 +1,4 @@
 import { isActiveChatNotificationLink } from '../chat/activeChatFocus'
-import { isActiveLeadLineChatNotificationLink } from '../crm/activeLeadLineChatFocus'
 import { isChatNotification } from './chatNotification'
 import { isLeadLineMessageNotification } from './leadLineMessageNotification'
 import { isStaffAlertNotification } from './staffAlertNotification'
@@ -21,12 +20,14 @@ const DEFAULT_CHIME_PATTERN = [
   { freq: 1174.66, at: 0.14, dur: 0.18 },
 ] as const
 
-/** เสียงข้อความแชท — สั้น นุ่ม แยกจาก Lead */
-const CHAT_CHIME_PATTERN = [
-  { freq: 523.25, at: 0, dur: 0.07, gain: 0.1 },
-  { freq: 659.25, at: 0.08, dur: 0.1, gain: 0.12 },
-  { freq: 783.99, at: 0.17, dur: 0.12, gain: 0.1 },
+/** เสียงข้อความใหม่แบบ LINE — pop สองโน้ตสั้น */
+const LINE_MESSAGE_SOUND_PATTERN = [
+  { freq: 659.25, at: 0, dur: 0.055, gain: 0.2 },
+  { freq: 987.77, at: 0.065, dur: 0.09, gain: 0.18 },
 ] as const
+
+/** เสียงแชทโปรเจกต์ (เดิม) */
+const CHAT_CHIME_PATTERN = LINE_MESSAGE_SOUND_PATTERN
 
 let audioContext: AudioContext | null = null
 let primed = false
@@ -147,6 +148,11 @@ export function playChatNotificationSound() {
   playPattern(CHAT_CHIME_PATTERN)
 }
 
+/** เสียงข้อความ LINE เข้าใหม่ (ใช้เมื่อเปิดแชทอยู่หรือแจ้งเตือน LINE) */
+export function playLineMessageNotificationSound() {
+  playPattern(LINE_MESSAGE_SOUND_PATTERN)
+}
+
 /** เลือกเสียงตามประเภทแจ้งเตือน — ครั้งเดียว */
 export function playNotificationAlert(dedupeKey?: string) {
   if (dedupeKey && isStaffAlertNotification(dedupeKey)) {
@@ -165,9 +171,7 @@ export function tryPlayIncomingNotificationSound(row: UserNotification) {
   if (!isNotificationSoundEnabled() || row.read_at) return
 
   if (isLeadLineMessageNotification(row.dedupe_key)) {
-    if (isActiveLeadLineChatNotificationLink(row.link)) {
-      playChatNotificationSound()
-    }
+    playLineMessageNotificationSound()
     return
   }
 
