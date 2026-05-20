@@ -299,14 +299,7 @@ export function LeadEditorPage() {
         </p>
       )}
 
-      {!isNew && initial && (
-        <LeadPreferredChannelPanel
-          lead={initial}
-          readOnly={readOnly}
-          onLeadUpdated={(updated) => handleLeadPatched(updated)}
-        />
-      )}
-
+      <div className="crm-lead-workspace">
       {!isNew && initial && initial.preferred_contact_channel === 'line' ? (
         <LeadLineChatPanel
           key={`line-chat-${initial.id}-${initial.line_oa_chat_user_id ?? ''}-${initial.updated_at}`}
@@ -322,7 +315,16 @@ export function LeadEditorPage() {
         />
       ) : null}
 
-      <section className="card card--wide">
+      {!isNew && initial && (
+        <LeadPreferredChannelPanel
+          lead={initial}
+          readOnly={readOnly}
+          onLeadUpdated={(updated) => handleLeadPatched(updated)}
+        />
+      )}
+      </div>
+
+      <section className="card card--wide crm-lead-form-card">
         <LeadForm
           initial={initial}
           serviceOptions={serviceOptions}

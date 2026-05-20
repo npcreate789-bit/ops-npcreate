@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Lead } from '../types'
 import {
   NPCREATE_FACEBOOK_MESSENGER_URL,
@@ -8,23 +8,27 @@ import {
   type PreferredContactChannel,
 } from '../../../../shared/crm/preferredContactChannel'
 import { computeLineOaChatSyncState } from '../../../../shared/line/lineOaChatSyncState'
-import { resolveLineStaffChatOpenUserId } from '../../../../shared/line/lineUserIdResolution'
-import { openStaffLineChatFromUserId } from '../../../../shared/line/staffLineMessaging'
 import { useLeadLatestInboundLineUserId } from '../hooks/useLeadLatestInboundLineUserId'
 import '../crm.css'
-
-const EXTERNAL_SALES_CHECKLIST = [
-  'ทักลูกค้า แนะนำตัว และยืนยันข้อมูลจากฟอร์ม',
-  'สรุปความต้องการ — บันทึกใน Lead',
-  'เสนอแพ็กเกจเบื้องต้น → สร้างใบเสนอราคาเมื่อลูกค้าพร้อม',
-  'หลังชำระเงิน — ลูกค้าใช้ Client Workspace',
-] as const
 
 interface LeadPreferredChannelPanelProps {
   lead: Lead
   variant?: 'default' | 'quotation'
   readOnly?: boolean
   onLeadUpdated?: (lead: Lead) => void
+}
+
+function lineChannelStatus(sync: ReturnType<typeof computeLineOaChatSyncState>): {
+  tone: 'ok' | 'muted' | 'wait'
+  label: string
+} {
+  if (sync.canPush) {
+    return {
+      tone: 'ok',
+      label: sync.shouldOfferInboundSync ? 'พร้อมส่งข้อความ' : 'เชื่อมต่อแล้ว',
+    }
+  }
+  return { tone: 'wait', label: 'รอลูกค้าทัก OA' }
 }
 
 export function LeadPreferredChannelPanel({
@@ -41,148 +45,95 @@ export function LeadPreferredChannelPanel({
   const latestInboundLineUserId = useLeadLatestInboundLineUserId(
     isLineChannel ? lead.id : undefined,
   )
-  const lineIds = {
-    line_user_id: lead.line_user_id,
-    line_oa_chat_user_id: lead.line_oa_chat_user_id,
-  }
-  const sync = computeLineOaChatSyncState(lineIds, latestInboundLineUserId)
 
   if (!channel) return null
 
   const ch = channel as PreferredContactChannel
-  const label = preferredContactChannelLabel(ch)
   const isLine = ch === 'line'
-  const openHref = openUrlForPreferredChannel(ch, lineIds)
-  const staffChatOpenId = resolveLineStaffChatOpenUserId(lineIds, latestInboundLineUserId)
-  const canOpenLineChat = Boolean(staffChatOpenId)
 
-  const [openLineError, setOpenLineError] = useState<string | null>(null)
+  /** หน้า Lead — แชท LINE ด้านล่างเป็นจุดเดียว ไม่แสดงการ์ดซ้ำ */
+  if (isLine && variant === 'default') return null
 
-  function handleOpenLine() {
-    setOpenLineError(null)
-    const oaOpenId = resolveLineStaffChatOpenUserId(lineIds, latestInboundLineUserId)
-    if (!oaOpenId) {
-      setOpenLineError(
-        'ยังเปิดแชทตรงไม่ได้ — ให้ลูกค้าทัก OA ก่อน หรือกด「ใช้ ID จากข้อความลูกค้า」ในแผงแชทด้านล่าง',
-      )
-      return
-    }
-    const result = openStaffLineChatFromUserId(oaOpenId, { mode: 'direct' })
-    if (!result.ok) {
-      setOpenLineError(result.message)
-      return
-    }
-    if (!result.opened) {
-      setOpenLineError('เบราว์เซอร์บล็อกป็อปอัป — อนุญาตป็อปอัปแล้วลองใหม่')
-    }
+  const label = preferredContactChannelLabel(ch)
+  const lineIds = {
+    line_user_id: lead.line_user_id,
+    line_oa_chat_user_id: lead.line_oa_chat_user_id,
   }
+  const sync = isLine ? computeLineOaChatSyncState(lineIds, latestInboundLineUserId) : null
+  const openHref = openUrlForPreferredChannel(ch, lineIds)
+
+  const title =
+    variant === 'quotation' ? `ติดต่อทาง ${label} ก่อนส่งใบเสนอราคา` : `ช่องทางติดต่อ: ${label}`
+
+  const hint =
+    variant === 'quotation'
+      ? 'คุยและสรุปความต้องการก่อนส่งใบเสนอราคา'
+      : 'ลูกค้าเลือกจากฟอร์มติดต่อ'
 
   return (
     <section
-      className={`card card--wide crm-preferred-channel crm-preferred-channel--${ch}${variant === 'quotation' ? ' crm-preferred-channel--quotation' : ''}`}
+      className={`crm-channel-strip crm-channel-strip--${ch}${variant === 'quotation' ? ' crm-channel-strip--quotation' : ''}`}
       aria-label="ช่องทางติดต่อลูกค้า"
     >
-      <header className="crm-preferred-channel__head">
-        <div className="crm-preferred-channel__title-block">
-          {isLine ? (
-            <span className="crm-preferred-channel__line-mark" aria-hidden>
-              LINE
-            </span>
-          ) : null}
-          <div>
-            <h2>
-              {variant === 'quotation'
-                ? `ติดต่อทาง ${label} ก่อนส่งใบเสนอราคา`
-                : `ช่องทางติดต่อ: ${label}`}
-            </h2>
-            <p className="crm-preferred-channel__lead">
-              {variant === 'quotation'
-                ? 'คุยและสรุปความต้องการก่อน — ส่งใบเสนอราคาเมื่อลูกค้าพร้อม'
-                : 'ลูกค้าเลือกจากฟอร์มติดต่อ — คุยจนกว่าชำระและเริ่มงาน'}
-            </p>
-          </div>
+      <div className="crm-channel-strip__main">
+        <span className={`crm-channel-strip__icon crm-channel-strip__icon--${ch}`} aria-hidden>
+          {isLine ? 'LINE' : label.slice(0, 1)}
+        </span>
+        <div className="crm-channel-strip__copy">
+          <h2 className="crm-channel-strip__title">{title}</h2>
+          <p className="crm-channel-strip__hint">{hint}</p>
         </div>
-        {!isLine ? (
-          <span className={`crm-preferred-channel__badge crm-preferred-channel__badge--${ch}`}>
-            {label}
-          </span>
-        ) : null}
-      </header>
+      </div>
 
-      <div className="crm-preferred-channel__toolbar">
+      <div className="crm-channel-strip__actions">
         {isLine ? (
           <>
-            <button
-              type="button"
-              className="crm-btn crm-btn--primary crm-preferred-channel__cta"
-              onClick={handleOpenLine}
-            >
-              {staffOpenChannelLabel(ch)}
-            </button>
-            {sync.canPush ? (
-              <span className="crm-preferred-channel__pill crm-preferred-channel__pill--ok">
-                {sync.shouldOfferInboundSync ? 'ส่งข้อความได้ (ID จากแชท)' : 'เชื่อมต่อ OA แล้ว'}
+            {sync ? (
+              <span
+                className={`crm-channel-strip__status crm-channel-strip__status--${lineChannelStatus(sync).tone}`}
+              >
+                <span className="crm-channel-strip__status-dot" aria-hidden />
+                {lineChannelStatus(sync).label}
               </span>
-            ) : canOpenLineChat ? (
-              <span className="crm-preferred-channel__pill crm-preferred-channel__pill--muted">
-                เปิดแชทได้เมื่อมีข้อความจากลูกค้า
-              </span>
-            ) : (
-              <span className="crm-preferred-channel__pill crm-preferred-channel__pill--muted">
-                รอลูกค้าทัก OA
-              </span>
-            )}
-            {openLineError ? (
-              <p className="crm-preferred-channel__open-error" role="alert">
-                {openLineError}
-              </p>
             ) : null}
+            <Link to={`/app/crm/${lead.id}`} className="crm-btn crm-btn--ghost crm-channel-strip__link">
+              แชทใน CRM
+            </Link>
           </>
         ) : (
           <a
             href={openHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="crm-btn crm-btn--primary crm-preferred-channel__cta"
+            className="crm-btn crm-btn--primary crm-channel-strip__link"
           >
             {staffOpenChannelLabel(ch)}
           </a>
         )}
-
-        {ch === 'line' && lead.line_id ? (
-          <span className="crm-preferred-channel__meta">
-            LINE ID: <strong>{lead.line_id}</strong>
-          </span>
-        ) : null}
-        {ch === 'facebook' && lead.facebook_psid ? (
-          <span className="crm-preferred-channel__meta">
-            Facebook: <strong>{lead.facebook_psid}</strong>
-          </span>
-        ) : null}
-        {ch === 'facebook' && lead.facebook ? (
-          <span className="crm-preferred-channel__meta">
-            เพจ: <strong>{lead.facebook}</strong>
-          </span>
-        ) : null}
-        {ch === 'facebook' && !lead.facebook ? (
-          <span className="crm-preferred-channel__meta muted">
-            แนะนำทักเพจ{' '}
-            <a href={NPCREATE_FACEBOOK_MESSENGER_URL} target="_blank" rel="noopener noreferrer">
-              NP Create
-            </a>
-          </span>
-        ) : null}
       </div>
 
-      {variant === 'default' ? (
-        <details className="crm-preferred-channel__steps">
-          <summary>ขั้นตอนติดต่อลูกค้า</summary>
-          <ol className="crm-preferred-channel__checklist">
-            {EXTERNAL_SALES_CHECKLIST.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-        </details>
+      {ch === 'line' && lead.line_id ? (
+        <p className="crm-channel-strip__meta">
+          LINE ID <strong>{lead.line_id}</strong>
+        </p>
+      ) : null}
+      {ch === 'facebook' && lead.facebook_psid ? (
+        <p className="crm-channel-strip__meta">
+          Facebook <strong>{lead.facebook_psid}</strong>
+        </p>
+      ) : null}
+      {ch === 'facebook' && lead.facebook ? (
+        <p className="crm-channel-strip__meta">
+          เพจ <strong>{lead.facebook}</strong>
+        </p>
+      ) : null}
+      {ch === 'facebook' && !lead.facebook ? (
+        <p className="crm-channel-strip__meta muted">
+          แนะนำทักเพจ{' '}
+          <a href={NPCREATE_FACEBOOK_MESSENGER_URL} target="_blank" rel="noopener noreferrer">
+            NP Create
+          </a>
+        </p>
       ) : null}
     </section>
   )

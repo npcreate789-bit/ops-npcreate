@@ -321,7 +321,7 @@ export function LeadLineChatPanel({
   return (
     <section
       ref={chatSectionRef}
-      className="card card--wide crm-line-chat"
+      className="card card--wide crm-line-chat crm-line-chat--focus"
       aria-label="แชท LINE"
     >
       <header className="crm-line-chat__head">
@@ -329,13 +329,18 @@ export function LeadLineChatPanel({
           <span className="crm-line-chat__line-badge" aria-hidden>
             LINE
           </span>
-          <div>
+          <div className="crm-line-chat__title-copy">
             <h2>แชทกับลูกค้า</h2>
             <p className="crm-line-chat__subtitle">
-              {lineChatLinked
-                ? 'ส่งและรับข้อความผ่าน Official Account'
-                : 'เชื่อมต่อเมื่อลูกค้าทัก OA หรือบันทึก ID จาก chat.line.biz'}
+              {canPush
+                ? 'ส่งและรับข้อความได้ในระบบ — ไม่ต้องสลับไปแอปอื่น'
+                : 'รอลูกค้าทัก Official Account ครั้งแรก'}
             </p>
+            {lead.line_id ? (
+              <p className="crm-line-chat__line-id">
+                LINE ID <span>{lead.line_id}</span>
+              </p>
+            ) : null}
           </div>
         </div>
       </header>
