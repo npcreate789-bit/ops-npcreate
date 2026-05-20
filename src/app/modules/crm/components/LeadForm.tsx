@@ -2,9 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import type { Lead, LeadInsert, LeadUpdate } from '../types'
 import {
+  BANGKOK_TZ,
   datetimeLocalBangkokToIso,
+  formatBangkokDateTime,
   isoToDatetimeLocalBangkok,
 } from '../../../../shared/dates/bangkok'
+import { preferredContactChannelLabel } from '../../../../shared/crm/preferredContactChannel'
 import type { ServicePackageOption } from '../../../../shared/packages/serviceInterests'
 import { normalizeServiceInterestCodes } from '../../../../shared/packages/serviceInterests'
 import {
@@ -15,13 +18,9 @@ import {
 import '../crm.css'
 
 export interface LeadFormValues {
-  brand_name: string
   contact_name: string
   phone: string
-  line_id: string
-  facebook: string
   business_type: string
-  ad_budget_daily: string
   ad_budget_monthly: string
   pain_points: string
   services_interested: string[]
@@ -32,18 +31,33 @@ export interface LeadFormValues {
   reminder_at: string
 }
 
+const REMINDER_PRESETS = [
+  { id: 'tomorrow', label: 'พรุ่งนี้ 10:00', days: 1, hour: 10 },
+  { id: '3days', label: 'อีก 3 วัน', days: 3, hour: 10 },
+  { id: 'week', label: 'อีก 7 วัน', days: 7, hour: 10 },
+] as const
+
+function reminderPresetDatetimeLocal(daysFromNow: number, hourBangkok = 10): string {
+  const dateParts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BANGKOK_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(Date.now() + daysFromNow * 86_400_000))
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    dateParts.find((p) => p.type === type)?.value ?? ''
+  const pad = (n: string) => n.padStart(2, '0')
+  return `${get('year')}-${pad(get('month'))}-${pad(get('day'))}T${pad(String(hourBangkok))}:00`
+}
+
 function toFormValues(
   lead: Lead | null | undefined,
   serviceOptions: ServicePackageOption[],
 ): LeadFormValues {
   return {
-    brand_name: lead?.brand_name ?? '',
-    contact_name: lead?.contact_name ?? '',
+    contact_name: lead?.contact_name?.trim() || lead?.brand_name?.trim() || '',
     phone: lead?.phone ?? '',
-    line_id: lead?.line_id ?? '',
-    facebook: lead?.facebook ?? '',
     business_type: lead?.business_type ?? '',
-    ad_budget_daily: lead?.ad_budget_daily?.toString() ?? '',
     ad_budget_monthly: lead?.ad_budget_monthly?.toString() ?? '',
     pain_points: lead?.pain_points ?? '',
     services_interested: normalizeServiceInterestCodes(
@@ -64,16 +78,14 @@ function hasLeadDetailContent(values: LeadFormValues): boolean {
   )
 }
 
-/** ฟิลด์ที่แก้ในฟอร์มเท่านั้น — ไม่รวม line_user_id / line_oa_chat_user_id / facebook_psid (ตั้งจากฟอร์มติดต่อหรือแผง LINE) */
+/** ฟิลด์ที่แก้ในฟอร์ม — ไม่รวม line_id/facebook/line_user_id (ตั้งจากฟอร์มติดต่อหรือแผง LINE) */
 function toPayloadFields(values: LeadFormValues) {
+  const name = values.contact_name.trim()
   return {
-    brand_name: values.brand_name.trim(),
-    contact_name: values.contact_name.trim() || null,
+    brand_name: name,
+    contact_name: name || null,
     phone: values.phone.trim() || null,
-    line_id: values.line_id.trim() || null,
-    facebook: values.facebook.trim() || null,
     business_type: values.business_type || null,
-    ad_budget_daily: values.ad_budget_daily ? Number(values.ad_budget_daily) : null,
     ad_budget_monthly: values.ad_budget_monthly ? Number(values.ad_budget_monthly) : null,
     pain_points: values.pain_points.trim() || null,
     services_interested: values.services_interested,
@@ -95,6 +107,9 @@ export function formValuesToPayload(
     line_user_id: null,
     line_oa_chat_user_id: null,
     facebook_psid: null,
+    ad_budget_daily: null,
+    line_id: null,
+    facebook: null,
     ...toPayloadFields(values),
   }
 }
@@ -145,31 +160,31 @@ export function LeadForm({
     }))
   }
 
+  const fromContactForm =
+    Boolean(initial?.preferred_contact_channel) && initial?.channel === 'website'
+  const reminderIso = datetimeLocalBangkokToIso(values.reminder_at)
+  const reminderOverdue =
+    reminderIso && new Date(reminderIso) <= new Date() && values.status !== 'won'
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (readOnly) return
-    if (!values.brand_name.trim()) return
+    if (!values.contact_name.trim()) return
     await onSubmit(values)
   }
 
   return (
     <form className="crm-form" onSubmit={handleSubmit}>
       <fieldset disabled={readOnly} className="crm-form__grid">
-        <label>
-          ชื่อแบรนด์ / ร้าน <span className="req">*</span>
+        <label className="crm-form__full">
+          ชื่อผู้ติดต่อ / ร้าน <span className="req">*</span>
+          <span className="crm-sub">ใช้แสดงในรายการ CRM และแจ้งเตือน (แทนช่องแบรนด์แยก)</span>
           <input
             required
-            value={values.brand_name}
-            onChange={(e) => setValues({ ...values, brand_name: e.target.value })}
-            className="crm-input"
-          />
-        </label>
-        <label>
-          ชื่อผู้ติดต่อ
-          <input
             value={values.contact_name}
             onChange={(e) => setValues({ ...values, contact_name: e.target.value })}
             className="crm-input"
+            placeholder="เช่น ร้าน ABC / คุณสมชาย"
           />
         </label>
         <label>
@@ -178,22 +193,7 @@ export function LeadForm({
             value={values.phone}
             onChange={(e) => setValues({ ...values, phone: e.target.value })}
             className="crm-input"
-          />
-        </label>
-        <label>
-          Line ID
-          <input
-            value={values.line_id}
-            onChange={(e) => setValues({ ...values, line_id: e.target.value })}
-            className="crm-input"
-          />
-        </label>
-        <label>
-          Facebook
-          <input
-            value={values.facebook}
-            onChange={(e) => setValues({ ...values, facebook: e.target.value })}
-            className="crm-input"
+            inputMode="tel"
           />
         </label>
         <label>
@@ -207,22 +207,6 @@ export function LeadForm({
             {BUSINESS_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          ช่องทางที่มา
-          <select
-            value={values.channel}
-            onChange={(e) =>
-              setValues({ ...values, channel: e.target.value as Lead['channel'] })
-            }
-            className="crm-select"
-          >
-            {LEAD_CHANNEL_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
               </option>
             ))}
           </select>
@@ -242,16 +226,6 @@ export function LeadForm({
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          งบแอด / วัน (บาท)
-          <input
-            type="number"
-            min={0}
-            value={values.ad_budget_daily}
-            onChange={(e) => setValues({ ...values, ad_budget_daily: e.target.value })}
-            className="crm-input"
-          />
         </label>
         <label>
           งบแอด / เดือน (บาท)
@@ -333,16 +307,98 @@ export function LeadForm({
         </div>
       </details>
 
-      <fieldset disabled={readOnly} className="crm-form__grid">
-        <label>
-          Reminder ติดตาม
+      <fieldset disabled={readOnly} className="crm-form__section crm-form__full">
+        <legend className="crm-form__section-title">แหล่งที่มา &amp; ติดตาม</legend>
+        <p className="crm-form__section-hint muted">
+          แยกจากช่องทางติดต่อกลับ (LINE / Facebook) ที่ลูกค้าเลือกในฟอร์มติดต่อ — ดูและเปิดแชทได้ที่แผงด้านบน
+        </p>
+
+        {initial?.preferred_contact_channel ? (
+          <p className="crm-form__readonly-channel">
+            ลูกค้าเลือกให้ติดต่อกลับทาง{' '}
+            <strong>{preferredContactChannelLabel(initial.preferred_contact_channel)}</strong>
+            {fromContactForm ? (
+              <span className="crm-sub"> · ส่งจากฟอร์ม /contact</span>
+            ) : null}
+          </p>
+        ) : null}
+
+        <div className="crm-form__field-block">
+          <span className="crm-form__field-label">แหล่งที่มา (การตลาด)</span>
+          <span className="crm-sub">ลูกค้ารู้จัก NP Create จากช่องทางไหน — ใช้กรองรายงาน CRM</span>
+          <div className="crm-chips crm-chips--channel" role="group" aria-label="แหล่งที่มา">
+            {LEAD_CHANNEL_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                className={
+                  values.channel === o.value ? 'crm-chip crm-chip--on' : 'crm-chip'
+                }
+                aria-pressed={values.channel === o.value}
+                onClick={() => setValues({ ...values, channel: o.value })}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          {fromContactForm && values.channel === 'website' ? (
+            <p className="crm-sub">
+              ค่าเริ่มต้นจากฟอร์มเว็บ — ปรับเป็น TikTok / Facebook Ads ฯลฯ หลังคุยลูกค้าแล้ว
+            </p>
+          ) : null}
+        </div>
+
+        <div className="crm-form__field-block">
+          <span className="crm-form__field-label">นัดติดตามครั้งถัดไป</span>
+          <span className="crm-sub">
+            แจ้งเตือนใน Dashboard และไฮไลต์แถว CRM เมื่อถึงเวลา
+            {values.status === 'follow_up' ? ' — แนะนำตั้งเมื่อสถานะ “ติดตามใหม่”' : ''}
+          </span>
+          <div className="crm-reminder-presets">
+            {REMINDER_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="crm-chip"
+                onClick={() =>
+                  setValues({
+                    ...values,
+                    reminder_at: reminderPresetDatetimeLocal(p.days, p.hour),
+                  })
+                }
+              >
+                {p.label}
+              </button>
+            ))}
+            {values.reminder_at ? (
+              <button
+                type="button"
+                className="crm-chip crm-chip--ghost"
+                onClick={() => setValues({ ...values, reminder_at: '' })}
+              >
+                ล้างนัด
+              </button>
+            ) : null}
+          </div>
           <input
             type="datetime-local"
             value={values.reminder_at}
             onChange={(e) => setValues({ ...values, reminder_at: e.target.value })}
             className="crm-input"
           />
-        </label>
+          {values.reminder_at ? (
+            <p
+              className={
+                reminderOverdue ? 'crm-reminder-status crm-reminder-status--due' : 'crm-reminder-status'
+              }
+            >
+              {reminderOverdue ? 'ถึงเวลาติดตามแล้ว' : 'นัดติดตาม'}:{' '}
+              {formatBangkokDateTime(reminderIso)}
+            </p>
+          ) : (
+            <p className="crm-sub">ยังไม่ตั้งนัด — เลือกปุ่มลัดหรือระบุวันเวลา</p>
+          )}
+        </div>
       </fieldset>
 
       <div className="crm-form__actions">

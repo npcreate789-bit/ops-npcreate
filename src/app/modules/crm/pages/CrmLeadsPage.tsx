@@ -16,6 +16,7 @@ import { LeadStatusBadge } from '../components/LeadStatusBadge'
 import { SalesSummary } from '../components/SalesSummary'
 import { CrmPipelineBar } from '../components/CrmPipelineBar'
 import { CrmRoleGuide } from '../components/CrmRoleGuide'
+import { leadDisplayName } from '../leadDisplay'
 import '../../tasks/tasks.css'
 import '../../phase2/phase2.css'
 import '../crm.css'
@@ -227,7 +228,7 @@ export function CrmLeadsPage() {
             <table className="crm-table crm-table--clickable">
               <thead>
                 <tr>
-                  <th>แบรนด์</th>
+                  <th>ชื่อร้าน / ผู้ติดต่อ</th>
                   <th>ผู้ติดต่อ</th>
                   <th>ที่มา</th>
                   <th>ติดต่อกลับ</th>
@@ -244,7 +245,7 @@ export function CrmLeadsPage() {
                     className={isReminderDue(lead) ? 'crm-row--due' : undefined}
                   >
                     <td>
-                      <strong>{lead.brand_name}</strong>
+                      <strong>{leadDisplayName(lead)}</strong>
                       {lead.business_type && (
                         <span className="crm-sub">{lead.business_type}</span>
                       )}

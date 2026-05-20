@@ -1668,3 +1668,73 @@ button.crm-line-reply-quote:hover {
   font-size: 0.8rem;
   color: var(--npc-accent);
 }
+
+.crm-form__section {
+  margin-top: 1rem;
+  padding: 1rem 0 0;
+  border: none;
+  border-top: 1px solid var(--npc-glass-border);
+}
+
+.crm-form__section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.crm-form__section-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+}
+
+.crm-form__readonly-channel {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: rgba(6, 199, 85, 0.08);
+  border: 1px solid rgba(6, 199, 85, 0.2);
+  font-size: 0.85rem;
+}
+
+.crm-form__field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.crm-form__field-block:last-child {
+  margin-bottom: 0;
+}
+
+.crm-form__field-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.crm-chips--channel {
+  flex-wrap: wrap;
+}
+
+.crm-reminder-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.crm-chip--ghost {
+  opacity: 0.85;
+  border-style: dashed;
+}
+
+.crm-reminder-status {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+}
+
+.crm-reminder-status--due {
+  color: #f5a623;
+  font-weight: 600;
+}

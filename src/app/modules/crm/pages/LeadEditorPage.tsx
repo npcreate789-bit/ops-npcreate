@@ -185,7 +185,11 @@ export function LeadEditorPage() {
         <Link to="/app/crm" className="crm-back">
           ← กลับรายการ
         </Link>
-        <h1>{isNew ? 'เพิ่ม Lead ใหม่' : `แก้ไข: ${initial?.brand_name ?? ''}`}</h1>
+        <h1>
+          {isNew
+            ? 'เพิ่ม Lead ใหม่'
+            : `แก้ไข: ${initial?.contact_name?.trim() || initial?.brand_name || ''}`}
+        </h1>
       </header>
 
       {error && <p className="crm-error">{error}</p>}
