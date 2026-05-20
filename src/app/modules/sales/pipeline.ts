@@ -24,14 +24,14 @@ export function buildQuotationNextSteps(q: Quotation): SalesNextStep[] {
       steps.push({
         label: 'ส่งให้ลูกค้า',
         path: `/app/sales/quotations/${q.id}`,
-        detail: 'สร้างลิงก์สาธารณะด้านล่าง แล้วตั้งสถานะ "ส่งแล้ว"',
+        detail: 'ลิงก์สาธารณะ + ตั้งสถานะ "ส่งแล้ว" หรือติ๊กส่ง LINE ในฟอร์ม',
         primary: true,
       })
       if (q.lead_id) {
         steps.push({
-          label: 'ติดต่อทาง LINE',
-          path: `/app/sales/quotations/${q.id}`,
-          detail: 'เปิด LINE ส่งข้อมูลอ้างอิง / ใบเสนอราคา',
+          label: 'แชท CRM',
+          path: `/app/crm/${q.lead_id}`,
+          detail: 'ติดตามลูกค้าหลังส่งลิงก์ — ประวัติแชทรวมใน Lead',
         })
       }
       break

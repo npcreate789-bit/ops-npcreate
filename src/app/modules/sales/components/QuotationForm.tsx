@@ -261,31 +261,28 @@ export function QuotationForm({
     <form className="crm-form qt-form" onSubmit={handleSubmit}>
       <fieldset disabled={readOnly}>
       {fromLeadSave && leadId && (
-        <p className="crm-banner crm-banner--ok qt-form__flow-banner">
-          บันทึก Lead แล้ว — กรอกใบเสนอราคาด้านล่าง แล้วกด{' '}
-          <strong>บันทึกและส่งลิงก์ใบเสนอราคาไป LINE</strong> — ระบบตรวจสิทธิ์ทันที
-          แล้วพาไปแชท CRM ขั้นถัดไป
+        <p className="qt-form__flow-banner" role="status">
+          บันทึก Lead แล้ว — กรอกรายการด้านล่าง ตั้งสถานะ &quot;ส่งแล้ว&quot; แล้วติ๊กส่ง LINE
+          หากต้องการส่งลิงก์ทันที
         </p>
       )}
 
       {leadBrandName && (
-        <p className="crm-banner crm-banner--warn">
-          Lead: <strong>{leadBrandName}</strong>
-          {leadId && (
-            <>
-              {' '}
-              ·{' '}
-              <Link to={`/app/crm/${leadId}`} className="crm-inline-link">
-                เปิด Lead
-              </Link>
-            </>
-          )}
-          {leadServiceCodes.length > 0 && (
-            <span className="crm-sub" style={{ display: 'block', marginTop: '0.35rem' }}>
-              บริการที่สนใจ: {formatServiceInterests(leadServiceCodes, serviceOptions)}
+        <div className="qt-form__lead-strip">
+          <span>
+            Lead: <strong>{leadBrandName}</strong>
+          </span>
+          {leadId ? (
+            <Link to={`/app/crm/${leadId}`} className="crm-btn crm-btn--ghost crm-btn--sm">
+              แชท CRM
+            </Link>
+          ) : null}
+          {leadServiceCodes.length > 0 ? (
+            <span className="crm-sub qt-form__lead-strip-services">
+              {formatServiceInterests(leadServiceCodes, serviceOptions)}
             </span>
-          )}
-        </p>
+          ) : null}
+        </div>
       )}
 
       <div className="qt-form__grid">
@@ -454,7 +451,11 @@ export function QuotationForm({
       </fieldset>
 
       {!readOnly && lineAutoSendAvailable ? (
-        <label className="qt-form__line-send qt-form__full">
+        <label
+          className={`qt-form__line-send qt-form__full${
+            sendLineAfterSave ? ' qt-form__line-send--on' : ''
+          }`}
+        >
           <span className="qt-form__line-send-row">
             <input
               type="checkbox"
@@ -462,16 +463,18 @@ export function QuotationForm({
               onChange={(e) => onSendLineAfterSaveChange?.(e.target.checked)}
               disabled={!state.lead_id.trim()}
             />
-            <span>
-              <strong>หลังบันทึกส่งลิงก์ใบเสนอราคาไปแชท LINE</strong>
+            <span className="qt-form__line-send-copy">
+              <strong className="qt-form__line-send-title">ส่งลิงก์ใบเสนอราคาไป LINE หลังบันทึก</strong>
               <span className="crm-sub">
-                {' '}
-                ลูกค้าเปิดลิงก์แล้วพิมพ์/บันทึกเป็น PDF ได้ — ประวัติแสดงในแชท CRM
+                ต้องตั้งสถานะ &quot;ส่งแล้ว&quot;ขึ้นไป · ลูกค้าเปิดลิงก์แล้วบันทึก PDF ได้ ·
+                ประวัติอยู่ในแชท CRM
               </span>
             </span>
           </span>
           {!state.lead_id.trim() ? (
-            <span className="crm-sub">เลือกผูก Lead (หรือเปิดใบเสนอราคาจากหน้า CRM) เพื่อเปิดใช้การส่งอัตโนมัติ</span>
+            <span className="crm-sub qt-form__line-send-hint">
+              ผูก Lead ในฟอร์มหรือเปิดใบเสนอราคาจากหน้า CRM เพื่อเปิดใช้
+            </span>
           ) : null}
         </label>
       ) : null}

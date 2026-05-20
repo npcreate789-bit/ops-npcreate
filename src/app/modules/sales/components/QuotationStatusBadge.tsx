@@ -1,8 +1,8 @@
-import type { QuotationStatus } from '../types'
 import { quotationStatusLabel } from '../constants'
+import type { QuotationStatus } from '../types'
 import '../sales.css'
 
-const CLASS: Record<QuotationStatus, string> = {
+const STATUS_CLASS: Record<QuotationStatus, string> = {
   draft: 'qt-badge--gray',
   sent: 'qt-badge--blue',
   viewed: 'qt-badge--blue',
@@ -14,6 +14,6 @@ const CLASS: Record<QuotationStatus, string> = {
 
 export function QuotationStatusBadge({ status }: { status: QuotationStatus }) {
   return (
-    <span className={`qt-badge ${CLASS[status]}`}>{quotationStatusLabel(status)}</span>
+    <span className={`qt-badge ${STATUS_CLASS[status]}`}>{quotationStatusLabel(status)}</span>
   )
 }

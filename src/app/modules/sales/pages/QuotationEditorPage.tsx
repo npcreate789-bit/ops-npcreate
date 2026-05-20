@@ -30,8 +30,7 @@ import { printDocument } from '../../../../shared/print/printDocument'
 import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import { QuotationPublicLink } from '../components/QuotationPublicLink'
 import { QuotationNextStepsPanel } from '../components/QuotationNextStepsPanel'
-import { QuotationLineStaffPanel } from '../components/QuotationLineStaffPanel'
-import { DEFAULT_CONTRACT_MONTHS, lineUnitPriceForContract } from '../quotationPricing'
+import { QuotationEditorHeader } from '../components/QuotationEditorHeader'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../sales.css'
@@ -419,14 +418,14 @@ export function QuotationEditorPage() {
 
   return (
     <div className="page sales-page">
-      <header className="page__header no-print">
-        <Link to="/app/sales" className="crm-back">
-          ← กลับ Sales
-        </Link>
-        <h1>
-          {isNew ? 'สร้างใบเสนอราคา' : `ใบเสนอราคา ${initial?.quotation_number ?? ''}`}
-        </h1>
-      </header>
+      <QuotationEditorHeader
+        isNew={isNew}
+        quotationNumber={initial?.quotation_number}
+        status={initial?.status}
+        leadBrandName={leadBrandName}
+        leadId={effectiveLeadId || null}
+        backTo={leadIdParam ? `/app/crm/${leadIdParam}` : '/app/sales'}
+      />
 
       {error && <p className="crm-error no-print">{error}</p>}
 
@@ -504,86 +503,11 @@ export function QuotationEditorPage() {
       {!isNew && initial && <QuotationNextStepsPanel quotation={initial} />}
 
       {!isNew && initial && (
-        <QuotationLineStaffPanel
-          quotation={initial}
-          brandName={leadBrandName ?? 'ลูกค้า'}
-          leadServiceCodes={leadServiceCodes}
-          lineIds={
-            leadForBanner
-              ? {
-                  line_user_id: leadForBanner.line_user_id,
-                  line_oa_chat_user_id: leadForBanner.line_oa_chat_user_id,
-                }
-              : null
-          }
-          packages={packages}
-          saved
-        />
-      )}
-
-      {isNew && (leadBrandName || leadIdParam) && (
-        <QuotationLineStaffPanel
-          quotation={{
-            id: 'new',
-            quotation_number: 'ฉบับร่าง',
-            lead_id: leadIdParam,
-            customer_id: null,
-            owner_id: ownerId,
-            status: 'draft',
-            subtotal: 0,
-            discount: 0,
-            vat_rate: 7,
-            vat_amount: 0,
-            total: 0,
-            contract_months: suggestedPackage ? DEFAULT_CONTRACT_MONTHS : null,
-            terms: null,
-            notes: null,
-            sent_at: null,
-            viewed_at: null,
-            accepted_at: null,
-            paid_at: null,
-            public_token: null,
-            created_at: '',
-            updated_at: '',
-            items: suggestedPackage
-              ? [
-                  {
-                    id: 'draft',
-                    quotation_id: 'new',
-                    package_id: suggestedPackage.id,
-                    description: suggestedPackage.name,
-                    quantity: 1,
-                    unit_price: lineUnitPriceForContract(
-                      suggestedPackage.base_price,
-                      DEFAULT_CONTRACT_MONTHS,
-                    ),
-                    line_total: lineUnitPriceForContract(
-                      suggestedPackage.base_price,
-                      DEFAULT_CONTRACT_MONTHS,
-                    ),
-                    sort_order: 0,
-                  },
-                ]
-              : [],
-          }}
-          brandName={leadBrandName ?? 'ลูกค้า'}
-          leadServiceCodes={leadServiceCodes}
-          lineIds={
-            leadForBanner
-              ? {
-                  line_user_id: leadForBanner.line_user_id,
-                  line_oa_chat_user_id: leadForBanner.line_oa_chat_user_id,
-                }
-              : null
-          }
-          packages={packages}
-          saved={false}
-        />
-      )}
-
-      {!isNew && initial && (
-        <section className="card card--wide no-print">
-          <h2 className="crm-section-title">ลิงก์สำหรับลูกค้า</h2>
+        <section className="card card--wide no-print qt-section">
+          <header className="qt-section__head">
+            <h2>ลิงก์สำหรับลูกค้า</h2>
+            <p className="muted">ลูกค้าเปิดลิงก์แล้วพิมพ์หรือบันทึกเป็น PDF ได้</p>
+          </header>
           <QuotationPublicLink
             quotation={initial}
             onTokenReady={() => {
@@ -593,7 +517,22 @@ export function QuotationEditorPage() {
         </section>
       )}
 
-      <section className="card card--wide no-print">
+      <section className="card card--wide no-print qt-section">
+        <header className="qt-section__head">
+          <h2>รายละเอียดใบเสนอราคา</h2>
+          {lineAutoSendAvailable ? (
+            <p className="muted">
+              ตั้งสถานะ &quot;ส่งแล้ว&quot; แล้วติ๊กส่ง LINE ในฟอร์ม — หรือติดตามใน{' '}
+              {effectiveLeadId.trim() ? (
+                <Link to={`/app/crm/${effectiveLeadId}`} className="crm-inline-link">
+                  แชท CRM
+                </Link>
+              ) : (
+                'แชท CRM'
+              )}
+            </p>
+          ) : null}
+        </header>
         <QuotationForm
           initial={initial}
           leadId={leadIdParam ?? initial?.lead_id ?? undefined}
