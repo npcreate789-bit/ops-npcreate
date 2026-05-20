@@ -159,9 +159,9 @@ export function lineStaffChatIdHint(ids: LeadLineIds): string {
     return 'ยังไม่มี LINE User ID — ให้ลูกค้าเชื่อมต่อ LINE จากฟอร์มติดต่อหรือเพิ่มเพื่อน OA'
   }
   if (resolveLineStaffChatOpenUserId(ids)) {
-    if (lineLoginAndOaIdsMismatch(ids)) {
-      return 'มีทั้ง ID จาก LINE Login และแชท OA — เปิดแชทใช้ ID จากแชท OA'
-    }
+  if (lineLoginAndOaIdsMismatch(ids)) {
+    return 'มีทั้ง LINE Login และแชท OA — ส่ง Push ใช้ ID จากประวัติแชท OA ไม่ใช่ LINE Login'
+  }
     return 'เปิดแชทตรงลูกค้าบน chat.line.biz ได้ (ID จากแชท OA)'
   }
   if (ids.line_user_id?.trim() && lineLoginAndOaIdsMismatch(ids)) {

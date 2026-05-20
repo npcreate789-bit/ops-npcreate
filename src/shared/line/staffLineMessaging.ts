@@ -146,8 +146,6 @@ export function buildClientPortalCredentialsMessage(input: {
 
 export interface SendLinePushOptions {
   leadId?: string
-  /** บังคับ user id สำหรับ push (ต้องตรงกับที่ resolveLeadLinePushRecipient แล้ว) */
-  pushTo?: string
   metadata?: Record<string, unknown>
   /** LINE Flex bubble (ส่งคู่ข้อความ text สั้น ๆ ได้) */
   flex?: QuotationFlexPayload
@@ -243,10 +241,7 @@ export async function deliverLineMessageToCustomer(
   text: string,
   pushOptions?: SendLinePushOptions,
 ): Promise<LineSendResult> {
-  const explicit = pushOptions?.pushTo?.trim()
-  const recipient =
-    explicit ||
-    (await resolvePushRecipient(lineIds, pushOptions?.leadId))
+  const recipient = await resolvePushRecipient(lineIds, pushOptions?.leadId)
   if (recipient) {
     return sendLinePushMessage(recipient, text, pushOptions)
   }

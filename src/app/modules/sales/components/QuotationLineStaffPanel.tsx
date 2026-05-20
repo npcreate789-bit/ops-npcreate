@@ -209,7 +209,11 @@ export function QuotationLineStaffPanel({
             </>
           )}
           {lineIds && lineLoginAndOaIdsMismatch(lineIds) && (
-            <> — ID ไม่ตรงกัน บันทึก ID จาก URL แชท OA ใน CRM</>
+            <>
+              {' '}
+              — LINE Login กับแชท OA ไม่ตรงกัน ส่ง Push ใช้ ID แชท OA / ประวัติทัก OA ไม่ใช้
+              Login
+            </>
           )}
         </p>
       )}

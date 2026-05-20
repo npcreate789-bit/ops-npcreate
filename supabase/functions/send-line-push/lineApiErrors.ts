@@ -26,7 +26,10 @@ export function formatLineMessagingApiError(
   }
 
   if (context === 'profile' && status === 404) {
-    return 'ระบบไม่พบลูกค้าใน OA ชุดนี้ — User ID อาจผิดช่อง หรือยังไม่เป็นเพื่อน ให้ลูกค้าทัก OA แล้วลองใหม่'
+    return (
+      'ระบบไม่พบลูกค้าใน OA ชุดนี้ — ตรวจ ID จาก URL แชท OA (ไม่ใช่ LINE Login) ' +
+      'ให้ลูกค้าทัก @npcreate อย่างน้อยหนึ่งครั้ง หรือส่งจากแชท CRM ที่เคยส่งสำเร็จแล้ว'
+    )
   }
 
   if (lower.includes('invalid') && (lower.includes('to') || lower.includes('user'))) {
