@@ -1,5 +1,7 @@
 import { isActiveChatNotificationLink } from '../chat/activeChatFocus'
+import { isActiveLeadLineChatNotificationLink } from '../crm/activeLeadLineChatFocus'
 import { isChatNotification } from './chatNotification'
+import { isLeadLineMessageNotification } from './leadLineMessageNotification'
 import { isStaffAlertNotification } from './staffAlertNotification'
 import type { UserNotification } from './types'
 
@@ -158,9 +160,17 @@ export function playNotificationAlert(dedupeKey?: string) {
   playNotificationSound()
 }
 
-/** เล่นเสียงเมื่อมีแจ้งเตือนเข้า (Realtime) — ข้าม Lead loop และห้องที่เปิดอยู่ */
+/** เล่นเสียงเมื่อมีแจ้งเตือนเข้า (Realtime) */
 export function tryPlayIncomingNotificationSound(row: UserNotification) {
   if (!isNotificationSoundEnabled() || row.read_at) return
+
+  if (isLeadLineMessageNotification(row.dedupe_key)) {
+    if (isActiveLeadLineChatNotificationLink(row.link)) {
+      playChatNotificationSound()
+    }
+    return
+  }
+
   if (isStaffAlertNotification(row.dedupe_key)) return
   if (isChatNotification(row.dedupe_key) && isActiveChatNotificationLink(row.link)) return
   playNotificationAlert(row.dedupe_key)

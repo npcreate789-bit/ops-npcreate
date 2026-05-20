@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { canAccessNotifications } from '../../../../shared/auth/access'
 import type { AppRole } from '../../../../shared/types/roles'
 import { isInquiryNotification } from '../inquiryNotification'
+import { isLeadLineMessageNotification } from '../leadLineMessageNotification'
 import { isNotificationSoundEnabled } from '../notificationSound'
 import { useStaffAlertNotificationToasts } from '../useStaffAlertNotificationToasts'
 import '../notifications.css'
@@ -22,12 +23,17 @@ export function StaffAlertToasts({ userId, roles }: StaffAlertToastsProps) {
     <div className="lead-toast-stack" role="region" aria-live="polite">
       {toasts.map((n) => {
         const isInquiry = isInquiryNotification(n.dedupe_key)
-        const regionLabel = isInquiry ? 'แจ้งเตือนคำขอติดต่อใหม่' : 'แจ้งเตือน Lead ใหม่'
-        const openLabel = isInquiry ? 'เปิดคำขอติดต่อ' : 'เปิด Lead'
+        const isLineMsg = isLeadLineMessageNotification(n.dedupe_key)
+        const regionLabel = isLineMsg
+          ? 'ข้อความ LINE ใหม่'
+          : isInquiry
+            ? 'แจ้งเตือนคำขอติดต่อใหม่'
+            : 'แจ้งเตือน Lead ใหม่'
+        const openLabel = isLineMsg ? 'เปิดแชท' : isInquiry ? 'เปิดคำขอติดต่อ' : 'เปิด Lead'
         return (
           <article
             key={n.id}
-            className={`lead-toast lead-toast--${n.severity}${isInquiry ? ' lead-toast--inquiry' : ''}${soundLooping ? ' lead-toast--ringing' : ''}`}
+            className={`lead-toast lead-toast--${n.severity}${isInquiry ? ' lead-toast--inquiry' : ''}${isLineMsg ? ' lead-toast--line-msg' : ''}${soundLooping ? ' lead-toast--ringing' : ''}`}
             aria-label={regionLabel}
           >
             <div className="lead-toast__pulse" aria-hidden />

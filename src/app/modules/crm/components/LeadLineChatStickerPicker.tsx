@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { LINE_FRIENDS_PANIC_PACKAGE } from '../../../../shared/line/lineStaffStickerCatalog'
 import {
   getLineStaffStickerPackages,
   type LineStaffSticker,
@@ -17,7 +18,11 @@ export function LeadLineChatStickerPicker({
   onSelect,
 }: LeadLineChatStickerPickerProps) {
   const packages = getLineStaffStickerPackages()
-  const [activePackageId, setActivePackageId] = useState(packages[0]?.packageId ?? '')
+  const defaultPackageId =
+    packages.find((p) => p.packageId === LINE_FRIENDS_PANIC_PACKAGE.packageId)?.packageId ??
+    packages[0]?.packageId ??
+    ''
+  const [activePackageId, setActivePackageId] = useState(defaultPackageId)
   const panelRef = useRef<HTMLDivElement>(null)
 
   const activePackage =

@@ -325,6 +325,7 @@ export function LeadEditorPage() {
           key={`line-chat-${initial.id}-${initial.line_oa_chat_user_id ?? ''}-${initial.updated_at}`}
           lead={initial}
           senderProfileId={userId}
+          viewerUserId={userId}
           readOnly={readOnly}
           servicesInterested={servicesInterested}
           serviceOptions={serviceOptions}

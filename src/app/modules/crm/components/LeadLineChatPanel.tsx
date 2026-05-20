@@ -6,6 +6,11 @@ import {
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
 import { validateLineChatImage } from '../api/leadLineChat'
+import { markLeadLineMessageNotificationReadByLeadId } from '../../notifications/api/notifications'
+import {
+  clearActiveLeadLineChatFocus,
+  setActiveLeadLineChatFocus,
+} from '../activeLeadLineChatFocus'
 import { insertTextAtComposerCursor } from '../lineChatComposerUtils'
 import { enrichLeadLineMessages } from '../leadLineChatUtils'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
@@ -20,6 +25,8 @@ import '../crm.css'
 interface LeadLineChatPanelProps {
   lead: Lead
   senderProfileId: string | undefined
+  /** ผู้ใช้ที่เปิดแชท — รับทราบแจ้งเตือน LINE เมื่อมีข้อความเข้าใหม่ */
+  viewerUserId?: string
   readOnly?: boolean
   servicesInterested?: string[]
   serviceOptions?: ServicePackageOption[]
@@ -55,6 +62,7 @@ function isThreadNearBottom(thread: HTMLElement, threshold = 96): boolean {
 export function LeadLineChatPanel({
   lead,
   senderProfileId,
+  viewerUserId,
   readOnly = false,
   servicesInterested = [],
   serviceOptions = [],
@@ -72,6 +80,7 @@ export function LeadLineChatPanel({
   const composerInputRef = useRef<HTMLTextAreaElement>(null)
   const prevMessageCountRef = useRef(0)
   const shouldStickThreadRef = useRef(true)
+  const lastInboundKeyRef = useRef('')
 
   const lineIds = {
     line_user_id: lead.line_user_id,
@@ -117,6 +126,21 @@ export function LeadLineChatPanel({
     el.classList.add('crm-line-chat__msg--highlight')
     window.setTimeout(() => el.classList.remove('crm-line-chat__msg--highlight'), 1400)
   }, [])
+
+  useEffect(() => {
+    setActiveLeadLineChatFocus(lead.id)
+    return () => clearActiveLeadLineChatFocus()
+  }, [lead.id])
+
+  useEffect(() => {
+    const inbound = messages.filter((m) => m.direction === 'inbound' && !m.deleted_at)
+    const latest = inbound.at(-1)
+    const key = latest ? `${latest.id}:${latest.created_at}` : ''
+    if (lastInboundKeyRef.current && key && key !== lastInboundKeyRef.current && viewerUserId) {
+      void markLeadLineMessageNotificationReadByLeadId(viewerUserId, lead.id).catch(() => {})
+    }
+    lastInboundKeyRef.current = key
+  }, [messages, lead.id, viewerUserId])
 
   useEffect(() => {
     if (!imageFile) {

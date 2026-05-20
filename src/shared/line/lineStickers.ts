@@ -1,4 +1,6 @@
-/** สติกเกอร์ที่ทีมส่งได้ — ชุด Brown & Cony (ใช้กับ OA ส่วนใหญ่ในไทย) */
+/** สติกเกอร์ที่ทีมส่งได้ — ชุด LINE Friends (11537) รวม panic / Brown / Cony / Sally */
+
+import { DEFAULT_LINE_STAFF_STICKER_PACKAGES } from './lineStaffStickerCatalog'
 
 export interface LineStaffSticker {
   packageId: string
@@ -11,44 +13,6 @@ export interface LineStaffStickerPackage {
   name: string
   stickers: LineStaffSticker[]
 }
-
-const DEFAULT_PACKAGES: LineStaffStickerPackage[] = [
-  {
-    packageId: '11537',
-    name: 'Brown',
-    stickers: [
-      { packageId: '11537', stickerId: '52002734', label: 'สวัสดี' },
-      { packageId: '11537', stickerId: '52002735', label: 'ขอบคุณ' },
-      { packageId: '11537', stickerId: '52002736', label: 'โอเค' },
-      { packageId: '11537', stickerId: '52002738', label: 'ยิ้ม' },
-      { packageId: '11537', stickerId: '52002739', label: 'หัวเราะ' },
-      { packageId: '11537', stickerId: '52002740', label: 'เศร้า' },
-      { packageId: '11537', stickerId: '52114110', label: 'รัก' },
-    ],
-  },
-  {
-    packageId: '11538',
-    name: 'Cony',
-    stickers: [
-      { packageId: '11538', stickerId: '51626494', label: 'สวัสดี' },
-      { packageId: '11538', stickerId: '51626495', label: 'ขอบคุณ' },
-      { packageId: '11538', stickerId: '51626496', label: 'โอเค' },
-      { packageId: '11538', stickerId: '51626497', label: 'ยิ้ม' },
-      { packageId: '11538', stickerId: '51626498', label: 'หัวเราะ' },
-      { packageId: '11538', stickerId: '51626500', label: 'รัก' },
-    ],
-  },
-  {
-    packageId: '446',
-    name: 'Moon',
-    stickers: [
-      { packageId: '446', stickerId: '1988', label: 'ยิ้ม' },
-      { packageId: '446', stickerId: '1989', label: 'ขอบคุณ' },
-      { packageId: '446', stickerId: '1990', label: 'โอเค' },
-      { packageId: '446', stickerId: '1991', label: 'สวัสดี' },
-    ],
-  },
-]
 
 function parseEnvStickerPackages(): LineStaffStickerPackage[] | null {
   const raw = import.meta.env.VITE_LINE_STAFF_STICKERS?.trim()
@@ -63,7 +27,7 @@ function parseEnvStickerPackages(): LineStaffStickerPackage[] | null {
 }
 
 export function getLineStaffStickerPackages(): LineStaffStickerPackage[] {
-  return parseEnvStickerPackages() ?? DEFAULT_PACKAGES
+  return parseEnvStickerPackages() ?? DEFAULT_LINE_STAFF_STICKER_PACKAGES
 }
 
 export function findLineStaffSticker(

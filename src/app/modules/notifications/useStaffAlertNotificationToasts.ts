@@ -3,10 +3,31 @@ import {
   listUnreadStaffAlertNotifications,
   markNotificationRead,
 } from './api/notifications'
+import { isActiveLeadLineChatNotificationLink } from '../crm/activeLeadLineChatFocus'
+import { isInquiryNotification } from './inquiryNotification'
+import { isLeadNotification } from './leadNotification'
+import { isLeadLineMessageNotification } from './leadLineMessageNotification'
 import { NOTIFICATION_PUSH_EVENT } from './leadNotification'
 import { useNotificationRealtime } from './NotificationRealtimeContext'
 import { stopLeadAlertLoop, syncLeadAlertLoop } from './notificationSound'
 import type { UserNotification } from './types'
+
+function shouldShowStaffAlertToast(row: UserNotification): boolean {
+  if (isLeadLineMessageNotification(row.dedupe_key) && isActiveLeadLineChatNotificationLink(row.link)) {
+    return false
+  }
+  return true
+}
+
+function filterVisibleStaffAlertToasts(rows: UserNotification[]): UserNotification[] {
+  return rows.filter(shouldShowStaffAlertToast)
+}
+
+function shouldLoopStaffAlertSound(toasts: UserNotification[]): boolean {
+  return toasts.some(
+    (t) => isLeadNotification(t.dedupe_key) || isInquiryNotification(t.dedupe_key),
+  )
+}
 
 function upsertToast(prev: UserNotification[], row: UserNotification): UserNotification[] {
   const without = prev.filter((t) => t.id !== row.id && t.dedupe_key !== row.dedupe_key)
@@ -20,9 +41,10 @@ export function useStaffAlertNotificationToasts(userId: string | undefined, enab
   const realtime = useNotificationRealtime()
 
   const applyToasts = useCallback((next: UserNotification[]) => {
-    knownKeysRef.current = new Set(next.map((n) => n.dedupe_key))
+    const visible = filterVisibleStaffAlertToasts(next)
+    knownKeysRef.current = new Set(visible.map((n) => n.dedupe_key))
     initialLoadRef.current = false
-    setToasts(next)
+    setToasts(visible)
   }, [])
 
   const load = useCallback(async () => {
@@ -41,6 +63,7 @@ export function useStaffAlertNotificationToasts(userId: string | undefined, enab
   }, [userId, enabled, applyToasts])
 
   const handleInsert = useCallback((row: UserNotification) => {
+    if (!shouldShowStaffAlertToast(row)) return
     setToasts((prev) => {
       knownKeysRef.current.add(row.dedupe_key)
       return upsertToast(prev, row)
@@ -50,6 +73,10 @@ export function useStaffAlertNotificationToasts(userId: string | undefined, enab
   const handleUpdate = useCallback((row: UserNotification) => {
     if (row.read_at) {
       setToasts((prev) => prev.filter((t) => t.id !== row.id))
+      return
+    }
+    if (!shouldShowStaffAlertToast(row)) {
+      setToasts((prev) => prev.filter((t) => t.dedupe_key !== row.dedupe_key))
       return
     }
     setToasts((prev) => {
@@ -67,9 +94,9 @@ export function useStaffAlertNotificationToasts(userId: string | undefined, enab
       stopLeadAlertLoop()
       return
     }
-    syncLeadAlertLoop(toasts.length > 0)
+    syncLeadAlertLoop(shouldLoopStaffAlertSound(toasts))
     return () => stopLeadAlertLoop()
-  }, [toasts.length, enabled])
+  }, [toasts, enabled])
 
   useEffect(() => {
     if (!userId || !enabled) return
