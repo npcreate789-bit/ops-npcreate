@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
+import { defaultAppHome } from '../../../../shared/auth/postLoginPath'
 import {
   canCreateSalesQuotation,
   canEditSalesQuotation,
@@ -206,12 +207,10 @@ export function QuotationEditorPage() {
     }
   }
 
-  function goToQuotationFlowWait(leadId: string, notice: string) {
-    navigate(`/app/crm/${leadId}`, {
-      state: {
-        leadSaveNotice: notice,
-        focusLineChat: true,
-      },
+  function goHomeAfterQuotationLineSend(notice: string) {
+    navigate(defaultAppHome(roles), {
+      replace: true,
+      state: { homeNotice: notice },
     })
   }
 
@@ -269,10 +268,7 @@ export function QuotationEditorPage() {
             lineIds: idsForLineSend,
           })
           if (r.ok) {
-            goToQuotationFlowWait(
-              created.lead_id,
-              `${lineSendSuccessBannerMessage(r.mode)} — ขั้นถัดไป: ติดตามลูกค้าในแชท LINE`,
-            )
+            goHomeAfterQuotationLineSend(lineSendSuccessBannerMessage(r.mode))
             return
           }
           const publicUrl =
@@ -298,10 +294,7 @@ export function QuotationEditorPage() {
             lineIds: idsForLineSend,
           })
           if (r.ok) {
-            goToQuotationFlowWait(
-              refreshed.lead_id,
-              `${lineSendSuccessBannerMessage(r.mode)} — ขั้นถัดไป: ติดตามลูกค้าในแชท LINE`,
-            )
+            goHomeAfterQuotationLineSend(lineSendSuccessBannerMessage(r.mode))
             return
           }
           const publicUrl =
@@ -364,29 +357,18 @@ export function QuotationEditorPage() {
         brandName: leadBrandName ?? 'ลูกค้า',
         lineIds: idsForRetry,
       })
-      if (r.ok && initial.lead_id) {
-        goToQuotationFlowWait(
-          initial.lead_id,
-          `${lineSendSuccessBannerMessage(r.mode)} — ขั้นถัดไป: ติดตามลูกค้าในแชท LINE`,
-        )
+      if (r.ok) {
+        goHomeAfterQuotationLineSend(lineSendSuccessBannerMessage(r.mode))
         return
       }
-      setLineSendFeedback(
-        r.ok
-          ? {
-              ok: true,
-              message: lineSendSuccessBannerMessage(r.mode),
-              publicUrl:
-                initial.public_token != null
-                  ? quotationPublicUrl(initial.public_token)
-                  : undefined,
-            }
-          : { ok: false, message: r.error },
-      )
-      if (r.ok && id) {
-        const refreshed = await getQuotation(id)
-        if (refreshed) setInitial(refreshed)
-      }
+      setLineSendFeedback({
+        ok: false,
+        message: r.error,
+        publicUrl:
+          initial.public_token != null
+            ? quotationPublicUrl(initial.public_token)
+            : undefined,
+      })
     } finally {
       setSaving(false)
       setSavePhase('idle')

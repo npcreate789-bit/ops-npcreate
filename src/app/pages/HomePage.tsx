@@ -1,4 +1,5 @@
-import { Link, Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { effectiveRolesForNav, sidebarNavItemsForRoles } from '../config/navigation'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import {
@@ -26,14 +27,25 @@ import { HomeWorkPreview } from './home/HomeWorkPreview'
 import { canViewHomeContactInquiries } from './home/access'
 import { useHomeContactInquiries } from './home/useHomeContactInquiries'
 import { useHomeDashboard } from './home/useHomeDashboard'
+import { readHomeNoticeFromState } from './home/homeNoticeNavState'
 import './pages.css'
 import './home/home-dashboard.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
 export function HomePage() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const { configured, profile, profileLoadError } = useAuth()
   const roles = profile?.roles ?? []
+  const [homeNotice, setHomeNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    const notice = readHomeNoticeFromState(location.state)
+    if (!notice) return
+    setHomeNotice(notice)
+    navigate(location.pathname, { replace: true, state: {} })
+  }, [location.state, location.pathname, navigate])
   const navRoles = effectiveRolesForNav(roles, configured)
   const userId = profile?.id ?? DEV_OWNER
   const displayName = profile?.full_name?.trim() || profile?.email?.split('@')[0] || 'ผู้ใช้งาน'
@@ -118,6 +130,12 @@ export function HomePage() {
           <p className="muted">{profileLoadError}</p>
           <p>ลองรีเฟรชหน้า หรือติดต่อผู้ดูแลหากปัญหายังอยู่</p>
         </section>
+      ) : null}
+
+      {homeNotice ? (
+        <p className="crm-banner crm-banner--ok" role="status">
+          {homeNotice}
+        </p>
       ) : null}
 
       {!configured && (
