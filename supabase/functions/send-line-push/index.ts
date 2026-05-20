@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import { buildLinePushCandidateIds } from '../_shared/linePushRecipient.ts'
 import { formatLineMessagingApiError } from './lineApiErrors.ts'
 
 const PRIVILEGED = new Set(['ceo', 'operations', 'dev', 'admin', 'account', 'sales'])
@@ -63,6 +64,50 @@ function isHttpsUrl(value: string): boolean {
   } catch {
     return false
   }
+}
+
+async function lineProfileOk(lineToken: string, userId: string): Promise<boolean> {
+  const res = await fetch(
+    `https://api.line.me/v2/bot/profile/${encodeURIComponent(userId)}`,
+    { headers: { Authorization: `Bearer ${lineToken}` } },
+  )
+  return res.ok
+}
+
+async function resolvePushToForLead(
+  admin: ReturnType<typeof createClient>,
+  lineToken: string,
+  leadId: string,
+  requestedTo: string,
+): Promise<string> {
+  const { data: lead } = await admin
+    .from('leads')
+    .select('line_user_id, line_oa_chat_user_id')
+    .eq('id', leadId)
+    .maybeSingle()
+
+  const { data: inboundRows } = await admin
+    .from('lead_line_messages')
+    .select('line_user_id')
+    .eq('lead_id', leadId)
+    .eq('direction', 'inbound')
+    .order('created_at', { ascending: false })
+    .limit(20)
+
+  const candidates = buildLinePushCandidateIds({
+    requestedTo,
+    lineUserId: (lead?.line_user_id as string | null) ?? null,
+    lineOaChatUserId: (lead?.line_oa_chat_user_id as string | null) ?? null,
+    inboundUserIdsNewestFirst: (inboundRows ?? []).map(
+      (r) => (r.line_user_id as string | null) ?? '',
+    ),
+  })
+
+  for (const candidate of candidates) {
+    if (await lineProfileOk(lineToken, candidate)) return candidate
+  }
+
+  return requestedTo
 }
 
 Deno.serve(async (req) => {
@@ -165,17 +210,28 @@ Deno.serve(async (req) => {
       return json({ error: 'ลิงก์รูปไม่ถูกต้อง' }, 400)
     }
 
+    const leadIdForResolve = body.lead_id?.trim() ?? ''
+    let pushTo = to
+    if (leadIdForResolve) {
+      pushTo = await resolvePushToForLead(admin, lineToken, leadIdForResolve, to)
+    }
+
     const profileRes = await fetch(
-      `https://api.line.me/v2/bot/profile/${encodeURIComponent(to)}`,
+      `https://api.line.me/v2/bot/profile/${encodeURIComponent(pushTo)}`,
       { headers: { Authorization: `Bearer ${lineToken}` } },
     )
     if (!profileRes.ok) {
       const errText = await profileRes.text()
-      console.error('LINE profile check failed', profileRes.status, to, errText)
+      console.error('LINE profile check failed', profileRes.status, pushTo, errText)
+      const base = formatLineMessagingApiError(profileRes.status, errText, 'profile')
+      const detail =
+        pushTo !== to
+          ? `${base} (ลองแล้ว: …${pushTo.slice(-8)})`
+          : `${base} (ID: …${pushTo.slice(-8)})`
       return json(
         {
-          error: formatLineMessagingApiError(profileRes.status, errText, 'profile'),
-          to,
+          error: detail,
+          to: pushTo,
         },
         profileRes.status === 404 ? 400 : 502,
       )
@@ -235,7 +291,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${lineToken}`,
       },
-      body: JSON.stringify({ to, messages: lineMessages }),
+      body: JSON.stringify({ to: pushTo, messages: lineMessages }),
     })
 
     const pushRaw = await lineRes.text()
@@ -247,11 +303,11 @@ Deno.serve(async (req) => {
     }
 
     if (!lineRes.ok) {
-      console.error('LINE push failed', lineRes.status, to, pushRaw)
+      console.error('LINE push failed', lineRes.status, pushTo, pushRaw)
       return json(
         {
           error: formatLineMessagingApiError(lineRes.status, pushRaw, 'push'),
-          to,
+          to: pushTo,
         },
         502,
       )
@@ -266,7 +322,7 @@ Deno.serve(async (req) => {
         if (storagePath) imageMeta.storage_path = storagePath
         logRows.push({
           lead_id: leadId,
-          line_user_id: to,
+          line_user_id: pushTo,
           direction: 'outbound',
           body: imageName || '[รูปภาพ]',
           message_type: 'image',
@@ -283,7 +339,7 @@ Deno.serve(async (req) => {
         }
         logRows.push({
           lead_id: leadId,
-          line_user_id: to,
+          line_user_id: pushTo,
           direction: 'outbound',
           body: '[สติกเกอร์]',
           message_type: 'sticker',
@@ -295,7 +351,7 @@ Deno.serve(async (req) => {
       if (text) {
         logRows.push({
           lead_id: leadId,
-          line_user_id: to,
+          line_user_id: pushTo,
           direction: 'outbound',
           body: text,
           message_type: 'text',
@@ -307,7 +363,7 @@ Deno.serve(async (req) => {
       if (hasFlex) {
         logRows.push({
           lead_id: leadId,
-          line_user_id: to,
+          line_user_id: pushTo,
           direction: 'outbound',
           body: flexAlt,
           message_type: 'flex',
@@ -337,7 +393,7 @@ Deno.serve(async (req) => {
       actor_id: caller.id,
       action: 'line.push',
       entity_type: 'line_user',
-      entity_id: to,
+      entity_id: pushTo,
       metadata: {
         char_count: text.length,
         has_image: Boolean(imageUrl),

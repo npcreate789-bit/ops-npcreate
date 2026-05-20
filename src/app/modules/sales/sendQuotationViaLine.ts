@@ -90,11 +90,12 @@ export async function sendQuotationLinkViaLine(opts: {
     })
     const greeting = `สวัสดีครับ/ค่ะ — ทีม NP Create ส่งใบเสนอราคา ${opts.quotation.quotation_number} ให้ ${opts.brandName} ครับ/ค่ะ`
 
+    const pushOpts = { leadId, pushTo, metadata } as const
+
     let result: { mode: LineDeliveryMode; message?: string }
     try {
       result = await deliverLineMessageToCustomer(opts.lineIds, greeting, {
-        leadId,
-        metadata,
+        ...pushOpts,
         flex,
       })
     } catch {
@@ -106,10 +107,7 @@ export async function sendQuotationLinkViaLine(opts: {
         contractMonths: opts.quotation.contract_months,
         pdfDownloadUrl,
       })
-      result = await deliverLineMessageToCustomer(opts.lineIds, text, {
-        leadId,
-        metadata,
-      })
+      result = await deliverLineMessageToCustomer(opts.lineIds, text, pushOpts)
     }
     return { ok: true, mode: result.mode }
   } catch (e) {
