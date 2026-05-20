@@ -102,6 +102,7 @@ export async function sendLeadLineChatMessage(
   lead: Pick<Lead, 'id' | 'owner_id' | 'line_user_id' | 'line_oa_chat_user_id'>,
   input: SendLeadLineChatInput,
   senderProfileId?: string | null,
+  options?: { preferredInboundLineUserId?: string | null },
 ): Promise<void> {
   const text = input.text?.trim() ?? ''
   let imageUrl: string | undefined
@@ -116,14 +117,17 @@ export async function sendLeadLineChatMessage(
   const sticker = input.sticker
   if (!text && !imageUrl && !sticker) throw new Error('กรุณาพิมพ์ข้อความ แนบรูป หรือเลือกสติกเกอร์')
 
-  const to = await resolveLeadLinePushRecipient({
-    id: lead.id,
-    line_user_id: lead.line_user_id,
-    line_oa_chat_user_id: lead.line_oa_chat_user_id,
-  })
+  const to = await resolveLeadLinePushRecipient(
+    {
+      id: lead.id,
+      line_user_id: lead.line_user_id,
+      line_oa_chat_user_id: lead.line_oa_chat_user_id,
+    },
+    { preferredInboundLineUserId: options?.preferredInboundLineUserId },
+  )
   if (!to) {
     throw new Error(
-      'ยังไม่มี LINE User ID สำหรับส่งข้อความ — ให้ลูกค้าทัก OA หรือบันทึก ID จาก chat.line.biz (หลัง /chat/)',
+      'ยังไม่มี LINE User ID สำหรับส่งข้อความ — ให้ลูกค้าทัก OA หรือบันทึก ID จาก chat.line.biz (หลัง /chat/) ไม่ใช่ ID ตัวอย่างในเอกสาร',
     )
   }
 

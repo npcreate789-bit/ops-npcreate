@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { isDocumentedLineChatUserExampleId } from '../../../../shared/line/lineDocumentedExampleIds'
 import {
   lineLoginAndOaIdsMismatch,
   resolveLineMessagingRecipientId,
@@ -105,6 +106,20 @@ export function LeadLineChatPanel({
   const hasInbound = messages.some((m) => m.direction === 'inbound')
   const hasOutbound = messages.some((m) => m.direction === 'outbound')
   const lineChatLinked = hasInbound && (hasOutbound || Boolean(lineIds.line_oa_chat_user_id?.trim()))
+  const latestInbound = useMemo(
+    () =>
+      [...messages]
+        .reverse()
+        .find((m) => m.direction === 'inbound' && !m.deleted_at) ?? null,
+    [messages],
+  )
+  const savedOaExampleId = isDocumentedLineChatUserExampleId(lineIds.line_oa_chat_user_id)
+  const latestInboundLineUserId = latestInbound?.line_user_id?.trim() ?? ''
+  const savedOaLineUserId = lineIds.line_oa_chat_user_id?.trim() ?? ''
+  const savedOaDiffersFromInbound =
+    Boolean(latestInboundLineUserId) &&
+    Boolean(savedOaLineUserId) &&
+    latestInboundLineUserId.toLowerCase() !== savedOaLineUserId.toLowerCase()
 
   const showSetupBanner = !canPush
   const showIdSetupHint =
@@ -337,6 +352,24 @@ export function LeadLineChatPanel({
             {idMismatch
               ? 'มี ID จากฟอร์มติดต่อกับแชท OA คนละตัว — ให้ลูกค้าทัก OA หนึ่งครั้ง หรือบันทึก ID จาก chat.line.biz'
               : 'มีเฉพาะ ID จากฟอร์ม — ถ้าส่งไม่ผ่าน ให้บันทึก ID จาก chat.line.biz'}
+          </p>
+        </div>
+      ) : null}
+
+      {savedOaExampleId ? (
+        <div className="crm-line-chat__notice crm-line-chat__notice--warn" role="alert">
+          <p>
+            ID แชท OA ที่บันทึกเป็นตัวอย่างในเอกสารระบบ ไม่ใช่ลูกค้าจริง — ลบแล้ววางลิงก์จากแชทลูกค้าบน
+            chat.line.biz (ส่วนหลัง /chat/)
+          </p>
+        </div>
+      ) : null}
+
+      {savedOaDiffersFromInbound && !savedOaExampleId ? (
+        <div className="crm-line-chat__notice crm-line-chat__notice--warn" role="status">
+          <p>
+            ID ที่บันทึกไม่ตรงข้อความลูกค้าล่าสุด — ระบบจะใช้ ID จากข้อความเข้าเมื่อส่ง (แนะนำอัปเดตในส่วนบันทึก
+            ID แชท OA)
           </p>
         </div>
       ) : null}

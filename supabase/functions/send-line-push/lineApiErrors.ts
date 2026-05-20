@@ -1,7 +1,17 @@
+const DOCUMENTED_LINE_CHAT_USER_EXAMPLE_IDS = new Set([
+  'u1bfd708d6595baea50b50568a7b84b5f',
+])
+
+function isDocumentedLineChatUserExampleId(userId: string | undefined): boolean {
+  const t = userId?.trim().toLowerCase()
+  return Boolean(t && DOCUMENTED_LINE_CHAT_USER_EXAMPLE_IDS.has(t))
+}
+
 export function formatLineMessagingApiError(
   status: number,
   bodyText: string,
   context: 'profile' | 'push',
+  failedUserId?: string,
 ): string {
   let message = bodyText
   try {
@@ -26,9 +36,27 @@ export function formatLineMessagingApiError(
   }
 
   if (context === 'profile' && status === 404) {
+    if (isDocumentedLineChatUserExampleId(failedUserId)) {
+      return (
+        'User ID นี้เป็นตัวอย่างในเอกสารระบบ ไม่ใช่ลูกค้าจริง — เปิดแชทลูกค้าบน chat.line.biz ' +
+        'แล้วบันทึกส่วนหลัง /chat/ ในหน้า Lead'
+      )
+    }
     return (
       'ระบบไม่พบลูกค้าใน OA ชุดนี้ — User ID อาจผิดช่อง (ใส่ account id แทน user หลัง /chat/) ' +
-      'หรือเป็น LINE Login ไม่ใช่แชท OA — ให้ลูกค้าทัก @npcreate แล้วบันทึก ID จาก URL แชทลูกค้าในหน้า Lead'
+      'หรือ LINE_MESSAGING_CHANNEL_ACCESS_TOKEN ไม่ใช่ช่อง @npcreate เดียวกับ webhook — ' +
+      'ให้ลูกค้าทัก @npcreate แล้วบันทึก ID จาก URL แชทลูกค้าในหน้า Lead'
+    )
+  }
+
+  if (
+    (context === 'push' || context === 'profile') &&
+    (status === 400 || status === 404) &&
+    isDocumentedLineChatUserExampleId(failedUserId)
+  ) {
+    return (
+      'User ID นี้เป็นตัวอย่างในเอกสารระบบ ไม่ใช่ลูกค้าจริง — เปิดแชทลูกค้าบน chat.line.biz ' +
+      'แล้วบันทึกส่วนหลัง /chat/ ในหน้า Lead'
     )
   }
 

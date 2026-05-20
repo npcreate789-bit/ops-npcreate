@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 import { formatLineMessagingApiError } from './lineApiErrors.ts'
-import {
-  collectLeadLinePushCandidates,
-  fetchLineUserProfile,
-} from './pushRecipientFallback.ts'
+import { collectLeadLinePushCandidates } from './pushRecipientFallback.ts'
 
 const PRIVILEGED = new Set(['ceo', 'operations', 'dev', 'admin', 'account', 'sales'])
 
@@ -169,34 +166,7 @@ Deno.serve(async (req) => {
       return json({ error: 'ลิงก์รูปไม่ถูกต้อง' }, 400)
     }
 
-    let pushTo = to
-    let profileRes = await fetchLineUserProfile(pushTo, lineToken)
-
     const leadId = body.lead_id?.trim()
-    if (!profileRes.ok && profileRes.status === 404 && leadId) {
-      const candidates = await collectLeadLinePushCandidates(admin, leadId, pushTo)
-      for (const alt of candidates) {
-        const altRes = await fetchLineUserProfile(alt, lineToken)
-        if (altRes.ok) {
-          pushTo = alt
-          profileRes = altRes
-          console.info('send-line-push: profile fallback', to, '->', pushTo)
-          break
-        }
-      }
-    }
-
-    if (!profileRes.ok) {
-      const errText = await profileRes.text()
-      console.error('LINE profile check failed', profileRes.status, pushTo, errText)
-      return json(
-        {
-          error: formatLineMessagingApiError(profileRes.status, errText, 'profile'),
-          to: pushTo,
-        },
-        profileRes.status === 404 ? 400 : 502,
-      )
-    }
 
     const replyToMessageId =
       body.reply_to_message_id?.trim() ??
@@ -246,14 +216,33 @@ Deno.serve(async (req) => {
       lineMessages.push(flexMsg)
     }
 
-    const lineRes = await fetch('https://api.line.me/v2/bot/message/push', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${lineToken}`,
-      },
-      body: JSON.stringify({ to: pushTo, messages: lineMessages }),
-    })
+    let pushTo = to
+
+    async function postLinePush(target: string): Promise<Response> {
+      return fetch('https://api.line.me/v2/bot/message/push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${lineToken}`,
+        },
+        body: JSON.stringify({ to: target, messages: lineMessages }),
+      })
+    }
+
+    let lineRes = await postLinePush(pushTo)
+
+    if (!lineRes.ok && leadId) {
+      const candidates = await collectLeadLinePushCandidates(admin, leadId, pushTo)
+      for (const alt of candidates) {
+        const altRes = await postLinePush(alt)
+        if (altRes.ok) {
+          pushTo = alt
+          lineRes = altRes
+          console.info('send-line-push: push fallback', to, '->', pushTo)
+          break
+        }
+      }
+    }
 
     const pushRaw = await lineRes.text()
     let pushJson: { sentMessages?: LineSentMessage[] } = {}
@@ -267,10 +256,10 @@ Deno.serve(async (req) => {
       console.error('LINE push failed', lineRes.status, pushTo, pushRaw)
       return json(
         {
-          error: formatLineMessagingApiError(lineRes.status, pushRaw, 'push'),
+          error: formatLineMessagingApiError(lineRes.status, pushRaw, 'push', pushTo),
           to: pushTo,
         },
-        502,
+        lineRes.status === 400 || lineRes.status === 404 ? 400 : 502,
       )
     }
 

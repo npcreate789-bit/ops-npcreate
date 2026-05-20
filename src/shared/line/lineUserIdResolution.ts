@@ -1,4 +1,9 @@
 import {
+  documentedLineChatUserExampleError,
+  isDocumentedLineChatBizAccountExampleId,
+  isDocumentedLineChatUserExampleId,
+} from './lineDocumentedExampleIds'
+import {
   isLineMessagingUserIdForUrl,
   parseLineChatBizAccountFromUrl,
   parseLineChatBizUrl,
@@ -16,6 +21,15 @@ export function lineOaChatUserIdSaveError(
   parsedUserId: string,
   configuredAccountId: string,
 ): string | null {
+  if (isDocumentedLineChatUserExampleId(parsedUserId)) {
+    return documentedLineChatUserExampleError()
+  }
+  if (isDocumentedLineChatBizAccountExampleId(parsedUserId)) {
+    return (
+      'นี่เป็น account id ตัวอย่างในเอกสาร (segment แรกของ URL) ไม่ใช่ user id ลูกค้า — ' +
+      'ใช้ส่วนหลัง /chat/ ในลิงก์แชทลูกค้า'
+    )
+  }
   if (
     configuredAccountId &&
     parsedUserId.toLowerCase() === configuredAccountId.toLowerCase()
@@ -140,7 +154,7 @@ export function resolveLineMessagingRecipientId(ids: LeadLineIds): string | null
   const oa = ids.line_oa_chat_user_id?.trim() ?? ''
   const mismatch = lineLoginAndOaIdsMismatch(ids)
 
-  if (oa && isLineMessagingUserId(oa)) {
+  if (oa && isLineMessagingUserId(oa) && !isDocumentedLineChatUserExampleId(oa)) {
     if (!mismatch || !login || !lineIdsEqual(oa, login)) return oa
   }
 

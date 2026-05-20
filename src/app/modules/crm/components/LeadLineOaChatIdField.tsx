@@ -200,9 +200,7 @@ export function LeadLineOaChatIdField({
           <summary>{hasOaId ? 'แก้ไข ID แชท OA' : 'บันทึก ID จากแชท OA'}</summary>
           <p className="crm-line-ids__edit-hint muted">
             วางลิงก์เต็ม เช่น{' '}
-            <code>
-              https://chat.line.biz/U2626…/chat/U1bfd708…
-            </code>
+            <code>{'https://chat.line.biz/{account}/chat/{user}'}</code>
             {getStaffLineChatBizAccountId() ? (
               <>
                 {' '}

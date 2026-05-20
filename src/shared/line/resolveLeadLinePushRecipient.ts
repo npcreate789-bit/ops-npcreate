@@ -1,3 +1,4 @@
+import { isDocumentedLineChatUserExampleId } from './lineDocumentedExampleIds'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { isLineMessagingUserId, LINE_CHAT_BIZ_ACCOUNT_ID } from './lineStaffOpenUrl'
 import {
@@ -13,9 +14,14 @@ function idsEqual(a: string, b: string): boolean {
 function usableLineId(id: string | null | undefined): string | null {
   const t = id?.trim()
   if (!t || !isLineMessagingUserId(t)) return null
+  if (isDocumentedLineChatUserExampleId(t)) return null
   const accountId = LINE_CHAT_BIZ_ACCOUNT_ID.trim()
   if (accountId && t.toLowerCase() === accountId.toLowerCase()) return null
   return t
+}
+
+function normalizePreferredInbound(id: string | null | undefined): string | null {
+  return usableLineId(id)
 }
 
 /**
@@ -63,15 +69,21 @@ async function pushUserIdFromMessageHistory(
 /** ID สำหรับ push — ประวัติแชทที่ยืนยันกับ OA ก่อน แล้วค่อย ID ในฟอร์ม */
 export async function resolveLeadLinePushRecipient(
   lead: LeadLineIds & { id: string },
+  options?: { preferredInboundLineUserId?: string | null },
 ): Promise<string | null> {
   const login = lead.line_user_id?.trim() ?? ''
   const mismatch = lineLoginAndOaIdsMismatch(lead)
+
+  const preferredInbound = normalizePreferredInbound(options?.preferredInboundLineUserId)
+  if (preferredInbound) {
+    if (!mismatch || !login || !idsEqual(preferredInbound, login)) return preferredInbound
+  }
 
   const fromHistory = await pushUserIdFromMessageHistory(lead.id, login, mismatch)
   if (fromHistory) return fromHistory
 
   const fromForm = resolveLineMessagingRecipientId(lead)
-  if (fromForm) {
+  if (fromForm && !isDocumentedLineChatUserExampleId(fromForm)) {
     if (mismatch && login && idsEqual(fromForm, login)) return null
     return fromForm
   }

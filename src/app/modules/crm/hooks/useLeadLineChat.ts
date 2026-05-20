@@ -111,8 +111,13 @@ export function useLeadLineChat(
       if (!lead) return
       setSending(true)
       setError(null)
+      const latestInbound = [...messages]
+        .reverse()
+        .find((m) => m.direction === 'inbound' && !m.deleted_at)
       try {
-        await sendLeadLineChatMessage(lead, input, senderProfileId)
+        await sendLeadLineChatMessage(lead, input, senderProfileId, {
+          preferredInboundLineUserId: latestInbound?.line_user_id,
+        })
         await load({ silent: true })
       } catch (e) {
         setError(e instanceof Error ? e.message : 'ส่งไม่สำเร็จ')
@@ -121,7 +126,7 @@ export function useLeadLineChat(
         setSending(false)
       }
     },
-    [lead, senderProfileId, load],
+    [lead, messages, senderProfileId, load],
   )
 
   const remove = useCallback(

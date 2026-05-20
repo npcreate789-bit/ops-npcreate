@@ -1,5 +1,9 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 
+const DOCUMENTED_LINE_CHAT_USER_EXAMPLE_IDS = new Set([
+  'u1bfd708d6595baea50b50568a7b84b5f',
+])
+
 function idsEqual(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase()
 }
@@ -22,6 +26,7 @@ export async function collectLeadLinePushCandidates(
     const key = t.toLowerCase()
     if (key === failed || seen.has(key)) return
     if (oaAccountId && key === oaAccountId.toLowerCase()) return
+    if (DOCUMENTED_LINE_CHAT_USER_EXAMPLE_IDS.has(key)) return
     seen.add(key)
     out.push(t)
   }
