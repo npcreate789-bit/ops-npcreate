@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { isDocumentedLineChatUserExampleId } from '../../../../shared/line/lineDocumentedExampleIds'
+import { leadHasLinePushCapability } from '../../../../shared/line/linePushEligibility'
 import {
   lineLoginAndOaIdsMismatch,
-  resolveLineMessagingRecipientId,
 } from '../../../../shared/line/lineUserIdResolution'
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
@@ -91,12 +91,12 @@ export function LeadLineChatPanel({
   const prevMessageCountRef = useRef(0)
   const shouldStickThreadRef = useRef(true)
   const lastInboundKeyRef = useRef('')
+  const autoSyncedOaRef = useRef<string | null>(null)
 
   const lineIds = {
     line_user_id: lead.line_user_id,
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
   }
-  const canPush = Boolean(resolveLineMessagingRecipientId(lineIds))
   const idMismatch = lineLoginAndOaIdsMismatch(lineIds)
   const onlyLoginId = Boolean(lineIds.line_user_id?.trim()) && !lineIds.line_oa_chat_user_id?.trim()
 
@@ -109,7 +109,6 @@ export function LeadLineChatPanel({
 
   const hasInbound = messages.some((m) => m.direction === 'inbound')
   const hasOutbound = messages.some((m) => m.direction === 'outbound')
-  const lineChatLinked = hasInbound && (hasOutbound || Boolean(lineIds.line_oa_chat_user_id?.trim()))
   const latestInbound = useMemo(
     () =>
       [...messages]
@@ -119,13 +118,17 @@ export function LeadLineChatPanel({
   )
   const savedOaExampleId = isDocumentedLineChatUserExampleId(lineIds.line_oa_chat_user_id)
   const latestInboundLineUserId = latestInbound?.line_user_id?.trim() ?? ''
+  const canPush = leadHasLinePushCapability(lineIds, latestInboundLineUserId)
+  const lineChatLinked =
+    hasInbound &&
+    (hasOutbound || Boolean(lineIds.line_oa_chat_user_id?.trim()) || canPush)
   const savedOaLineUserId = lineIds.line_oa_chat_user_id?.trim() ?? ''
   const savedOaDiffersFromInbound =
     Boolean(latestInboundLineUserId) &&
     Boolean(savedOaLineUserId) &&
     latestInboundLineUserId.toLowerCase() !== savedOaLineUserId.toLowerCase()
 
-  const showSetupBanner = !canPush
+  const showSetupBanner = !canPush && !hasInbound
   const showIdSetupHint =
     canPush && !lineChatLinked && (onlyLoginId || idMismatch) && !hasOutbound
   const showOutsideWindow =
@@ -155,6 +158,27 @@ export function LeadLineChatPanel({
     setActiveLeadLineChatFocus(lead.id)
     return () => clearActiveLeadLineChatFocus()
   }, [lead.id])
+
+  useEffect(() => {
+    autoSyncedOaRef.current = null
+  }, [lead.id])
+
+  useEffect(() => {
+    if (readOnly || !onLeadUpdated || !savedOaExampleId || !latestInboundLineUserId) return
+    if (autoSyncedOaRef.current === latestInboundLineUserId) return
+    autoSyncedOaRef.current = latestInboundLineUserId
+    void updateLead(lead.id, { line_oa_chat_user_id: latestInboundLineUserId })
+      .then(onLeadUpdated)
+      .catch(() => {
+        autoSyncedOaRef.current = null
+      })
+  }, [
+    lead.id,
+    readOnly,
+    onLeadUpdated,
+    savedOaExampleId,
+    latestInboundLineUserId,
+  ])
 
   useEffect(() => {
     if (!focusComposerOnMount || readOnly || !canPush) return

@@ -1,6 +1,7 @@
 import { isDocumentedLineChatUserExampleId } from './lineDocumentedExampleIds'
+import { isUsableLinePushUserId } from './linePushEligibility'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
-import { isLineMessagingUserId, LINE_CHAT_BIZ_ACCOUNT_ID } from './lineStaffOpenUrl'
+import { isLineMessagingUserId } from './lineStaffOpenUrl'
 import {
   type LeadLineIds,
   lineLoginAndOaIdsMismatch,
@@ -12,16 +13,7 @@ function idsEqual(a: string, b: string): boolean {
 }
 
 function usableLineId(id: string | null | undefined): string | null {
-  const t = id?.trim()
-  if (!t || !isLineMessagingUserId(t)) return null
-  if (isDocumentedLineChatUserExampleId(t)) return null
-  const accountId = LINE_CHAT_BIZ_ACCOUNT_ID.trim()
-  if (accountId && t.toLowerCase() === accountId.toLowerCase()) return null
-  return t
-}
-
-function normalizePreferredInbound(id: string | null | undefined): string | null {
-  return usableLineId(id)
+  return isUsableLinePushUserId(id) ? id!.trim() : null
 }
 
 /**
@@ -73,7 +65,9 @@ export async function resolveLeadLinePushRecipient(
   const login = lead.line_user_id?.trim() ?? ''
   const mismatch = lineLoginAndOaIdsMismatch(lead)
 
-  const preferredInbound = normalizePreferredInbound(options?.preferredInboundLineUserId)
+  const preferredInbound = isUsableLinePushUserId(options?.preferredInboundLineUserId)
+    ? options!.preferredInboundLineUserId!.trim()
+    : null
   if (preferredInbound) return preferredInbound
 
   const fromHistory = await pushUserIdFromMessageHistory(lead.id, login, mismatch)

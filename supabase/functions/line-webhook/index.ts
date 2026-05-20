@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import { isDocumentedLineChatUserExampleId } from '../_shared/lineDocumentedExampleIds.ts'
 import { summarizeLineInboundMessage, type LineInboundMessage } from './lineMessageSummary.ts'
 
 const corsHeaders = {
@@ -180,6 +181,7 @@ Deno.serve(async (req) => {
         const existingLogin = (leadRow?.line_user_id as string | null)?.trim() ?? ''
         const shouldSyncOa =
           !existingOa ||
+          isDocumentedLineChatUserExampleId(existingOa) ||
           existingOa.toLowerCase() === lineUserId.toLowerCase() ||
           (Boolean(existingLogin) &&
             existingOa.toLowerCase() === existingLogin.toLowerCase() &&

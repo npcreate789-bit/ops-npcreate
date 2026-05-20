@@ -133,6 +133,7 @@ export function shouldSyncLineOaChatUserIdFromWebhook(
   const incoming = incomingUserId.trim()
   if (!incoming) return false
   if (!oa) return true
+  if (isDocumentedLineChatUserExampleId(oa)) return true
   if (oa.toLowerCase() === incoming.toLowerCase()) return true
   if (
     login &&
@@ -162,10 +163,10 @@ export function resolveLineMessagingRecipientId(ids: LeadLineIds): string | null
   return null
 }
 
-/** ID สำหรับเปิดแชทตรงบน chat.line.biz — ต้องเป็น user id จากแชท OA เท่านั้น */
+/** ID สำหรับเปิดแชทตรงบน chat.line.biz — ต้องเป็น user id จากแชท OA เท่านั้น (ไม่ใช่ตัวอย่าง) */
 export function resolveLineStaffChatOpenUserId(ids: LeadLineIds): string | null {
   const oa = ids.line_oa_chat_user_id?.trim()
-  if (oa && isLineMessagingUserId(oa)) return oa
+  if (oa && isLineMessagingUserId(oa) && !isDocumentedLineChatUserExampleId(oa)) return oa
   return null
 }
 

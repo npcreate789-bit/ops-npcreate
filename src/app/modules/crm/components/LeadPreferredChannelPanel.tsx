@@ -47,10 +47,11 @@ export function LeadPreferredChannelPanel({
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
   }
   const openHref = openUrlForPreferredChannel(ch, lineIds)
-  const hasOaChat = Boolean(resolveLineStaffChatOpenUserId(lineIds))
+  const hasOaChat =
+    Boolean(resolveLineStaffChatOpenUserId(lineIds)) &&
+    !isDocumentedLineChatUserExampleId(lineIds.line_oa_chat_user_id)
   const idsSynced =
-    Boolean(lineIds.line_oa_chat_user_id?.trim()) &&
-    !lineLoginAndOaIdsMismatch(lineIds)
+    hasOaChat && !lineLoginAndOaIdsMismatch(lineIds)
 
   const [openLineError, setOpenLineError] = useState<string | null>(null)
 
