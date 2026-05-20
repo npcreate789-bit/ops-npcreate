@@ -1921,6 +1921,21 @@ button.crm-line-reply-quote:hover {
   justify-content: start;
 }
 
+.crm-line-sticker-panel__grid--symbols {
+  grid-template-columns: repeat(auto-fill, 2.35rem);
+}
+
+.crm-line-sticker-panel__grid--symbols .crm-line-sticker-panel__item {
+  width: 2.35rem;
+  height: 2.35rem;
+  min-height: 0;
+}
+
+.crm-line-sticker-panel__grid--symbols .crm-line-sticker-panel__item-img {
+  width: 2rem;
+  height: 2rem;
+}
+
 .crm-line-emoji-panel__item {
   display: flex;
   align-items: center;
@@ -1991,6 +2006,20 @@ button.crm-line-reply-quote:hover {
 
   .crm-line-sticker-panel__grid {
     grid-template-columns: repeat(auto-fill, 2.85rem);
+  }
+
+  .crm-line-sticker-panel__grid--symbols {
+    grid-template-columns: repeat(auto-fill, 2.2rem);
+  }
+
+  .crm-line-sticker-panel__grid--symbols .crm-line-sticker-panel__item {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+
+  .crm-line-sticker-panel__grid--symbols .crm-line-sticker-panel__item-img {
+    width: 1.85rem;
+    height: 1.85rem;
   }
 
   .crm-line-sticker-panel__item {

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { LINE_FRIENDS_PANIC_PACKAGE } from '../../../../shared/line/lineStaffStickerCatalog'
+import {
+  LINE_FRIENDS_PANIC_PACKAGE,
+  LINE_OA_SYMBOLS_PACKAGE,
+} from '../../../../shared/line/lineStaffStickerCatalog'
 import {
   getLineStaffStickerPackages,
   type LineStaffSticker,
@@ -25,7 +28,7 @@ function IconClock() {
   )
 }
 
-function LineFriendsTabIcon({ pkg }: { pkg: LineStaffStickerPackage }) {
+function StickerPackageTabPill({ pkg }: { pkg: LineStaffStickerPackage }) {
   const ids = pkg.featuredTabStickerIds ?? [
     pkg.tabStickerId ?? pkg.stickers[0]?.stickerId,
     pkg.stickers[1]?.stickerId,
@@ -57,6 +60,7 @@ export function LeadLineChatStickerPicker({
   onSelect,
 }: LeadLineChatStickerPickerProps) {
   const friendsId = LINE_FRIENDS_PANIC_PACKAGE.packageId
+  const symbolsId = LINE_OA_SYMBOLS_PACKAGE.packageId
   const packages = useMemo(() => {
     const all = getLineStaffStickerPackages()
     const friends = all.find((p) => p.packageId === friendsId)
@@ -113,7 +117,7 @@ export function LeadLineChatStickerPicker({
     >
       <div className="crm-line-sticker-panel__tabs" role="tablist" aria-label="ชุดสติกเกอร์">
         {packages.map((pkg) => {
-          const isFriends = pkg.packageId === friendsId
+          const isTabPill = Boolean(pkg.featuredTabStickerIds?.length)
           const isActive = activeTab === pkg.packageId
           return (
             <button
@@ -122,13 +126,13 @@ export function LeadLineChatStickerPicker({
               role="tab"
               aria-selected={isActive}
               className={`crm-line-sticker-panel__tab${
-                isFriends ? ' crm-line-sticker-panel__tab--friends' : ''
+                isTabPill ? ' crm-line-sticker-panel__tab--friends' : ''
               }${isActive ? ' crm-line-sticker-panel__tab--active' : ''}`}
               title={pkg.name}
               onClick={() => setActiveTab(pkg.packageId)}
             >
-              {isFriends ? (
-                <LineFriendsTabIcon pkg={pkg} />
+              {isTabPill ? (
+                <StickerPackageTabPill pkg={pkg} />
               ) : pkg.tabIcon ? (
                 <span className="crm-line-sticker-panel__tab-emoji">{pkg.tabIcon}</span>
               ) : pkg.tabStickerId ? (
@@ -182,7 +186,13 @@ export function LeadLineChatStickerPicker({
             </div>
           )
         ) : activePackage ? (
-          <div className="crm-line-sticker-panel__grid">
+          <div
+            className={`crm-line-sticker-panel__grid${
+              activePackage.packageId === symbolsId
+                ? ' crm-line-sticker-panel__grid--symbols'
+                : ''
+            }`}
+          >
             {activePackage.stickers.map((sticker) => (
               <button
                 key={`${sticker.packageId}-${sticker.stickerId}`}

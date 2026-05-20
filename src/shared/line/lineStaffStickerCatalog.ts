@@ -8,6 +8,18 @@ function range(packageId: string, from: number, to: number): LineStaffSticker[] 
   return stickers
 }
 
+/**
+ * สัญลักษณ์ / ไอคอน default ใน LINE OA (ลูกศร เครื่องหมาย ฯลฯ)
+ * package 1 — ใช้ได้กับ Messaging API / LINE Notify (stickerId 1–47)
+ */
+export const LINE_OA_SYMBOLS_PACKAGE: LineStaffStickerPackage = {
+  packageId: '1',
+  name: 'สัญลักษณ์',
+  tabStickerId: '1',
+  featuredTabStickerIds: ['1', '4'],
+  stickers: range('1', 1, 47),
+}
+
 /** ชุด LINE Friends แบบ chat.line.biz (รวม Moon panic / Brown / Cony / Sally) — API package 11537 */
 export const LINE_FRIENDS_PANIC_PACKAGE: LineStaffStickerPackage = {
   packageId: '11537',
@@ -47,6 +59,7 @@ export const SALLY_SPECIAL_PACKAGE: LineStaffStickerPackage = {
 
 export const DEFAULT_LINE_STAFF_STICKER_PACKAGES: LineStaffStickerPackage[] = [
   LINE_FRIENDS_PANIC_PACKAGE,
+  LINE_OA_SYMBOLS_PACKAGE,
   MOON_SPECIAL_PACKAGE,
   CONY_FRIENDS_PACKAGE,
   SALLY_SPECIAL_PACKAGE,
