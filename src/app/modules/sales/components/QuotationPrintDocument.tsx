@@ -54,34 +54,36 @@ export function QuotationPrintDocument({
         )}
       </dl>
 
-      <table className="qt-document__table">
-        <thead>
-          <tr>
-            <th scope="col">ลำดับ</th>
-            <th scope="col">รายการ</th>
-            <th scope="col" className="qt-document__num">
-              จำนวน
-            </th>
-            <th scope="col" className="qt-document__num">
-              ราคา/หน่วย (บาท)
-            </th>
-            <th scope="col" className="qt-document__num">
-              จำนวนเงิน (บาท)
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {(quotation.items ?? []).map((item, index) => (
-            <tr key={item.id}>
-              <td>{index + 1}</td>
-              <td>{item.description}</td>
-              <td className="qt-document__num">{item.quantity}</td>
-              <td className="qt-document__num">{money(item.unit_price)}</td>
-              <td className="qt-document__num">{money(item.line_total)}</td>
+      <div className="qt-document__table-scroll">
+        <table className="qt-document__table">
+          <thead>
+            <tr>
+              <th scope="col">ลำดับ</th>
+              <th scope="col">รายการ</th>
+              <th scope="col" className="qt-document__num">
+                จำนวน
+              </th>
+              <th scope="col" className="qt-document__num">
+                ราคา/หน่วย (บาท)
+              </th>
+              <th scope="col" className="qt-document__num">
+                จำนวนเงิน (บาท)
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(quotation.items ?? []).map((item, index) => (
+              <tr key={item.id}>
+                <td>{index + 1}</td>
+                <td>{item.description}</td>
+                <td className="qt-document__num">{item.quantity}</td>
+                <td className="qt-document__num">{money(item.unit_price)}</td>
+                <td className="qt-document__num">{money(item.line_total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <dl className="qt-document__totals">
         <div>

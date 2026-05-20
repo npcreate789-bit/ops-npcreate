@@ -513,6 +513,10 @@
     margin: 0;
   }
 
+  .qt-document__table-scroll {
+    overflow: visible;
+  }
+
   .qt-document__footer {
     display: none !important;
   }

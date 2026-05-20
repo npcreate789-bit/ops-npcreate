@@ -154,7 +154,7 @@ export function PublicQuotationPage() {
               </section>
             )}
 
-            <section className="public-qt-document-wrap card card--wide">
+            <section className="public-qt-document-wrap">
               <QuotationPrintDocument
                 quotation={publicQuotationToPrintModel(data)}
                 brandName={data.brand_name}

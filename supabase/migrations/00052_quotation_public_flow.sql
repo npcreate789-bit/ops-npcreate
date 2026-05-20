@@ -214,7 +214,7 @@ BEGIN
     'ลูกค้ายอมรับใบเสนอราคา: ' || COALESCE(v_brand, v_q.quotation_number),
     'เลขที่ ' || v_q.quotation_number || ' — ติดตามชำระเงินและอัปเดตสถานะใน Sales',
     '/app/sales/quotations/' || p_quotation_id::text,
-    'success'
+    'info'
   )
   ON CONFLICT (user_id, dedupe_key) DO UPDATE
     SET
