@@ -115,7 +115,13 @@ export function LeadLineChatPanel({
   )
   const latestInboundLineUserId = latestInbound?.line_user_id?.trim() ?? ''
   const sync = computeLineOaChatSyncState(lineIds, latestInboundLineUserId)
-  const { canPush, shouldOfferInboundSync, idsMismatch: idMismatch } = sync
+  const {
+    canPush,
+    shouldOfferInboundSync,
+    showChatInboundSyncBanner,
+    pushUsesInbound,
+    idsMismatch: idMismatch,
+  } = sync
   const lineChatLinked =
     hasInbound &&
     (hasOutbound || Boolean(lineIds.line_oa_chat_user_id?.trim()) || canPush)
@@ -126,7 +132,8 @@ export function LeadLineChatPanel({
     !lineChatLinked &&
     (onlyLoginId || idMismatch) &&
     !hasOutbound &&
-    !shouldOfferInboundSync
+    !showChatInboundSyncBanner &&
+    !(shouldOfferInboundSync && pushUsesInbound)
   const showOutsideWindow =
     canPush && lineChatLinked && !replyWindow.withinWindow && replyWindow.expiresAt
   const outsideReplyWindow = Boolean(
@@ -379,7 +386,7 @@ export function LeadLineChatPanel({
         </div>
       ) : null}
 
-      {shouldOfferInboundSync && latestInboundLineUserId ? (
+      {showChatInboundSyncBanner && latestInboundLineUserId ? (
         <div className="crm-line-chat__notice crm-line-chat__notice--warn" role="alert">
           <p>{lineOaChatInboundSyncBannerText(sync)}</p>
           {!readOnly ? (
@@ -390,6 +397,22 @@ export function LeadLineChatPanel({
               onClick={() => void handleSyncOaIdFromInbound()}
             >
               {syncingOaId ? 'กำลังบันทึก…' : 'ใช้ ID จากข้อความลูกค้า'}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {shouldOfferInboundSync && pushUsesInbound && latestInboundLineUserId ? (
+        <div className="crm-line-chat__notice crm-line-chat__notice--info">
+          <p>ส่งข้อความใช้ ID จากแชทลูกค้าแล้ว — กดปุ่มด้านล่างถ้าต้องการให้ข้อมูลที่บันทึกตรงกัน</p>
+          {!readOnly ? (
+            <button
+              type="button"
+              className="crm-btn crm-btn--ghost crm-line-chat__sync-oa-btn"
+              disabled={syncingOaId}
+              onClick={() => void handleSyncOaIdFromInbound()}
+            >
+              {syncingOaId ? 'กำลังบันทึก…' : 'อัปเดต ID ที่บันทึก'}
             </button>
           ) : null}
         </div>

@@ -375,11 +375,18 @@
 
 .crm-form__actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1.25rem;
   padding-top: 1rem;
   border-top: 1px solid var(--npc-glass-border);
+}
+
+@media (max-width: 520px) {
+  .crm-form__actions .crm-btn--primary {
+    flex: 1 1 100%;
+  }
 }
 
 .crm-section-title {
@@ -545,6 +552,25 @@
 
 .crm-lead-form-card {
   margin-top: 0.25rem;
+}
+
+.crm-lead-form-card__head {
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--npc-glass-border);
+}
+
+.crm-lead-form-card__head h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.crm-lead-form-card__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--npc-text-muted);
+  line-height: 1.45;
 }
 
 .crm-channel-strip {

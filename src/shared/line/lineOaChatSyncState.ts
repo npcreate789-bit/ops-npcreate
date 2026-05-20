@@ -20,6 +20,9 @@ export interface LineOaChatSyncState {
   savedOaIsLegacyExample: boolean
   savedOaDiffersFromInbound: boolean
   shouldOfferInboundSync: boolean
+  /** ส่งด้วย inbound แล้ว — ไม่ต้องเตือนแบบรุนแรง */
+  pushUsesInbound: boolean
+  showChatInboundSyncBanner: boolean
   canPush: boolean
   showTopMismatchNote: boolean
   showOaReadyMessage: boolean
@@ -68,6 +71,9 @@ export function computeLineOaChatSyncState(
 
   const shouldOfferInboundSync = savedOaDiffersFromInbound
   const canPush = leadHasLinePushCapability(lineIds, latestInboundLineUserId)
+  const pushUsesInbound = canPush && pushSource === 'inbound'
+  const showChatInboundSyncBanner =
+    shouldOfferInboundSync && Boolean(inboundId) && !pushUsesInbound
 
   return {
     loginId,
@@ -80,6 +86,8 @@ export function computeLineOaChatSyncState(
     savedOaIsLegacyExample,
     savedOaDiffersFromInbound,
     shouldOfferInboundSync,
+    pushUsesInbound,
+    showChatInboundSyncBanner,
     canPush,
     showTopMismatchNote: idsMismatch && !sameId && !shouldOfferInboundSync,
     showOaReadyMessage: canPush,

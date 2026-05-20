@@ -127,6 +127,8 @@ interface LeadFormProps {
   readOnly?: boolean
   submitLabel?: string
   onSubmit: (values: LeadFormValues) => void | Promise<void>
+  secondarySubmitLabel?: string
+  onSecondarySubmit?: (values: LeadFormValues) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -139,6 +141,8 @@ export function LeadForm({
   readOnly = false,
   submitLabel = 'บันทึก',
   onSubmit,
+  secondarySubmitLabel,
+  onSecondarySubmit,
   onCancel,
 }: LeadFormProps) {
   const [values, setValues] = useState<LeadFormValues>(() =>
@@ -418,9 +422,24 @@ export function LeadForm({
           {readOnly ? 'กลับ' : 'ยกเลิก'}
         </button>
         {!readOnly && (
-          <button type="submit" className="crm-btn crm-btn--primary" disabled={saving}>
-            {saving ? 'กำลังดำเนินการ…' : submitLabel}
-          </button>
+          <>
+            <button type="submit" className="crm-btn crm-btn--primary" disabled={saving}>
+              {saving ? 'กำลังดำเนินการ…' : submitLabel}
+            </button>
+            {secondarySubmitLabel && onSecondarySubmit ? (
+              <button
+                type="button"
+                className="crm-btn crm-btn--ghost"
+                disabled={saving}
+                onClick={() => {
+                  if (!values.contact_name.trim()) return
+                  void onSecondarySubmit(values)
+                }}
+              >
+                {saving ? 'กำลังดำเนินการ…' : secondarySubmitLabel}
+              </button>
+            ) : null}
+          </>
         )}
       </div>
     </form>

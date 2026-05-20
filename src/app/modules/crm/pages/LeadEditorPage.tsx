@@ -174,7 +174,28 @@ export function LeadEditorPage() {
     })
   }
 
-  async function handleSubmit(values: LeadFormValues) {
+  async function handleSaveOnly(values: LeadFormValues) {
+    setSaving(true)
+    setError(null)
+    setSaveNotice(null)
+    try {
+      if (isNew) {
+        const created = await createLead(formValuesToPayload(values, ownerId))
+        navigate(`/app/crm/${created.id}`, { replace: true })
+        return
+      }
+      if (id) {
+        const { lead, notice } = await persistLeadUpdate(id, values, initial)
+        if (lead) applyLead(lead, notice ?? 'บันทึกแล้ว')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleSaveAndQuotation(values: LeadFormValues) {
     setSaving(true)
     setError(null)
     setSaveNotice(null)
@@ -183,8 +204,8 @@ export function LeadEditorPage() {
         const created = await createLead(formValuesToPayload(values, ownerId))
         await goToCreateQuotation(created.id, values.status, 'สร้าง Lead แล้ว')
       } else if (id) {
-        const previous = initial
-        const { notice } = await persistLeadUpdate(id, values, previous)
+        const { lead, notice } = await persistLeadUpdate(id, values, initial)
+        if (!lead) return
         await goToCreateQuotation(id, values.status, notice)
       }
     } catch (e) {
@@ -289,33 +310,39 @@ export function LeadEditorPage() {
       )}
 
       <div className="crm-lead-workspace">
-      {!isNew && initial && initial.preferred_contact_channel === 'line' ? (
-        <LeadLineChatPanel
-          key={`line-chat-${initial.id}-${initial.line_oa_chat_user_id ?? ''}-${initial.updated_at}`}
-          lead={initial}
-          senderProfileId={userId}
-          viewerUserId={userId}
-          readOnly={readOnly}
-          focusComposerOnMount={focusLineChatOnMount}
-          servicesInterested={servicesInterested}
-          serviceOptions={serviceOptions}
-          canManageSnippets={canManageLineSnippets(roles)}
-          onLeadUpdated={(updated) => handleLeadPatched(updated)}
-        />
-      ) : null}
-
-      {!isNew &&
-        initial &&
-        initial.preferred_contact_channel !== 'line' && (
-          <LeadPreferredChannelPanel
+        {!isNew && initial && initial.preferred_contact_channel === 'line' ? (
+          <LeadLineChatPanel
+            key={`line-chat-${initial.id}-${initial.line_oa_chat_user_id ?? ''}-${initial.updated_at}`}
             lead={initial}
+            senderProfileId={userId}
+            viewerUserId={userId}
             readOnly={readOnly}
+            focusComposerOnMount={focusLineChatOnMount}
+            servicesInterested={servicesInterested}
+            serviceOptions={serviceOptions}
+            canManageSnippets={canManageLineSnippets(roles)}
             onLeadUpdated={(updated) => handleLeadPatched(updated)}
           />
-        )}
+        ) : null}
+
+        {!isNew &&
+          initial &&
+          initial.preferred_contact_channel !== 'line' && (
+            <LeadPreferredChannelPanel
+              lead={initial}
+              readOnly={readOnly}
+              onLeadUpdated={(updated) => handleLeadPatched(updated)}
+            />
+          )}
       </div>
 
       <section className="card card--wide crm-lead-form-card">
+        <header className="crm-lead-form-card__head">
+          <h2>ข้อมูล Lead</h2>
+          <p className="crm-lead-form-card__hint">
+            บันทึกเพื่ออยู่ในหน้านี้ — สร้างใบเสนอราคาเมื่อพร้อม
+          </p>
+        </header>
         <LeadForm
           initial={initial}
           serviceOptions={serviceOptions}
@@ -323,12 +350,14 @@ export function LeadEditorPage() {
           onServicesInterestedChange={setServicesInterested}
           saving={saving}
           readOnly={readOnly}
-          submitLabel={
-            showQuotationLink && !readOnly
-              ? 'บันทึกและไปสร้างใบเสนอราคา'
-              : 'บันทึก'
+          submitLabel="บันทึก"
+          onSubmit={handleSaveOnly}
+          secondarySubmitLabel={
+            showQuotationLink && !readOnly ? 'บันทึกและไปสร้างใบเสนอราคา' : undefined
           }
-          onSubmit={handleSubmit}
+          onSecondarySubmit={
+            showQuotationLink && !readOnly ? handleSaveAndQuotation : undefined
+          }
           onCancel={() => navigate('/app/crm')}
         />
       </section>
