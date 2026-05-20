@@ -66,11 +66,14 @@ export function LeadLineChatPanel({
     canPush && !lineChatLinked && (onlyLoginId || idMismatch) && !hasOutbound
   const showOutsideWindow =
     canPush && lineChatLinked && !replyWindow.withinWindow && replyWindow.expiresAt
+  const outsideReplyWindow = Boolean(
+    hasInbound && replyWindow.expiresAt && !replyWindow.withinWindow,
+  )
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const text = draft.trim()
-    if (!text || readOnly) return
+    if (!text || readOnly || outsideReplyWindow) return
     await send(text)
     setDraft('')
   }
@@ -162,20 +165,27 @@ export function LeadLineChatPanel({
           <label className="crm-line-chat__label" htmlFor={`lead-line-draft-${lead.id}`}>
             ข้อความ LINE
           </label>
+          {outsideReplyWindow ? (
+            <p className="crm-line-chat__composer-hint muted">
+              ส่งจากระบบไม่ได้ชั่วคราว — ลูกค้าต้องทัก OA ใหม่ก่อน (นอกช่วง 24 ชม.)
+            </p>
+          ) : null}
           <div className="crm-line-chat__composer-row">
             <textarea
               id={`lead-line-draft-${lead.id}`}
               className="crm-line-chat__input"
               rows={2}
-              placeholder="พิมพ์ข้อความ…"
+              placeholder={
+                outsideReplyWindow ? 'รอลูกค้าทักใหม่…' : 'พิมพ์ข้อความ…'
+              }
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              disabled={sending}
+              disabled={sending || outsideReplyWindow}
             />
             <button
               type="submit"
               className="crm-line-chat__send"
-              disabled={sending || !draft.trim()}
+              disabled={sending || !draft.trim() || outsideReplyWindow}
               aria-label="ส่งข้อความ"
             >
               {sending ? '…' : 'ส่ง'}

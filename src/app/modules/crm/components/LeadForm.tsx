@@ -64,16 +64,14 @@ function hasLeadDetailContent(values: LeadFormValues): boolean {
   )
 }
 
+/** ฟิลด์ที่แก้ในฟอร์มเท่านั้น — ไม่รวม line_user_id / line_oa_chat_user_id / facebook_psid (ตั้งจากฟอร์มติดต่อหรือแผง LINE) */
 function toPayloadFields(values: LeadFormValues) {
   return {
     brand_name: values.brand_name.trim(),
     contact_name: values.contact_name.trim() || null,
     phone: values.phone.trim() || null,
     line_id: values.line_id.trim() || null,
-    line_user_id: null,
-    line_oa_chat_user_id: null,
     facebook: values.facebook.trim() || null,
-    facebook_psid: null,
     business_type: values.business_type || null,
     ad_budget_daily: values.ad_budget_daily ? Number(values.ad_budget_daily) : null,
     ad_budget_monthly: values.ad_budget_monthly ? Number(values.ad_budget_monthly) : null,
@@ -94,6 +92,9 @@ export function formValuesToPayload(
   return {
     owner_id: ownerId,
     preferred_contact_channel: null,
+    line_user_id: null,
+    line_oa_chat_user_id: null,
+    facebook_psid: null,
     ...toPayloadFields(values),
   }
 }

@@ -23,7 +23,6 @@ import { LeadAttachmentsSection } from '../components/LeadAttachmentsSection'
 import { LeadNextStepsPanel } from '../components/LeadNextStepsPanel'
 import { LeadLineChatPanel } from '../components/LeadLineChatPanel'
 import { LeadPreferredChannelPanel } from '../components/LeadPreferredChannelPanel'
-import { resolveLineMessagingRecipientId } from '../../../../shared/line/lineUserIdResolution'
 import {
   LeadForm,
   formValuesToPayload,
@@ -79,9 +78,14 @@ export function LeadEditorPage() {
   useEffect(() => {
     if (isNew) {
       setLoading(false)
+      setInitial(null)
+      setError(null)
       return
     }
     let cancelled = false
+    setLoading(true)
+    setError(null)
+    setInitial(null)
     getLead(id)
       .then((lead) => {
         if (!cancelled) {
@@ -160,6 +164,21 @@ export function LeadEditorPage() {
     )
   }
 
+  if (!isNew && !loading && !initial) {
+    return (
+      <div className="page crm-page">
+        <header className="page__header">
+          <Link to="/app/crm" className="crm-back">
+            ← กลับรายการ
+          </Link>
+          <h1>ไม่พบ Lead</h1>
+        </header>
+        {error ? <p className="crm-error">{error}</p> : null}
+        <p className="muted">ตรวจสอบลิงก์หรือกลับไปรายการ Lead</p>
+      </div>
+    )
+  }
+
   return (
     <div className="page crm-page">
       <header className="page__header">
@@ -208,19 +227,9 @@ export function LeadEditorPage() {
         />
       )}
 
-      {!isNew &&
-        initial &&
-        initial.preferred_contact_channel === 'line' &&
-        resolveLineMessagingRecipientId({
-          line_user_id: initial.line_user_id,
-          line_oa_chat_user_id: initial.line_oa_chat_user_id,
-        }) && (
-          <LeadLineChatPanel
-            lead={initial}
-            senderProfileId={userId}
-            readOnly={readOnly}
-          />
-        )}
+      {!isNew && initial && initial.preferred_contact_channel === 'line' ? (
+        <LeadLineChatPanel lead={initial} senderProfileId={userId} readOnly={readOnly} />
+      ) : null}
 
       {!isNew && initial && <LeadNextStepsPanel lead={initial} />}
 
