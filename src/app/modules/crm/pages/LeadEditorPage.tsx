@@ -339,6 +339,7 @@ export function LeadEditorPage() {
           servicesInterested={servicesInterested}
           serviceOptions={serviceOptions}
           canManageSnippets={canManageLineSnippets(roles)}
+          onLeadUpdated={(updated) => handleLeadPatched(updated)}
         />
       ) : null}
 

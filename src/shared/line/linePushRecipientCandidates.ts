@@ -36,14 +36,11 @@ export function buildLinePushCandidateIds(input: {
     .map((id) => norm(id))
     .filter((id) => isLineMessagingUserId(id))
 
+  for (const id of inbounds) add(id)
+
   if (mismatch) {
-    for (const id of inbounds) {
-      if (login && id.toLowerCase() === login.toLowerCase()) continue
-      add(id)
-    }
     add(oa)
   } else {
-    for (const id of inbounds) add(id)
     add(oa)
     add(login)
   }

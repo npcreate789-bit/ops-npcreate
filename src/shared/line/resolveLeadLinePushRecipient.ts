@@ -44,14 +44,13 @@ async function pushUserIdFromMessageHistory(
 
   if (!data?.length) return null
 
-  const skipLogin = mismatch && Boolean(login)
+  const skipLoginOnOutbound = mismatch && Boolean(login)
 
-  // ข้อความเข้าจาก webhook = user id ที่ OA ชุดนี้รู้จัก — สำคัญกว่า outbound เก่าหรือ ID ในฟอร์ม
+  // ข้อความเข้าจาก webhook = user id บน OA ชุดนี้ (ใช้ได้แม้จะตรงกับ LINE Login ในฟอร์ม)
   for (const row of data) {
     if (row.direction !== 'inbound') continue
     const id = usableLineId(row.line_user_id as string)
     if (!id) continue
-    if (skipLogin && idsEqual(id, login)) continue
     return id
   }
 
@@ -59,7 +58,7 @@ async function pushUserIdFromMessageHistory(
     if (row.direction !== 'outbound') continue
     const id = usableLineId(row.line_user_id as string)
     if (!id) continue
-    if (skipLogin && idsEqual(id, login)) continue
+    if (skipLoginOnOutbound && idsEqual(id, login)) continue
     return id
   }
 
@@ -75,9 +74,7 @@ export async function resolveLeadLinePushRecipient(
   const mismatch = lineLoginAndOaIdsMismatch(lead)
 
   const preferredInbound = normalizePreferredInbound(options?.preferredInboundLineUserId)
-  if (preferredInbound) {
-    if (!mismatch || !login || !idsEqual(preferredInbound, login)) return preferredInbound
-  }
+  if (preferredInbound) return preferredInbound
 
   const fromHistory = await pushUserIdFromMessageHistory(lead.id, login, mismatch)
   if (fromHistory) return fromHistory

@@ -51,9 +51,7 @@ export async function collectLeadLinePushCandidates(
 
   for (const row of msgs ?? []) {
     if (row.direction !== 'inbound') continue
-    const id = row.line_user_id as string
-    if (mismatch && login && idsEqual(id, login)) continue
-    add(id)
+    add(row.line_user_id as string)
   }
 
   for (const row of msgs ?? []) {

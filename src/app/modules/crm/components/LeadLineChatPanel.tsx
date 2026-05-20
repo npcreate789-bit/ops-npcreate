@@ -6,6 +6,7 @@ import {
 } from '../../../../shared/line/lineUserIdResolution'
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
+import { updateLead } from '../api/leads'
 import { validateLineChatImage } from '../api/leadLineChat'
 import { markLeadLineMessageNotificationReadByLeadId } from '../../notifications/api/notifications'
 import { playLineMessageNotificationSound } from '../../notifications/notificationSound'
@@ -35,6 +36,7 @@ interface LeadLineChatPanelProps {
   canManageSnippets?: boolean
   /** โฟกัสช่องพิมพ์เมื่อเปิดจาก toast แจ้งเตือน LINE */
   focusComposerOnMount?: boolean
+  onLeadUpdated?: (lead: Lead) => void
 }
 
 function formatTime(iso: string): string {
@@ -72,6 +74,7 @@ export function LeadLineChatPanel({
   serviceOptions = [],
   canManageSnippets = false,
   focusComposerOnMount = false,
+  onLeadUpdated,
 }: LeadLineChatPanelProps) {
   const [draft, setDraft] = useState('')
   const [replyTo, setReplyTo] = useState<LeadLineMessage | null>(null)
@@ -80,6 +83,7 @@ export function LeadLineChatPanel({
   const [selectedSticker, setSelectedSticker] = useState<LineStaffSticker | null>(null)
   const [attachError, setAttachError] = useState<string | null>(null)
   const [snippetModalOpen, setSnippetModalOpen] = useState(false)
+  const [syncingOaId, setSyncingOaId] = useState(false)
 
   const chatSectionRef = useRef<HTMLElement>(null)
   const threadRef = useRef<HTMLDivElement>(null)
@@ -275,6 +279,21 @@ export function LeadLineChatPanel({
     })
   }
 
+  async function handleSyncOaIdFromInbound() {
+    if (!latestInboundLineUserId || readOnly) return
+    setSyncingOaId(true)
+    try {
+      const updated = await updateLead(lead.id, {
+        line_oa_chat_user_id: latestInboundLineUserId,
+      })
+      onLeadUpdated?.(updated)
+    } catch (e) {
+      setAttachError(e instanceof Error ? e.message : 'บันทึก ID ไม่สำเร็จ')
+    } finally {
+      setSyncingOaId(false)
+    }
+  }
+
   async function handleSend() {
     const text = draft.trim()
     if ((!text && !imageFile && !selectedSticker) || readOnly || outsideReplyWindow) return
@@ -356,21 +375,25 @@ export function LeadLineChatPanel({
         </div>
       ) : null}
 
-      {savedOaExampleId ? (
+      {(savedOaExampleId || savedOaDiffersFromInbound) && latestInboundLineUserId ? (
         <div className="crm-line-chat__notice crm-line-chat__notice--warn" role="alert">
           <p>
-            ID แชท OA ที่บันทึกเป็นตัวอย่างในเอกสารระบบ ไม่ใช่ลูกค้าจริง — ลบแล้ววางลิงก์จากแชทลูกค้าบน
-            chat.line.biz (ส่วนหลัง /chat/)
+            {savedOaExampleId
+              ? 'ID แชท OA ที่บันทึกเป็นตัวอย่างในเอกสาร ไม่ใช่ลูกค้าจริง — '
+              : 'ID ที่บันทึกไม่ตรงข้อความลูกค้า — '}
+            กดปุ่มด้านล่างเพื่อใช้ ID จากข้อความที่ลูกค้าทักเข้ามา (หรือวางลิงก์จาก chat.line.biz
+            ในส่วนบันทึก ID ด้านบน)
           </p>
-        </div>
-      ) : null}
-
-      {savedOaDiffersFromInbound && !savedOaExampleId ? (
-        <div className="crm-line-chat__notice crm-line-chat__notice--warn" role="status">
-          <p>
-            ID ที่บันทึกไม่ตรงข้อความลูกค้าล่าสุด — ระบบจะใช้ ID จากข้อความเข้าเมื่อส่ง (แนะนำอัปเดตในส่วนบันทึก
-            ID แชท OA)
-          </p>
+          {!readOnly ? (
+            <button
+              type="button"
+              className="crm-btn crm-btn--primary crm-line-chat__sync-oa-btn"
+              disabled={syncingOaId}
+              onClick={() => void handleSyncOaIdFromInbound()}
+            >
+              {syncingOaId ? 'กำลังบันทึก…' : 'ใช้ ID จากข้อความลูกค้า'}
+            </button>
+          ) : null}
         </div>
       ) : null}
 
