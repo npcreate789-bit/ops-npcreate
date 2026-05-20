@@ -167,12 +167,42 @@ Deno.serve(async (req) => {
         continue
       }
 
-      const { error: syncErr } = await admin
+      const { data: leadRow, error: leadReadErr } = await admin
         .from('leads')
-        .update({ line_oa_chat_user_id: lineUserId })
+        .select('line_user_id, line_oa_chat_user_id')
         .eq('id', leadId)
-      if (syncErr) {
-        console.error('line-webhook sync line_oa_chat_user_id', syncErr)
+        .maybeSingle()
+
+      if (leadReadErr) {
+        console.error('line-webhook lead read for oa sync', leadReadErr)
+      } else {
+        const existingOa = (leadRow?.line_oa_chat_user_id as string | null)?.trim() ?? ''
+        const existingLogin = (leadRow?.line_user_id as string | null)?.trim() ?? ''
+        const shouldSyncOa =
+          !existingOa ||
+          existingOa.toLowerCase() === lineUserId.toLowerCase() ||
+          (Boolean(existingLogin) &&
+            existingOa.toLowerCase() === existingLogin.toLowerCase() &&
+            lineUserId.toLowerCase() !== existingLogin.toLowerCase())
+
+        if (shouldSyncOa) {
+          const { error: syncErr } = await admin
+            .from('leads')
+            .update({ line_oa_chat_user_id: lineUserId })
+            .eq('id', leadId)
+          if (syncErr) {
+            console.error('line-webhook sync line_oa_chat_user_id', syncErr)
+          }
+        } else if (existingOa && existingOa.toLowerCase() !== lineUserId.toLowerCase()) {
+          console.info(
+            'line-webhook: keep manual line_oa_chat_user_id',
+            leadId,
+            'oa=',
+            existingOa.slice(0, 10),
+            'incoming=',
+            lineUserId.slice(0, 10),
+          )
+        }
       }
 
       const replyMeta = await buildInboundReplyMetadata(admin, leadId, msg.quotedMessageId)

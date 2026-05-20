@@ -5,6 +5,7 @@ import {
   LINE_CHAT_BIZ_ACCOUNT_ID,
   rememberLineChatBizAccountFromInput,
 } from '../../../../shared/line/staffLineMessaging'
+import { buildLineChatBizDirectUrl } from '../../../../shared/line/lineChatBizUrl'
 import {
   lineLoginAndOaIdsMismatch,
   lineOaChatUserIdSaveError,
@@ -19,6 +20,17 @@ interface LeadLineOaChatIdFieldProps {
   lead: Lead
   readOnly?: boolean
   onSaved?: (lead: Lead) => void
+}
+
+function formatOaChatDraftValue(oaUserId: string | null | undefined): string {
+  const oa = oaUserId?.trim() ?? ''
+  if (!oa) return ''
+  const accountId = getStaffLineChatBizAccountId()
+  if (accountId) {
+    const url = buildLineChatBizDirectUrl(oa, accountId)
+    if (url) return url
+  }
+  return oa
 }
 
 function truncateId(id: string): string {
@@ -82,14 +94,14 @@ export function LeadLineOaChatIdField({
   readOnly = false,
   onSaved,
 }: LeadLineOaChatIdFieldProps) {
-  const [draft, setDraft] = useState(lead.line_oa_chat_user_id ?? '')
+  const [draft, setDraft] = useState(() => formatOaChatDraftValue(lead.line_oa_chat_user_id))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [savedFlash, setSavedFlash] = useState(false)
   const [saveWarning, setSaveWarning] = useState<string | null>(null)
 
   useEffect(() => {
-    setDraft(lead.line_oa_chat_user_id ?? '')
+    setDraft(formatOaChatDraftValue(lead.line_oa_chat_user_id))
   }, [lead.id, lead.line_oa_chat_user_id])
 
   const loginId = lead.line_user_id?.trim() ?? ''
@@ -129,7 +141,7 @@ export function LeadLineOaChatIdField({
     setSaving(true)
     try {
       const updated = await updateLead(lead.id, { line_oa_chat_user_id: parsed })
-      setDraft(parsed)
+      setDraft(formatOaChatDraftValue(parsed))
       setSavedFlash(true)
       if (warning) setSaveWarning(warning)
       window.setTimeout(() => setSavedFlash(false), 2500)
@@ -143,13 +155,14 @@ export function LeadLineOaChatIdField({
 
   function handlePasteFromClipboard() {
     void navigator.clipboard.readText().then((text) => {
-      const parsed = parseLineOaChatUserIdFromInput(text)
+      const trimmed = text.trim()
+      const parsed = parseLineOaChatUserIdFromInput(trimmed)
       if (parsed) {
-        setDraft(parsed)
-        if (text.includes('line.biz')) {
-          rememberLineChatBizAccountFromInput(text)
+        setDraft(trimmed.includes('line.biz') ? trimmed : formatOaChatDraftValue(parsed))
+        if (trimmed.includes('line.biz')) {
+          rememberLineChatBizAccountFromInput(trimmed)
         }
-      } else setDraft(text.trim())
+      } else setDraft(trimmed)
     })
   }
 

@@ -105,6 +105,31 @@ export interface LeadLineIds {
   line_oa_chat_user_id?: string | null
 }
 
+/**
+ * อัปเดต line_oa_chat_user_id จาก webhook เฉพาะเมื่อปลอดภัย —
+ * ไม่ทับ ID ที่ทีมบันทึกจาก URL แชท OA แล้ว (ต่างจาก LINE Login id)
+ */
+export function shouldSyncLineOaChatUserIdFromWebhook(
+  existingOa: string | null | undefined,
+  existingLogin: string | null | undefined,
+  incomingUserId: string,
+): boolean {
+  const oa = existingOa?.trim() ?? ''
+  const login = existingLogin?.trim() ?? ''
+  const incoming = incomingUserId.trim()
+  if (!incoming) return false
+  if (!oa) return true
+  if (oa.toLowerCase() === incoming.toLowerCase()) return true
+  if (
+    login &&
+    oa.toLowerCase() === login.toLowerCase() &&
+    incoming.toLowerCase() !== login.toLowerCase()
+  ) {
+    return true
+  }
+  return false
+}
+
 /** ID สำหรับ push Messaging API — ใช้แชท OA ก่อน แล้วค่อย LINE Login */
 export function resolveLineMessagingRecipientId(ids: LeadLineIds): string | null {
   const oa = ids.line_oa_chat_user_id?.trim()
