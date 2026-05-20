@@ -370,58 +370,6 @@
   color: var(--npc-accent);
 }
 
-.crm-next-steps__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-}
-
-.crm-next-steps__head h2 {
-  margin: 0;
-  font-size: 0.95rem;
-}
-
-.crm-next-steps__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.45rem;
-}
-
-.crm-next-steps__link {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.7rem 0.9rem;
-  border-radius: 8px;
-  border: 1px solid var(--npc-glass-border);
-  text-decoration: none;
-  color: inherit;
-  transition: border-color 0.15s, background 0.15s;
-}
-
-.crm-next-steps__link:hover {
-  border-color: rgba(110, 231, 255, 0.35);
-  background: rgba(110, 231, 255, 0.06);
-}
-
-.crm-next-steps__link--primary {
-  border-color: rgba(110, 231, 255, 0.35);
-  background: rgba(110, 231, 255, 0.08);
-}
-
-.crm-next-steps__link strong {
-  font-size: 0.88rem;
-}
-
-.crm-next-steps__link .muted {
-  font-size: 0.72rem;
-}
-
 .crm-form__optional {
   margin: 0.5rem 0 0;
   grid-column: 1 / -1;

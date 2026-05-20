@@ -21,7 +21,6 @@ import { statusLabel } from '../constants'
 import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
 import { leadDisplayName } from '../leadDisplay'
 import { mergeAutoLeadStatus } from '../leadWorkflow'
-import { LeadNextStepsPanel } from '../components/LeadNextStepsPanel'
 import { LeadLineChatPanel } from '../components/LeadLineChatPanel'
 import { LeadPreferredChannelPanel } from '../components/LeadPreferredChannelPanel'
 import {
@@ -148,9 +147,9 @@ export function LeadEditorPage() {
 
     if (mergedStatus !== lead.status) {
       lead = await updateLead(leadId, { status: mergedStatus })
-      notice = `อัปเดตสถานะเป็น "${statusLabel(mergedStatus)}" อัตโนมัติ — ขั้นถัดไปพร้อมส่งใบเสนอราคา`
+      notice = `อัปเดตสถานะเป็น "${statusLabel(mergedStatus)}" อัตโนมัติ — พร้อมส่งใบเสนอราคา`
     } else if (mergedStatus === 'quotation_sent' && previous?.status !== 'quotation_sent') {
-      notice = 'สถานะพร้อมส่งใบเสนอราคา — ดูขั้นถัดไปด้านบน'
+      notice = 'สถานะพร้อมส่งใบเสนอราคา'
     }
 
     return { lead, notice }
@@ -299,8 +298,6 @@ export function LeadEditorPage() {
           ปิดการขายแล้ว — มี Customer ในระบบ · ลูกค้าเข้า Client Workspace ได้หลังได้บัญชี
         </p>
       )}
-
-      {!isNew && initial && <LeadNextStepsPanel key={`steps-${initial.updated_at}`} lead={initial} />}
 
       {!isNew && initial && (
         <LeadPreferredChannelPanel
