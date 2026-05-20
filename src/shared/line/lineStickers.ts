@@ -11,6 +11,10 @@ export interface LineStaffSticker {
 export interface LineStaffStickerPackage {
   packageId: string
   name: string
+  /** ไอคอนแท็บใน picker แบบ LINE */
+  tabIcon?: string
+  /** สติกเกอร์แรกใช้แสดงในแท็บ (ถ้าไม่มี tabIcon) */
+  tabStickerId?: string
   stickers: LineStaffSticker[]
 }
 

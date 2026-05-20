@@ -3,8 +3,11 @@ import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
 import { insertTextAtComposerCursor } from '../lineChatComposerUtils'
 import { lineChatMessagePreview, lineChatReplySenderLabel } from '../leadLineChatUtils'
 import type { LeadLineMessage } from '../types/leadLineChat'
-import { LeadLineChatEmojiPicker } from './LeadLineChatEmojiPicker'
-import { LeadLineChatStickerPicker } from './LeadLineChatStickerPicker'
+import { LINE_FRIENDS_PANIC_PACKAGE } from '../../../../shared/line/lineStaffStickerCatalog'
+import {
+  LeadLineChatExpressionPicker,
+  type ExpressionPickerTab,
+} from './LeadLineChatExpressionPicker'
 import { LeadLineSticker } from './LeadLineSticker'
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp'
@@ -138,14 +141,19 @@ export function LeadLineChatComposer({
 }: LeadLineChatComposerProps) {
   const inputId = useId()
   const fileRef = useRef<HTMLInputElement>(null)
-  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false)
-  const [stickerPickerOpen, setStickerPickerOpen] = useState(false)
+  const [expressionPickerOpen, setExpressionPickerOpen] = useState(false)
+  const [expressionPickerTab, setExpressionPickerTab] = useState<ExpressionPickerTab | undefined>()
   const locked = disabled || sending || outsideReplyWindow
   const canSend = Boolean(draft.trim() || imageFile || selectedSticker) && !locked
 
-  function closePickers() {
-    setEmojiPickerOpen(false)
-    setStickerPickerOpen(false)
+  function openExpressionPicker(tab: ExpressionPickerTab) {
+    setExpressionPickerTab(tab)
+    setExpressionPickerOpen(true)
+  }
+
+  function closeExpressionPicker() {
+    setExpressionPickerOpen(false)
+    setExpressionPickerTab(undefined)
   }
 
   function insertEmoji(emoji: string) {
@@ -167,7 +175,7 @@ export function LeadLineChatComposer({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!canSend) return
-    closePickers()
+    closeExpressionPicker()
     await onSubmit()
   }
 
@@ -236,18 +244,14 @@ export function LeadLineChatComposer({
       ) : null}
 
       <div className="crm-line-chat__composer-wrap">
-        <LeadLineChatEmojiPicker
-          open={emojiPickerOpen}
-          onClose={() => setEmojiPickerOpen(false)}
-          onPick={insertEmoji}
-        />
-        <LeadLineChatStickerPicker
-          open={stickerPickerOpen}
-          onClose={() => setStickerPickerOpen(false)}
-          onSelect={(sticker) => {
+        <LeadLineChatExpressionPicker
+          open={expressionPickerOpen}
+          initialTab={expressionPickerTab}
+          onClose={closeExpressionPicker}
+          onPickEmoji={insertEmoji}
+          onPickSticker={(sticker) => {
             onStickerPick(sticker)
             onImagePick(null)
-            setEmojiPickerOpen(false)
           }}
         />
 
@@ -269,15 +273,15 @@ export function LeadLineChatComposer({
             />
             <button
               type="button"
-              className={`crm-line-chat__tool-btn${emojiPickerOpen ? ' crm-line-chat__tool-btn--active' : ''}`}
+              className={`crm-line-chat__tool-btn${expressionPickerOpen ? ' crm-line-chat__tool-btn--active' : ''}`}
               disabled={locked}
               onClick={() => {
-                setStickerPickerOpen(false)
-                setEmojiPickerOpen((v) => !v)
+                if (expressionPickerOpen) closeExpressionPicker()
+                else openExpressionPicker('emoji:smileys')
               }}
-              aria-label="อีโมจิ"
-              title="อีโมจิ"
-              aria-expanded={emojiPickerOpen}
+              aria-label="อีโมจิและสติกเกอร์"
+              title="อีโมจิ / สติกเกอร์"
+              aria-expanded={expressionPickerOpen}
             >
               <IconEmoji />
             </button>
@@ -286,7 +290,7 @@ export function LeadLineChatComposer({
               className="crm-line-chat__tool-btn"
               disabled={locked}
               onClick={() => {
-                closePickers()
+                closeExpressionPicker()
                 fileRef.current?.click()
               }}
               aria-label="แนบรูปภาพ"
@@ -296,15 +300,18 @@ export function LeadLineChatComposer({
             </button>
             <button
               type="button"
-              className={`crm-line-chat__tool-btn${stickerPickerOpen ? ' crm-line-chat__tool-btn--active' : ''}`}
+              className={`crm-line-chat__tool-btn${expressionPickerOpen && expressionPickerTab?.startsWith('sticker:') ? ' crm-line-chat__tool-btn--active' : ''}`}
               disabled={locked}
               onClick={() => {
-                setEmojiPickerOpen(false)
-                setStickerPickerOpen((v) => !v)
+                if (expressionPickerOpen && expressionPickerTab?.startsWith('sticker:')) {
+                  closeExpressionPicker()
+                } else {
+                  openExpressionPicker(`sticker:${LINE_FRIENDS_PANIC_PACKAGE.packageId}`)
+                }
               }}
-              aria-label="สติกเกอร์"
-              title="สติกเกอร์"
-              aria-expanded={stickerPickerOpen}
+              aria-label="สติกเกอร์ LINE Friends"
+              title="สติกเกอร์ LINE"
+              aria-expanded={expressionPickerOpen}
             >
               <IconSticker />
             </button>
@@ -313,7 +320,7 @@ export function LeadLineChatComposer({
               className="crm-line-chat__tool-btn"
               disabled={locked}
               onClick={() => {
-                closePickers()
+                closeExpressionPicker()
                 onOpenSnippets()
               }}
               aria-label="ชุดข้อความ"
