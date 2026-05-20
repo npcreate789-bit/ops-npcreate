@@ -1,27 +1,33 @@
-/** ID ตัวอย่างในเอกสาร/placeholder — ห้ามบันทึกหรือใช้ push (ไม่ใช่ลูกค้าจริง) */
-export const DOCUMENTED_LINE_CHAT_USER_EXAMPLE_IDS = [
+/**
+ * ID ที่เคยใช้ในตัวอย่างเอกสารเก่า (ก่อน 2026-05) — แจ้งเตือนเท่านั้น ไม่บล็อกบันทึก
+ * เพราะทีมอาจคัดลอก URL จริงจาก chat.line.biz ที่ตรงกับตัวอย่างโดยบังเอิญ
+ */
+export const LEGACY_DOC_LINE_CHAT_USER_EXAMPLE_IDS = [
   'U1bfd708d6595baea50b50568a7b84b5f',
 ] as const
 
-export const DOCUMENTED_LINE_CHAT_BIZ_ACCOUNT_EXAMPLE_IDS = [
-  'U2626213ac7c9081487572e27c76826db',
-] as const
+/** ใช้ใน placeholder / .env.example เท่านั้น — ไม่ใช่ ID จริง */
+export const PLACEHOLDER_LINE_CHAT_USER_ID = 'U22222222222222222222222222222222'
+export const PLACEHOLDER_LINE_CHAT_BIZ_ACCOUNT_ID = 'U11111111111111111111111111111111'
 
-export function isDocumentedLineChatUserExampleId(id: string | null | undefined): boolean {
+export function isLegacyDocLineChatUserExampleId(id: string | null | undefined): boolean {
   const t = id?.trim().toLowerCase()
   if (!t) return false
-  return DOCUMENTED_LINE_CHAT_USER_EXAMPLE_IDS.some((ex) => ex.toLowerCase() === t)
+  return LEGACY_DOC_LINE_CHAT_USER_EXAMPLE_IDS.some((ex) => ex.toLowerCase() === t)
 }
+
+/** @deprecated ใช้ isLegacyDocLineChatUserExampleId */
+export const isDocumentedLineChatUserExampleId = isLegacyDocLineChatUserExampleId
 
 export function isDocumentedLineChatBizAccountExampleId(id: string | null | undefined): boolean {
   const t = id?.trim().toLowerCase()
   if (!t) return false
-  return DOCUMENTED_LINE_CHAT_BIZ_ACCOUNT_EXAMPLE_IDS.some((ex) => ex.toLowerCase() === t)
+  return t === PLACEHOLDER_LINE_CHAT_BIZ_ACCOUNT_ID.toLowerCase()
 }
 
-export function documentedLineChatUserExampleError(): string {
+export function legacyDocLineChatUserWarning(): string {
   return (
-    'นี่เป็น User ID ตัวอย่างในเอกสารระบบ ไม่ใช่ลูกค้าจริง — ' +
-    'เปิดแชทลูกค้าบน chat.line.biz แล้วคัดลอก URL เต็ม (ส่วนหลัง /chat/)'
+    'URL/ID นี้ตรงกับตัวอย่างในคู่มือระบบเก่า — ถ้าคัดลอกจากเอกสาร ให้เปิดแชทลูกค้าจริงบน chat.line.biz ' +
+    'แล้วคัดลอก URL จากแถบที่อยู่แทน (ส่วนหลัง /chat/)'
   )
 }

@@ -1,4 +1,3 @@
-import { isDocumentedLineChatUserExampleId } from './lineDocumentedExampleIds'
 import { LINE_CHAT_BIZ_ACCOUNT_ID, isLineMessagingUserId } from './lineStaffOpenUrl'
 import {
   type LeadLineIds,
@@ -9,7 +8,6 @@ import {
 export function isUsableLinePushUserId(id: string | null | undefined): boolean {
   const t = id?.trim()
   if (!t || !isLineMessagingUserId(t)) return false
-  if (isDocumentedLineChatUserExampleId(t)) return false
   const accountId = LINE_CHAT_BIZ_ACCOUNT_ID.trim()
   if (accountId && t.toLowerCase() === accountId.toLowerCase()) return false
   return true

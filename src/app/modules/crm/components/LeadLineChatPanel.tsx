@@ -116,7 +116,7 @@ export function LeadLineChatPanel({
         .find((m) => m.direction === 'inbound' && !m.deleted_at) ?? null,
     [messages],
   )
-  const savedOaExampleId = isDocumentedLineChatUserExampleId(lineIds.line_oa_chat_user_id)
+  const savedOaLegacyDocExample = isDocumentedLineChatUserExampleId(lineIds.line_oa_chat_user_id)
   const latestInboundLineUserId = latestInbound?.line_user_id?.trim() ?? ''
   const canPush = leadHasLinePushCapability(lineIds, latestInboundLineUserId)
   const lineChatLinked =
@@ -164,7 +164,7 @@ export function LeadLineChatPanel({
   }, [lead.id])
 
   useEffect(() => {
-    if (readOnly || !onLeadUpdated || !savedOaExampleId || !latestInboundLineUserId) return
+    if (readOnly || !onLeadUpdated || !savedOaLegacyDocExample || !latestInboundLineUserId) return
     if (autoSyncedOaRef.current === latestInboundLineUserId) return
     autoSyncedOaRef.current = latestInboundLineUserId
     void updateLead(lead.id, { line_oa_chat_user_id: latestInboundLineUserId })
@@ -176,7 +176,7 @@ export function LeadLineChatPanel({
     lead.id,
     readOnly,
     onLeadUpdated,
-    savedOaExampleId,
+    savedOaLegacyDocExample,
     latestInboundLineUserId,
   ])
 
@@ -399,11 +399,11 @@ export function LeadLineChatPanel({
         </div>
       ) : null}
 
-      {(savedOaExampleId || savedOaDiffersFromInbound) && latestInboundLineUserId ? (
+      {(savedOaLegacyDocExample || savedOaDiffersFromInbound) && latestInboundLineUserId ? (
         <div className="crm-line-chat__notice crm-line-chat__notice--warn" role="alert">
           <p>
-            {savedOaExampleId
-              ? 'ID แชท OA ที่บันทึกเป็นตัวอย่างในเอกสาร ไม่ใช่ลูกค้าจริง — '
+            {savedOaLegacyDocExample
+              ? 'ID แชท OA ตรงตัวอย่างในคู่มือเก่า — ถ้าคัดลอกจากเอกสารให้ใช้ปุ่มด้านล่าง หรือเปิดแชทลูกค้าจริงบน chat.line.biz — '
               : 'ID ที่บันทึกไม่ตรงข้อความลูกค้า — '}
             กดปุ่มด้านล่างเพื่อใช้ ID จากข้อความที่ลูกค้าทักเข้ามา (หรือวางลิงก์จาก chat.line.biz
             ในส่วนบันทึก ID ด้านบน)

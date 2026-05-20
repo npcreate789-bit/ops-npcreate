@@ -1,7 +1,7 @@
 import {
-  documentedLineChatUserExampleError,
   isDocumentedLineChatBizAccountExampleId,
-  isDocumentedLineChatUserExampleId,
+  isLegacyDocLineChatUserExampleId,
+  legacyDocLineChatUserWarning,
 } from './lineDocumentedExampleIds'
 import {
   isLineMessagingUserIdForUrl,
@@ -21,9 +21,6 @@ export function lineOaChatUserIdSaveError(
   parsedUserId: string,
   configuredAccountId: string,
 ): string | null {
-  if (isDocumentedLineChatUserExampleId(parsedUserId)) {
-    return documentedLineChatUserExampleError()
-  }
   if (isDocumentedLineChatBizAccountExampleId(parsedUserId)) {
     return (
       'นี่เป็น account id ตัวอย่างในเอกสาร (segment แรกของ URL) ไม่ใช่ user id ลูกค้า — ' +
@@ -48,6 +45,9 @@ export function lineOaChatUserIdSaveWarning(
   configuredAccountId: string,
   parsedUserId: string,
 ): string | null {
+  if (isLegacyDocLineChatUserExampleId(parsedUserId)) {
+    return legacyDocLineChatUserWarning()
+  }
   const accountFromUrl = parseLineChatBizAccountFromUrl(input)
   if (!accountFromUrl) return null
   if (accountFromUrl.toLowerCase() === parsedUserId.toLowerCase()) {
@@ -133,7 +133,7 @@ export function shouldSyncLineOaChatUserIdFromWebhook(
   const incoming = incomingUserId.trim()
   if (!incoming) return false
   if (!oa) return true
-  if (isDocumentedLineChatUserExampleId(oa)) return true
+  if (isLegacyDocLineChatUserExampleId(oa)) return true
   if (oa.toLowerCase() === incoming.toLowerCase()) return true
   if (
     login &&
@@ -155,7 +155,7 @@ export function resolveLineMessagingRecipientId(ids: LeadLineIds): string | null
   const oa = ids.line_oa_chat_user_id?.trim() ?? ''
   const mismatch = lineLoginAndOaIdsMismatch(ids)
 
-  if (oa && isLineMessagingUserId(oa) && !isDocumentedLineChatUserExampleId(oa)) {
+  if (oa && isLineMessagingUserId(oa)) {
     if (!mismatch || !login || !lineIdsEqual(oa, login)) return oa
   }
 
@@ -166,7 +166,7 @@ export function resolveLineMessagingRecipientId(ids: LeadLineIds): string | null
 /** ID สำหรับเปิดแชทตรงบน chat.line.biz — ต้องเป็น user id จากแชท OA เท่านั้น (ไม่ใช่ตัวอย่าง) */
 export function resolveLineStaffChatOpenUserId(ids: LeadLineIds): string | null {
   const oa = ids.line_oa_chat_user_id?.trim()
-  if (oa && isLineMessagingUserId(oa) && !isDocumentedLineChatUserExampleId(oa)) return oa
+  if (oa && isLineMessagingUserId(oa)) return oa
   return null
 }
 

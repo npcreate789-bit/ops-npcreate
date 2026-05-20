@@ -1,7 +1,5 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 
-import { isDocumentedLineChatUserExampleId } from '../_shared/lineDocumentedExampleIds.ts'
-
 function idsEqual(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase()
 }
@@ -24,7 +22,6 @@ export async function collectLeadLinePushCandidates(
     const key = t.toLowerCase()
     if (key === failed || seen.has(key)) return
     if (oaAccountId && key === oaAccountId.toLowerCase()) return
-    if (isDocumentedLineChatUserExampleId(t)) return
     seen.add(key)
     out.push(t)
   }

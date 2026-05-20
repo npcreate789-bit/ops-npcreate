@@ -1,4 +1,3 @@
-import { isDocumentedLineChatUserExampleId } from './lineDocumentedExampleIds'
 import { isUsableLinePushUserId } from './linePushEligibility'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { isLineMessagingUserId } from './lineStaffOpenUrl'
@@ -74,7 +73,7 @@ export async function resolveLeadLinePushRecipient(
   if (fromHistory) return fromHistory
 
   const fromForm = resolveLineMessagingRecipientId(lead)
-  if (fromForm && !isDocumentedLineChatUserExampleId(fromForm)) {
+  if (fromForm) {
     if (mismatch && login && idsEqual(fromForm, login)) return null
     return fromForm
   }

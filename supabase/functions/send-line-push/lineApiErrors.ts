@@ -31,8 +31,8 @@ export function formatLineMessagingApiError(
   if (context === 'profile' && status === 404) {
     if (isDocumentedLineChatUserExampleId(failedUserId)) {
       return (
-        'User ID นี้เป็นตัวอย่างในเอกสารระบบ ไม่ใช่ลูกค้าจริง — เปิดแชทลูกค้าบน chat.line.biz ' +
-        'แล้วบันทึกส่วนหลัง /chat/ ในหน้า Lead'
+        'LINE ไม่รู้จัก user id นี้ — ถ้าคัดลอกจากคู่มือระบบ ให้เปิดแชทลูกค้าจริงบน chat.line.biz ' +
+        'แล้วบันทึก URL จากแถบที่อยู่ (ส่วนหลัง /chat/)'
       )
     }
     return (
@@ -48,8 +48,8 @@ export function formatLineMessagingApiError(
     isDocumentedLineChatUserExampleId(failedUserId)
   ) {
     return (
-      'User ID นี้เป็นตัวอย่างในเอกสารระบบ ไม่ใช่ลูกค้าจริง — เปิดแชทลูกค้าบน chat.line.biz ' +
-      'แล้วบันทึกส่วนหลัง /chat/ ในหน้า Lead'
+      'LINE ไม่รู้จัก user id นี้ — ถ้าคัดลอกจากคู่มือระบบ ให้เปิดแชทลูกค้าจริงบน chat.line.biz ' +
+      'แล้วบันทึก URL จากแถบที่อยู่ (ส่วนหลัง /chat/)'
     )
   }
 

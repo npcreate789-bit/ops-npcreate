@@ -1,8 +1,5 @@
-const DOCUMENTED_LINE_CHAT_USER_EXAMPLE_IDS = new Set([
-  'u1bfd708d6595baea50b50568a7b84b5f',
-])
-
+/** ตัวอย่างในคู่มือเก่า — ใช้แจ้งเตือน ไม่บล็อก push/save */
 export function isDocumentedLineChatUserExampleId(id: string | null | undefined): boolean {
   const t = id?.trim().toLowerCase()
-  return Boolean(t && DOCUMENTED_LINE_CHAT_USER_EXAMPLE_IDS.has(t))
+  return t === 'u1bfd708d6595baea50b50568a7b84b5f'
 }

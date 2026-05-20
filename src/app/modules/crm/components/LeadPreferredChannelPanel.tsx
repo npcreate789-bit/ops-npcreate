@@ -7,7 +7,6 @@ import {
   staffOpenChannelLabel,
   type PreferredContactChannel,
 } from '../../../../shared/crm/preferredContactChannel'
-import { isDocumentedLineChatUserExampleId } from '../../../../shared/line/lineDocumentedExampleIds'
 import {
   lineLoginAndOaIdsMismatch,
   resolveLineStaffChatOpenUserId,
@@ -47,9 +46,7 @@ export function LeadPreferredChannelPanel({
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
   }
   const openHref = openUrlForPreferredChannel(ch, lineIds)
-  const hasOaChat =
-    Boolean(resolveLineStaffChatOpenUserId(lineIds)) &&
-    !isDocumentedLineChatUserExampleId(lineIds.line_oa_chat_user_id)
+  const hasOaChat = Boolean(resolveLineStaffChatOpenUserId(lineIds))
   const idsSynced =
     hasOaChat && !lineLoginAndOaIdsMismatch(lineIds)
 
@@ -57,12 +54,6 @@ export function LeadPreferredChannelPanel({
 
   function handleOpenLine() {
     setOpenLineError(null)
-    if (isDocumentedLineChatUserExampleId(lineIds.line_oa_chat_user_id)) {
-      setOpenLineError(
-        'ID แชท OA เป็นตัวอย่างในเอกสาร — กด "ใช้ ID จากข้อความลูกค้า" ในแผงแชทด้านล่าง หรือวางลิงก์จาก chat.line.biz',
-      )
-      return
-    }
     const oaOpenId = resolveLineStaffChatOpenUserId(lineIds)
     if (!oaOpenId) {
       setOpenLineError(

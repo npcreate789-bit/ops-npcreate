@@ -6,7 +6,6 @@ import {
   rememberLineChatBizAccountFromInput,
 } from '../../../../shared/line/staffLineMessaging'
 import { buildLineChatBizDirectUrl } from '../../../../shared/line/lineChatBizUrl'
-import { isDocumentedLineChatUserExampleId } from '../../../../shared/line/lineDocumentedExampleIds'
 import {
   lineLoginAndOaIdsMismatch,
   lineOaChatUserIdSaveError,
@@ -113,7 +112,7 @@ export function LeadLineOaChatIdField({
     line_user_id: lead.line_user_id,
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
   })
-  const hasOaId = Boolean(oaId) && !isDocumentedLineChatUserExampleId(oaId)
+  const hasOaId = Boolean(oaId)
   const needsSetup = !hasOaId && !readOnly
 
   async function handleSave() {
