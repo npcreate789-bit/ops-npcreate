@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { lineMessageTypeLabel } from '../../../../shared/line/lineMessageDisplay'
+import { LeadLineChatText } from './LeadLineChatText'
 import { LeadLineSticker } from './LeadLineSticker'
 import { fetchLineMessageContentObjectUrl } from '../../../../shared/line/lineMessageContentUrl'
 import { getLeadFileUrl } from '../api/leads'
@@ -97,7 +98,7 @@ export function LeadLineMessageBody({ message }: LeadLineMessageBodyProps) {
   const typeLabel = lineMessageTypeLabel(message.message_type)
 
   if (message.message_type === 'text') {
-    return <p className="crm-line-chat__body">{message.body}</p>
+    return <LeadLineChatText text={message.body} />
   }
 
   if (message.message_type === 'sticker') {
@@ -108,7 +109,7 @@ export function LeadLineMessageBody({ message }: LeadLineMessageBodyProps) {
         {stickerId ? (
           <LeadLineSticker stickerId={stickerId} />
         ) : (
-          <p className="crm-line-chat__body">{message.body}</p>
+          <LeadLineChatText text={message.body} />
         )}
       </div>
     )

@@ -6,11 +6,12 @@ import {
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
 import { validateLineChatImage } from '../api/leadLineChat'
+import { insertTextAtComposerCursor } from '../lineChatComposerUtils'
 import { enrichLeadLineMessages } from '../leadLineChatUtils'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
 import { LeadLineChatComposer } from './LeadLineChatComposer'
 import { LeadLineChatMessageItem } from './LeadLineChatMessageItem'
-import { LeadLineSnippetPanel } from './LeadLineSnippetPanel'
+import { LeadLineSnippetPickerModal } from './LeadLineSnippetPickerModal'
 import type { Lead } from '../types'
 import type { LeadLineMessage } from '../types/leadLineChat'
 import type { ServicePackageOption } from '../../../../shared/packages/serviceInterests'
@@ -65,6 +66,7 @@ export function LeadLineChatPanel({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
   const [selectedSticker, setSelectedSticker] = useState<LineStaffSticker | null>(null)
   const [attachError, setAttachError] = useState<string | null>(null)
+  const [snippetModalOpen, setSnippetModalOpen] = useState(false)
 
   const threadRef = useRef<HTMLDivElement>(null)
   const composerInputRef = useRef<HTMLTextAreaElement>(null)
@@ -202,7 +204,12 @@ export function LeadLineChatPanel({
   }
 
   function insertSnippet(text: string) {
-    setDraft(text)
+    const el = composerInputRef.current
+    if (el) {
+      setDraft(insertTextAtComposerCursor(el, draft, text))
+    } else {
+      setDraft(text)
+    }
     setReplyTo(null)
     setImageFile(null)
     setSelectedSticker(null)
@@ -348,20 +355,22 @@ export function LeadLineChatPanel({
               onImagePick={handleImagePick}
               selectedSticker={selectedSticker}
               onStickerPick={handleStickerPick}
+              onOpenSnippets={() => setSnippetModalOpen(true)}
               onSubmit={handleSend}
             />
           ) : null}
-          <LeadLineSnippetPanel
-            lead={lead}
-            servicesInterested={servicesInterested}
-            serviceOptions={serviceOptions}
-            placement="dock"
-            disabled={readOnly || outsideReplyWindow}
-            canManage={canManageSnippets && !readOnly}
-            onSelect={insertSnippet}
-          />
         </div>
       ) : null}
+
+      <LeadLineSnippetPickerModal
+        open={snippetModalOpen}
+        lead={lead}
+        servicesInterested={servicesInterested}
+        serviceOptions={serviceOptions}
+        canManage={canManageSnippets && !readOnly}
+        onClose={() => setSnippetModalOpen(false)}
+        onSelect={insertSnippet}
+      />
     </section>
   )
 }
