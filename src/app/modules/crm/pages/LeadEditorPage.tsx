@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canAccessNotifications,
@@ -21,6 +21,7 @@ import { statusLabel } from '../constants'
 import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
 import { leadDisplayName } from '../leadDisplay'
 import { mergeAutoLeadStatus } from '../leadWorkflow'
+import { LeadEditorHeader } from '../components/LeadEditorHeader'
 import { LeadLineChatPanel } from '../components/LeadLineChatPanel'
 import { LeadPreferredChannelPanel } from '../components/LeadPreferredChannelPanel'
 import {
@@ -225,8 +226,9 @@ export function LeadEditorPage() {
 
   if (loading) {
     return (
-      <div className="page">
-        <p className="muted">กำลังโหลด...</p>
+      <div className="page crm-page">
+        <LeadEditorHeader eyebrow="Lead" title="กำลังโหลด…" />
+        <p className="crm-lead-header__loading muted">โปรดรอสักครู่</p>
       </div>
     )
   }
@@ -234,12 +236,7 @@ export function LeadEditorPage() {
   if (isNew && !canCreate) {
     return (
       <div className="page crm-page">
-        <header className="page__header">
-          <Link to="/app/crm" className="crm-back">
-            ← กลับรายการ
-          </Link>
-          <h1>ไม่มีสิทธิ์สร้าง Lead</h1>
-        </header>
+        <LeadEditorHeader eyebrow="Lead" title="ไม่มีสิทธิ์สร้าง Lead" />
         <p className="crm-banner crm-banner--warn">
           บทบาทของคุณไม่สามารถสร้าง Lead ใหม่ได้ — ติดต่อทีม Sales
         </p>
@@ -250,35 +247,27 @@ export function LeadEditorPage() {
   if (!isNew && !loading && !initial) {
     return (
       <div className="page crm-page">
-        <header className="page__header">
-          <Link to="/app/crm" className="crm-back">
-            ← กลับรายการ
-          </Link>
-          <h1>ไม่พบ Lead</h1>
-        </header>
+        <LeadEditorHeader eyebrow="Lead" title="ไม่พบรายการ" />
         {error ? <p className="crm-error">{error}</p> : null}
         <p className="muted">ตรวจสอบลิงก์หรือกลับไปรายการ Lead</p>
       </div>
     )
   }
 
+  const headerSubtitle =
+    !isNew && initial?.brand_name?.trim() && initial.contact_name?.trim()
+      ? initial.brand_name.trim()
+      : null
+
   return (
     <div className="page crm-page">
-      <header className="page__header">
-        <Link to="/app/crm" className="crm-back">
-          ← กลับรายการ
-        </Link>
-        <h1>
-          {isNew
-            ? 'เพิ่ม Lead ใหม่'
-            : `แก้ไข: ${initial ? leadDisplayName(initial) : ''}`}
-        </h1>
-        {!isNew && initial ? (
-          <p className="crm-sub">
-            สถานะ: <strong>{statusLabel(initial.status)}</strong>
-          </p>
-        ) : null}
-      </header>
+      <LeadEditorHeader
+        eyebrow={isNew ? 'สร้าง Lead ใหม่' : 'รายละเอียด Lead'}
+        title={isNew ? 'เพิ่มลูกค้าเป้าหมาย' : leadDisplayName(initial!)}
+        subtitle={headerSubtitle}
+        status={!isNew && initial ? initial.status : undefined}
+        preferredContactChannel={initial?.preferred_contact_channel ?? null}
+      />
 
       {error && <p className="crm-error">{error}</p>}
       {saveNotice ? (
