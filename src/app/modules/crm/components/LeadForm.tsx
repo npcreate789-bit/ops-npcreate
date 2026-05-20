@@ -123,6 +123,7 @@ interface LeadFormProps {
   serviceOptions: ServicePackageOption[]
   saving?: boolean
   readOnly?: boolean
+  submitLabel?: string
   onSubmit: (values: LeadFormValues) => void | Promise<void>
   onCancel: () => void
 }
@@ -132,6 +133,7 @@ export function LeadForm({
   serviceOptions,
   saving,
   readOnly = false,
+  submitLabel = 'บันทึก',
   onSubmit,
   onCancel,
 }: LeadFormProps) {
@@ -407,7 +409,7 @@ export function LeadForm({
         </button>
         {!readOnly && (
           <button type="submit" className="crm-btn crm-btn--primary" disabled={saving}>
-            {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+            {saving ? 'กำลังดำเนินการ…' : submitLabel}
           </button>
         )}
       </div>

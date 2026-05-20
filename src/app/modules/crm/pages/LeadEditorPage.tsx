@@ -136,6 +136,24 @@ export function LeadEditorPage() {
     return { lead, notice }
   }
 
+  async function goToCreateQuotation(
+    leadId: string,
+    formStatus: Lead['status'],
+    notice?: string | null,
+  ) {
+    const closed: Lead['status'][] = ['won', 'not_interested']
+    if (!closed.includes(formStatus)) {
+      try {
+        await updateLead(leadId, { status: 'quotation_sent' })
+      } catch {
+        /* ยังไปหน้าใบเสนอราคาได้แม้อัปเดตสถานะไม่สำเร็จ */
+      }
+    }
+    navigate(`/app/sales/quotations/new?leadId=${leadId}&fromLead=1`, {
+      state: { leadSaveNotice: notice ?? 'บันทึก Lead แล้ว — กรอกใบเสนอราคาต่อ' },
+    })
+  }
+
   async function handleSubmit(values: LeadFormValues) {
     setSaving(true)
     setError(null)
@@ -143,11 +161,11 @@ export function LeadEditorPage() {
     try {
       if (isNew) {
         const created = await createLead(formValuesToPayload(values, ownerId))
-        navigate(`/app/crm/${created.id}`, { replace: true })
+        await goToCreateQuotation(created.id, values.status, 'สร้าง Lead แล้ว')
       } else if (id) {
         const previous = initial
-        const { lead, notice } = await persistLeadUpdate(id, values, previous)
-        applyLead(lead, notice)
+        const { notice } = await persistLeadUpdate(id, values, previous)
+        await goToCreateQuotation(id, values.status, notice)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
@@ -304,6 +322,11 @@ export function LeadEditorPage() {
           serviceOptions={serviceOptions}
           saving={saving}
           readOnly={readOnly}
+          submitLabel={
+            showQuotationLink && !readOnly
+              ? 'บันทึกและไปสร้างใบเสนอราคา'
+              : 'บันทึก'
+          }
           onSubmit={handleSubmit}
           onCancel={() => navigate('/app/crm')}
         />

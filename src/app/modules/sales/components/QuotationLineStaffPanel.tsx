@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { staffOpenChannelLabel } from '../../../../shared/crm/preferredContactChannel'
 import {
   openStaffLineChat,
@@ -142,7 +143,7 @@ export function QuotationLineStaffPanel({
       <header className="qt-line-staff__head">
         <h2 className="crm-section-title">ติดต่อลูกค้าทาง LINE</h2>
         <p className="muted">
-          ส่งข้อมูลอ้างอิงก่อนคุย · หลังบันทึกแล้วส่งใบเสนอราคา —{' '}
+          ส่งข้อมูลอ้างอิงก่อนคุย · หลังบันทึกใบเสนอราคาแล้วส่งลิงก์/ไฟล์ให้ลูกค้า —{' '}
           <a
             href={staffLineChatUrl(oaOpenId ?? loginId, oaOpenId ? { mode: 'direct' } : undefined)}
             target="_blank"
@@ -194,13 +195,21 @@ export function QuotationLineStaffPanel({
         </button>
         <button
           type="button"
-          className="crm-btn"
+          className="crm-btn crm-btn--primary"
           disabled={busy !== null || !saved}
           onClick={() => void handleSendQuotation()}
           title={!saved ? 'บันทึกใบเสนอราคาก่อน' : undefined}
         >
-          {busy === 'send' ? 'กำลังส่ง…' : 'ส่งใบเสนอราคาทาง LINE'}
+          {busy === 'send' ? 'กำลังส่ง…' : 'ส่งไฟล์ใบเสนอราคาไปแชท LINE'}
         </button>
+        {quotation.lead_id ? (
+          <Link
+            to={`/app/crm/${quotation.lead_id}`}
+            className="crm-btn crm-btn--ghost"
+          >
+            เปิดแชท CRM
+          </Link>
+        ) : null}
         <button
           type="button"
           className="crm-btn crm-btn--ghost"
@@ -216,7 +225,10 @@ export function QuotationLineStaffPanel({
       </div>
 
       {!saved && (
-        <p className="muted qt-line-staff__hint">บันทึกใบเสนอราคาก่อน — ปุ่มส่งใบเสนอราคาจะเปิดใช้งาน</p>
+        <p className="muted qt-line-staff__hint">
+          บันทึกใบเสนอราคาก่อน — จากนั้นตั้งสถานะ &quot;ส่งแล้ว&quot; แล้วกดส่งไฟล์ใบเสนอราคาไปแชท LINE
+          (ลูกค้าได้ลิงก์เปิดดู PDF/ใบเสนอออนไลน์)
+        </p>
       )}
     </section>
   )

@@ -36,7 +36,7 @@ export function publicQuotationPath(token: string): string {
 }
 
 export const DEFAULT_TERMS =
-  'รับดูแลขั้นต่ำ 3 เดือน มัดจำงวแรกก่อนเริ่มงาน ราคายังไม่รวมค่าแอด'
+  'รับดูแลขั้นต่ำ 1 เดือน มัดจำงวดแรกก่อนเริ่มงาน ราคายังไม่รวมค่าแอด'
 
 export function quotationStatusLabel(status: QuotationStatus): string {
   return QUOTATION_STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status

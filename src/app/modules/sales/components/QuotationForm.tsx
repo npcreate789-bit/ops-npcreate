@@ -7,6 +7,11 @@ import {
   QUOTATION_STATUS_OPTIONS,
   calcQuotationTotals,
 } from '../constants'
+import {
+  DEFAULT_CONTRACT_MONTHS,
+  lineUnitPriceForContract,
+  parseContractMonths,
+} from '../quotationPricing'
 import '../sales.css'
 
 export interface QuotationFormState {
@@ -25,12 +30,12 @@ export interface QuotationFormState {
   }[]
 }
 
-function defaultItemFromPackage(pkg: Package) {
+function defaultItemFromPackage(pkg: Package, contractMonths = DEFAULT_CONTRACT_MONTHS) {
   return {
     package_id: pkg.id,
     description: pkg.name,
     quantity: '1',
-    unit_price: String(pkg.base_price),
+    unit_price: String(lineUnitPriceForContract(pkg.base_price, contractMonths)),
   }
 }
 
@@ -38,13 +43,16 @@ function toState(
   initial?: Quotation | null,
   leadId?: string,
   suggestedPackage?: Package | null,
+  fromLeadSave?: boolean,
 ): QuotationFormState {
   const base = {
     lead_id: initial?.lead_id ?? leadId ?? '',
-    status: initial?.status ?? 'draft',
+    status: initial?.status ?? (fromLeadSave ? 'sent' : 'draft'),
     discount: String(initial?.discount ?? 0),
     vat_rate: String(initial?.vat_rate ?? 7),
-    contract_months: initial?.contract_months ? String(initial.contract_months) : '3',
+    contract_months: initial?.contract_months
+      ? String(initial.contract_months)
+      : String(DEFAULT_CONTRACT_MONTHS),
     terms: initial?.terms ?? DEFAULT_TERMS,
     notes: initial?.notes ?? '',
   }
@@ -62,7 +70,8 @@ function toState(
   }
 
   if (suggestedPackage) {
-    return { ...base, items: [defaultItemFromPackage(suggestedPackage)] }
+    const months = parseContractMonths(base.contract_months)
+    return { ...base, items: [defaultItemFromPackage(suggestedPackage, months)] }
   }
 
   return {
@@ -103,6 +112,8 @@ interface QuotationFormProps {
   packages: Package[]
   saving?: boolean
   readOnly?: boolean
+  /** มาจาก CRM หลังบันทึก Lead */
+  fromLeadSave?: boolean
   onSubmit: (input: QuotationInput) => void | Promise<void>
   onCancel: () => void
 }
@@ -117,6 +128,7 @@ export function QuotationForm({
   packages,
   saving,
   readOnly = false,
+  fromLeadSave = false,
   onSubmit,
   onCancel,
 }: QuotationFormProps) {
@@ -126,12 +138,12 @@ export function QuotationForm({
   )
 
   const [state, setState] = useState<QuotationFormState>(() =>
-    toState(initial, leadId, suggestedPackage),
+    toState(initial, leadId, suggestedPackage, fromLeadSave),
   )
 
   useEffect(() => {
-    if (initial) setState(toState(initial, leadId))
-  }, [initial, leadId])
+    if (initial) setState(toState(initial, leadId, undefined, fromLeadSave))
+  }, [initial, leadId, fromLeadSave])
 
   useEffect(() => {
     if (initial?.items?.length) return
@@ -179,12 +191,39 @@ export function QuotationForm({
     }))
   }
 
+  function applyContractMonthsToLineItems(
+    items: QuotationFormState['items'],
+    monthsRaw: string,
+  ): QuotationFormState['items'] {
+    const months = parseContractMonths(monthsRaw)
+    return items.map((item) => {
+      if (!item.package_id) return item
+      const pkg = packages.find((p) => p.id === item.package_id)
+      if (!pkg) return item
+      return {
+        ...item,
+        unit_price: String(lineUnitPriceForContract(pkg.base_price, months)),
+      }
+    })
+  }
+
+  function setContractMonths(value: string) {
+    setState((s) => ({
+      ...s,
+      contract_months: value,
+      items: applyContractMonthsToLineItems(s.items, value),
+    }))
+  }
+
   function pickPackage(index: number, packageId: string) {
     const pkg = packages.find((p) => p.id === packageId)
+    const months = parseContractMonths(state.contract_months)
     setItem(index, {
       package_id: packageId,
       description: pkg?.name ?? '',
-      unit_price: String(pkg?.base_price ?? 0),
+      unit_price: pkg
+        ? String(lineUnitPriceForContract(pkg.base_price, months))
+        : '0',
     })
   }
 
@@ -197,6 +236,12 @@ export function QuotationForm({
   return (
     <form className="crm-form qt-form" onSubmit={handleSubmit}>
       <fieldset disabled={readOnly}>
+      {fromLeadSave && leadId && (
+        <p className="crm-banner crm-banner--ok qt-form__flow-banner">
+          บันทึก Lead แล้ว — กรอกใบเสนอราคาด้านล่าง แล้วกด <strong>บันทึก</strong> เพื่อส่งลิงก์/ไฟล์ใบเสนอราคาไปแชท LINE
+        </p>
+      )}
+
       {leadBrandName && (
         <p className="crm-banner crm-banner--warn">
           Lead: <strong>{leadBrandName}</strong>
@@ -236,11 +281,14 @@ export function QuotationForm({
         </label>
         <label>
           ระยะสัญญา (เดือน)
+          <span className="crm-sub">
+            ราคา/หน่วยของแพ็กเกจ = ราคาต่อเดือน × จำนวนเดือน (อัปเดตอัตโนมัติ)
+          </span>
           <input
             type="number"
             min={1}
             value={state.contract_months}
-            onChange={(e) => setState({ ...state, contract_months: e.target.value })}
+            onChange={(e) => setContractMonths(e.target.value)}
             className="crm-input"
           />
         </label>
@@ -329,6 +377,11 @@ export function QuotationForm({
               </label>
               <label>
                 ราคา/หน่วย
+                <span className="crm-sub">
+                  {item.package_id
+                    ? `รวม ${parseContractMonths(state.contract_months)} เดือน`
+                    : 'กำหนดเอง'}
+                </span>
                 <input
                   type="number"
                   min={0}

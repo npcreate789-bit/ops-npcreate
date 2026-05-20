@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canCreateSalesQuotation,
@@ -24,6 +24,7 @@ import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import { QuotationPublicLink } from '../components/QuotationPublicLink'
 import { QuotationNextStepsPanel } from '../components/QuotationNextStepsPanel'
 import { QuotationLineStaffPanel } from '../components/QuotationLineStaffPanel'
+import { DEFAULT_CONTRACT_MONTHS, lineUnitPriceForContract } from '../quotationPricing'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../sales.css'
@@ -33,7 +34,11 @@ const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 export function QuotationEditorPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const leadIdParam = searchParams.get('leadId')
+  const fromLeadSave = searchParams.get('fromLead') === '1'
+  const leadSaveNotice =
+    (location.state as { leadSaveNotice?: string } | null)?.leadSaveNotice ?? null
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
   const { profile, configured } = useAuth()
@@ -157,6 +162,12 @@ export function QuotationEditorPage() {
 
       {error && <p className="crm-error no-print">{error}</p>}
 
+      {fromLeadSave && leadSaveNotice ? (
+        <p className="crm-banner crm-banner--ok no-print" role="status">
+          {leadSaveNotice}
+        </p>
+      ) : null}
+
       {leadForBanner &&
         needsExternalContactBeforeQuotation(leadForBanner) &&
         leadForBanner.preferred_contact_channel && (
@@ -211,7 +222,7 @@ export function QuotationEditorPage() {
             vat_rate: 7,
             vat_amount: 0,
             total: 0,
-            contract_months: suggestedPackage ? 3 : null,
+            contract_months: suggestedPackage ? DEFAULT_CONTRACT_MONTHS : null,
             terms: null,
             notes: null,
             sent_at: null,
@@ -229,8 +240,14 @@ export function QuotationEditorPage() {
                     package_id: suggestedPackage.id,
                     description: suggestedPackage.name,
                     quantity: 1,
-                    unit_price: suggestedPackage.base_price,
-                    line_total: suggestedPackage.base_price,
+                    unit_price: lineUnitPriceForContract(
+                      suggestedPackage.base_price,
+                      DEFAULT_CONTRACT_MONTHS,
+                    ),
+                    line_total: lineUnitPriceForContract(
+                      suggestedPackage.base_price,
+                      DEFAULT_CONTRACT_MONTHS,
+                    ),
                     sort_order: 0,
                   },
                 ]
@@ -274,8 +291,11 @@ export function QuotationEditorPage() {
           packages={packages}
           saving={saving}
           readOnly={readOnly}
+          fromLeadSave={fromLeadSave}
           onSubmit={handleSubmit}
-          onCancel={() => navigate('/app/sales')}
+          onCancel={() =>
+            leadIdParam ? navigate(`/app/crm/${leadIdParam}`) : navigate('/app/sales')
+          }
         />
       </section>
 
