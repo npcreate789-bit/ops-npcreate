@@ -4,6 +4,7 @@ import {
   lineStickerImageUrl,
 } from '../../../../shared/line/lineMessageDisplay'
 import { fetchLineMessageContentObjectUrl } from '../../../../shared/line/lineMessageContentUrl'
+import { getLeadFileUrl } from '../api/leads'
 import type { LeadLineMessage } from '../types/leadLineChat'
 
 function metaString(metadata: Record<string, unknown>, key: string): string | null {
@@ -12,6 +13,37 @@ function metaString(metadata: Record<string, unknown>, key: string): string | nu
   if (typeof v === 'string' && v.trim()) return v.trim()
   if (typeof v === 'number') return String(v)
   return null
+}
+
+function LeadStorageImagePreview({ storagePath }: { storagePath: string }) {
+  const [src, setSrc] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void getLeadFileUrl(storagePath).then((url) => {
+      if (cancelled) return
+      if (!url) {
+        setFailed(true)
+        return
+      }
+      setSrc(url)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [storagePath])
+
+  if (failed) {
+    return <p className="crm-line-chat__media-fallback muted">ไม่สามารถโหลดรูป</p>
+  }
+  if (!src) {
+    return <p className="crm-line-chat__media-fallback muted">กำลังโหลดรูป…</p>
+  }
+
+  return (
+    <img className="crm-line-chat__image" src={src} alt="รูปที่ส่ง" loading="lazy" />
+  )
 }
 
 function LineImagePreview({ contentMessageId }: { contentMessageId: string }) {
@@ -88,11 +120,14 @@ export function LeadLineMessageBody({ message }: LeadLineMessageBodyProps) {
   if (message.message_type === 'image') {
     const contentId =
       metaString(metadata, 'line_content_message_id') ?? message.line_message_id
+    const storagePath = metaString(metadata, 'storage_path')
     return (
       <div className="crm-line-chat__media">
         <span className="crm-line-chat__type-tag">{typeLabel}</span>
         {contentId ? (
           <LineImagePreview contentMessageId={contentId} />
+        ) : storagePath ? (
+          <LeadStorageImagePreview storagePath={storagePath} />
         ) : (
           <p className="crm-line-chat__body">{message.body}</p>
         )}

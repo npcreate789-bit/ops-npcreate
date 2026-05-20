@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
-import { listLeadLineMessages, sendLeadLineChatMessage } from '../api/leadLineChat'
+import {
+  listLeadLineMessages,
+  sendLeadLineChatMessage,
+  type SendLeadLineChatInput,
+} from '../api/leadLineChat'
 import type { Lead } from '../types'
 import type { LeadLineMessage } from '../types/leadLineChat'
 
 export function useLeadLineChat(
-  lead: Pick<Lead, 'id' | 'line_user_id' | 'line_oa_chat_user_id'> | null,
+  lead: Pick<Lead, 'id' | 'owner_id' | 'line_user_id' | 'line_oa_chat_user_id'> | null,
   senderProfileId: string | undefined,
 ) {
   const leadId = lead?.id
@@ -67,12 +71,12 @@ export function useLeadLineChat(
   }, [leadId, load])
 
   const send = useCallback(
-    async (text: string) => {
+    async (input: SendLeadLineChatInput) => {
       if (!lead) return
       setSending(true)
       setError(null)
       try {
-        await sendLeadLineChatMessage(lead, text, senderProfileId)
+        await sendLeadLineChatMessage(lead, input, senderProfileId)
         await load()
       } catch (e) {
         setError(e instanceof Error ? e.message : 'ส่งไม่สำเร็จ')

@@ -1,12 +1,14 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import {
   lineLoginAndOaIdsMismatch,
   resolveLineMessagingRecipientId,
 } from '../../../../shared/line/lineUserIdResolution'
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
-import { LeadLineMessageBody } from './LeadLineMessageBody'
+import { LeadLineChatComposer } from './LeadLineChatComposer'
+import { LeadLineChatMessageItem } from './LeadLineChatMessageItem'
 import type { Lead } from '../types'
+import type { LeadLineMessage } from '../types/leadLineChat'
 import '../crm.css'
 
 interface LeadLineChatPanelProps {
@@ -43,6 +45,10 @@ export function LeadLineChatPanel({
   readOnly = false,
 }: LeadLineChatPanelProps) {
   const [draft, setDraft] = useState('')
+  const [replyTo, setReplyTo] = useState<LeadLineMessage | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+
   const lineIds = {
     line_user_id: lead.line_user_id,
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
@@ -70,12 +76,31 @@ export function LeadLineChatPanel({
     hasInbound && replyWindow.expiresAt && !replyWindow.withinWindow,
   )
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    const text = draft.trim()
-    if (!text || readOnly || outsideReplyWindow) return
-    await send(text)
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(imageFile)
+    setImagePreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [imageFile])
+
+  function clearComposer() {
     setDraft('')
+    setReplyTo(null)
+    setImageFile(null)
+  }
+
+  async function handleSend() {
+    const text = draft.trim()
+    if ((!text && !imageFile) || readOnly || outsideReplyWindow) return
+    await send({
+      text: text || undefined,
+      imageFile: imageFile ?? undefined,
+      replyTo,
+    })
+    clearComposer()
   }
 
   return (
@@ -140,18 +165,13 @@ export function LeadLineChatPanel({
         ) : (
           <ul className="crm-line-chat__messages">
             {messages.map((m) => (
-              <li
+              <LeadLineChatMessageItem
                 key={m.id}
-                className={`crm-line-chat__msg crm-line-chat__msg--${m.direction}`}
-              >
-                <span className="crm-line-chat__sender">
-                  {m.direction === 'outbound' ? 'ทีม' : 'ลูกค้า'}
-                </span>
-                <LeadLineMessageBody message={m} />
-                <time className="crm-line-chat__time" dateTime={m.created_at}>
-                  {formatTime(m.created_at)}
-                </time>
-              </li>
+                message={m}
+                formattedTime={formatTime(m.created_at)}
+                canReply={!readOnly && canPush && !outsideReplyWindow}
+                onReply={setReplyTo}
+              />
             ))}
           </ul>
         )}
@@ -161,37 +181,19 @@ export function LeadLineChatPanel({
       {error ? <p className="crm-line-chat__error">{error}</p> : null}
 
       {!readOnly && canPush ? (
-        <form className="crm-line-chat__composer" onSubmit={(e) => void handleSubmit(e)}>
-          <label className="crm-line-chat__label" htmlFor={`lead-line-draft-${lead.id}`}>
-            ข้อความ LINE
-          </label>
-          {outsideReplyWindow ? (
-            <p className="crm-line-chat__composer-hint muted">
-              ส่งจากระบบไม่ได้ชั่วคราว — ลูกค้าต้องทัก OA ใหม่ก่อน (นอกช่วง 24 ชม.)
-            </p>
-          ) : null}
-          <div className="crm-line-chat__composer-row">
-            <textarea
-              id={`lead-line-draft-${lead.id}`}
-              className="crm-line-chat__input"
-              rows={2}
-              placeholder={
-                outsideReplyWindow ? 'รอลูกค้าทักใหม่…' : 'พิมพ์ข้อความ…'
-              }
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              disabled={sending || outsideReplyWindow}
-            />
-            <button
-              type="submit"
-              className="crm-line-chat__send"
-              disabled={sending || !draft.trim() || outsideReplyWindow}
-              aria-label="ส่งข้อความ"
-            >
-              {sending ? '…' : 'ส่ง'}
-            </button>
-          </div>
-        </form>
+        <LeadLineChatComposer
+          disabled={false}
+          sending={sending}
+          outsideReplyWindow={outsideReplyWindow}
+          draft={draft}
+          onDraftChange={setDraft}
+          replyTo={replyTo}
+          onClearReply={() => setReplyTo(null)}
+          imageFile={imageFile}
+          imagePreviewUrl={imagePreviewUrl}
+          onImagePick={setImageFile}
+          onSubmit={handleSend}
+        />
       ) : null}
     </section>
   )

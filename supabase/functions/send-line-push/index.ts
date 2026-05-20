@@ -11,7 +11,11 @@ const corsHeaders = {
 interface PushBody {
   to?: string
   text?: string
+  image_url?: string
   lead_id?: string
+  metadata?: Record<string, unknown>
+  storage_path?: string
+  image_name?: string
 }
 
 function json(body: unknown, status = 200) {
@@ -19,6 +23,15 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    const u = new URL(value)
+    return u.protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 Deno.serve(async (req) => {
@@ -83,13 +96,28 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as PushBody
     const to = body.to?.trim() ?? ''
     const text = body.text?.trim() ?? ''
+    const imageUrl = body.image_url?.trim() ?? ''
+    const metadata =
+      body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)
+        ? body.metadata
+        : {}
+    const storagePath = body.storage_path?.trim() ?? ''
+    const imageName = body.image_name?.trim() ?? ''
 
     if (!to || to.length > 64) {
       return json({ error: 'LINE User ID ไม่ถูกต้อง' }, 400)
     }
 
-    if (!text || text.length > 5000) {
-      return json({ error: 'ข้อความว่างหรือยาวเกินไป' }, 400)
+    if (!text && !imageUrl) {
+      return json({ error: 'ต้องมีข้อความหรือรูปภาพ' }, 400)
+    }
+
+    if (text.length > 5000) {
+      return json({ error: 'ข้อความยาวเกินไป' }, 400)
+    }
+
+    if (imageUrl && (!isHttpsUrl(imageUrl) || imageUrl.length > 2000)) {
+      return json({ error: 'ลิงก์รูปไม่ถูกต้อง' }, 400)
     }
 
     const profileRes = await fetch(
@@ -108,16 +136,25 @@ Deno.serve(async (req) => {
       )
     }
 
+    const lineMessages: Record<string, string>[] = []
+    if (imageUrl) {
+      lineMessages.push({
+        type: 'image',
+        originalContentUrl: imageUrl,
+        previewImageUrl: imageUrl,
+      })
+    }
+    if (text) {
+      lineMessages.push({ type: 'text', text })
+    }
+
     const lineRes = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${lineToken}`,
       },
-      body: JSON.stringify({
-        to,
-        messages: [{ type: 'text', text }],
-      }),
+      body: JSON.stringify({ to, messages: lineMessages }),
     })
 
     if (!lineRes.ok) {
@@ -134,17 +171,39 @@ Deno.serve(async (req) => {
 
     const leadId = body.lead_id?.trim()
     if (leadId) {
-      const { error: logErr } = await admin.from('lead_line_messages').insert({
-        lead_id: leadId,
-        line_user_id: to,
-        direction: 'outbound',
-        body: text,
-        message_type: 'text',
-        metadata: {},
-        sender_profile_id: caller.id,
-      })
-      if (logErr) {
-        console.error('send-line-push log message', logErr)
+      const logRows: Record<string, unknown>[] = []
+
+      if (imageUrl) {
+        const imageMeta: Record<string, unknown> = { ...metadata }
+        if (storagePath) imageMeta.storage_path = storagePath
+        logRows.push({
+          lead_id: leadId,
+          line_user_id: to,
+          direction: 'outbound',
+          body: imageName || '[รูปภาพ]',
+          message_type: 'image',
+          metadata: imageMeta,
+          sender_profile_id: caller.id,
+        })
+      }
+
+      if (text) {
+        logRows.push({
+          lead_id: leadId,
+          line_user_id: to,
+          direction: 'outbound',
+          body: text,
+          message_type: 'text',
+          metadata: { ...metadata },
+          sender_profile_id: caller.id,
+        })
+      }
+
+      for (const row of logRows) {
+        const { error: logErr } = await admin.from('lead_line_messages').insert(row)
+        if (logErr) {
+          console.error('send-line-push log message', logErr)
+        }
       }
     }
 
@@ -153,7 +212,10 @@ Deno.serve(async (req) => {
       action: 'line.push',
       entity_type: 'line_user',
       entity_id: to,
-      metadata: { char_count: text.length },
+      metadata: {
+        char_count: text.length,
+        has_image: Boolean(imageUrl),
+      },
     })
 
     return json({ ok: true, mode: 'push' })
