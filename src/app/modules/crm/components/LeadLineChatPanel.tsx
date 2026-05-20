@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { isDocumentedLineChatUserExampleId } from '../../../../shared/line/lineDocumentedExampleIds'
-import { leadHasLinePushCapability } from '../../../../shared/line/linePushEligibility'
 import {
-  lineLoginAndOaIdsMismatch,
-} from '../../../../shared/line/lineUserIdResolution'
+  computeLineOaChatSyncState,
+  lineOaChatInboundSyncBannerText,
+} from '../../../../shared/line/lineOaChatSyncState'
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
 import { updateLead } from '../api/leads'
@@ -96,7 +95,6 @@ export function LeadLineChatPanel({
     line_user_id: lead.line_user_id,
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
   }
-  const idMismatch = lineLoginAndOaIdsMismatch(lineIds)
   const onlyLoginId = Boolean(lineIds.line_user_id?.trim()) && !lineIds.line_oa_chat_user_id?.trim()
 
   const { messages, loading, sending, deletingId, error, send, remove } = useLeadLineChat(
@@ -115,21 +113,20 @@ export function LeadLineChatPanel({
         .find((m) => m.direction === 'inbound' && !m.deleted_at) ?? null,
     [messages],
   )
-  const savedOaLegacyDocExample = isDocumentedLineChatUserExampleId(lineIds.line_oa_chat_user_id)
   const latestInboundLineUserId = latestInbound?.line_user_id?.trim() ?? ''
-  const canPush = leadHasLinePushCapability(lineIds, latestInboundLineUserId)
+  const sync = computeLineOaChatSyncState(lineIds, latestInboundLineUserId)
+  const { canPush, shouldOfferInboundSync, idsMismatch: idMismatch } = sync
   const lineChatLinked =
     hasInbound &&
     (hasOutbound || Boolean(lineIds.line_oa_chat_user_id?.trim()) || canPush)
-  const savedOaLineUserId = lineIds.line_oa_chat_user_id?.trim() ?? ''
-  const savedOaDiffersFromInbound =
-    Boolean(latestInboundLineUserId) &&
-    Boolean(savedOaLineUserId) &&
-    latestInboundLineUserId.toLowerCase() !== savedOaLineUserId.toLowerCase()
 
   const showSetupBanner = !canPush && !hasInbound
   const showIdSetupHint =
-    canPush && !lineChatLinked && (onlyLoginId || idMismatch) && !hasOutbound
+    canPush &&
+    !lineChatLinked &&
+    (onlyLoginId || idMismatch) &&
+    !hasOutbound &&
+    !shouldOfferInboundSync
   const showOutsideWindow =
     canPush && lineChatLinked && !replyWindow.withinWindow && replyWindow.expiresAt
   const outsideReplyWindow = Boolean(
@@ -377,15 +374,9 @@ export function LeadLineChatPanel({
         </div>
       ) : null}
 
-      {(savedOaLegacyDocExample || savedOaDiffersFromInbound) && latestInboundLineUserId ? (
+      {shouldOfferInboundSync && latestInboundLineUserId ? (
         <div className="crm-line-chat__notice crm-line-chat__notice--warn" role="alert">
-          <p>
-            {savedOaLegacyDocExample
-              ? 'ID แชท OA ตรงตัวอย่างในคู่มือเก่า — ถ้าคัดลอกจากเอกสารให้ใช้ปุ่มด้านล่าง หรือเปิดแชทลูกค้าจริงบน chat.line.biz — '
-              : 'ID ที่บันทึกไม่ตรงข้อความลูกค้า — '}
-            กดปุ่มด้านล่างเพื่อใช้ ID จากข้อความที่ลูกค้าทักเข้ามา (หรือวางลิงก์จาก chat.line.biz
-            ในส่วนบันทึก ID ด้านบน)
-          </p>
+          <p>{lineOaChatInboundSyncBannerText(sync)}</p>
           {!readOnly ? (
             <button
               type="button"

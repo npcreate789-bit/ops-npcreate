@@ -7,7 +7,10 @@ import {
 } from '../../../../shared/line/staffLineMessaging'
 import { buildLineChatBizDirectUrl } from '../../../../shared/line/lineChatBizUrl'
 import {
-  lineLoginAndOaIdsMismatch,
+  computeLineOaChatSyncState,
+  lineOaChatIdPostSaveNotice,
+} from '../../../../shared/line/lineOaChatSyncState'
+import {
   lineOaChatUserIdSaveError,
   lineOaChatUserIdSaveWarning,
   parseLineOaChatUserIdFromInput,
@@ -18,6 +21,8 @@ import '../crm.css'
 
 interface LeadLineOaChatIdFieldProps {
   lead: Lead
+  /** จากข้อความเข้า — ให้ข้อความเตือนตรงกับ ID ที่ใช้ส่งจริง */
+  latestInboundLineUserId?: string | null
   readOnly?: boolean
   onSaved?: (lead: Lead) => void
 }
@@ -91,6 +96,7 @@ function IdCard({
 
 export function LeadLineOaChatIdField({
   lead,
+  latestInboundLineUserId,
   readOnly = false,
   onSaved,
 }: LeadLineOaChatIdFieldProps) {
@@ -114,14 +120,13 @@ export function LeadLineOaChatIdField({
     }
   }, [lead.id, lead.line_oa_chat_user_id])
 
-  const loginId = lead.line_user_id?.trim() ?? ''
-  const oaId = lead.line_oa_chat_user_id?.trim() ?? ''
-  const sameId =
-    Boolean(loginId && oaId) && loginId.toLowerCase() === oaId.toLowerCase()
-  const mismatch = lineLoginAndOaIdsMismatch({
+  const lineIds = {
     line_user_id: lead.line_user_id,
     line_oa_chat_user_id: lead.line_oa_chat_user_id,
-  })
+  }
+  const sync = computeLineOaChatSyncState(lineIds, latestInboundLineUserId)
+  const { loginId, savedOaId: oaId, sameId, showTopMismatchNote, showOaReadyMessage, shouldOfferInboundSync } =
+    sync
   const hasOaId = Boolean(oaId)
   const needsSetup = !hasOaId && !readOnly
 
@@ -138,7 +143,7 @@ export function LeadLineOaChatIdField({
       setError(saveErr)
       return
     }
-    const warning = lineOaChatUserIdSaveWarning(
+    const accountWarning = lineOaChatUserIdSaveWarning(
       draft,
       LINE_CHAT_BIZ_ACCOUNT_ID,
       parsed,
@@ -153,7 +158,13 @@ export function LeadLineOaChatIdField({
       const updated = await updateLead(lead.id, { line_oa_chat_user_id: parsed })
       setDraft(formatOaChatDraftValue(parsed))
       setSavedFlash(true)
-      if (warning) setSaveWarning(warning)
+      const afterSave = computeLineOaChatSyncState(
+        { ...lineIds, line_oa_chat_user_id: parsed },
+        latestInboundLineUserId,
+      )
+      const postNotice = lineOaChatIdPostSaveNotice(afterSave, parsed)
+      if (postNotice) setSaveWarning(postNotice)
+      else if (accountWarning) setSaveWarning(accountWarning)
       window.setTimeout(() => setSavedFlash(false), 2500)
       onSaved?.(updated)
     } catch (e) {
@@ -193,15 +204,17 @@ export function LeadLineOaChatIdField({
         </div>
       )}
 
-      {mismatch && !sameId ? (
+      {showTopMismatchNote ? (
         <p className="crm-line-ids__note" role="status">
           ID จากฟอร์มกับแชท OA ไม่ตรงกัน — ระบบจะใช้ ID จากแชท OA / ข้อความลูกค้าสำหรับส่ง Push
         </p>
       ) : null}
 
-      {hasOaId ? (
+      {showOaReadyMessage ? (
         <p className="crm-line-ids__ready" role="status">
-          เชื่อมต่อแชท OA แล้ว — ใช้แผงแชทด้านล่างส่งข้อความได้
+          {shouldOfferInboundSync
+            ? 'ส่งข้อความใช้ ID จากข้อความลูกค้า — อัปเดตค่าที่บันทึกได้ในแผงแชทด้านล่าง'
+            : 'เชื่อมต่อแชท OA แล้ว — ใช้แผงแชทด้านล่างส่งข้อความได้'}
         </p>
       ) : null}
 
@@ -253,7 +266,7 @@ export function LeadLineOaChatIdField({
               {error}
             </p>
           ) : null}
-          {savedFlash ? <p className="crm-line-ids__ok">บันทึกแล้ว</p> : null}
+          {savedFlash && !saveWarning ? <p className="crm-line-ids__ok">บันทึกแล้ว</p> : null}
           {saveWarning ? (
             <p className="crm-line-ids__note" role="status">
               {saveWarning}

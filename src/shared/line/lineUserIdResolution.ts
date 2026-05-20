@@ -1,7 +1,6 @@
 import {
   isDocumentedLineChatBizAccountExampleId,
   isLegacyDocLineChatUserExampleId,
-  legacyDocLineChatUserWarning,
 } from './lineDocumentedExampleIds'
 import {
   isLineMessagingUserIdForUrl,
@@ -45,9 +44,6 @@ export function lineOaChatUserIdSaveWarning(
   configuredAccountId: string,
   parsedUserId: string,
 ): string | null {
-  if (isLegacyDocLineChatUserExampleId(parsedUserId)) {
-    return legacyDocLineChatUserWarning()
-  }
   const accountFromUrl = parseLineChatBizAccountFromUrl(input)
   if (!accountFromUrl) return null
   if (accountFromUrl.toLowerCase() === parsedUserId.toLowerCase()) {
