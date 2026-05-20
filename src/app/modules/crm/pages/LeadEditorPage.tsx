@@ -13,7 +13,6 @@ import {
 import { useAcknowledgeLeadNotificationOnView } from '../../notifications/useAcknowledgeLeadNotificationOnView'
 import { listPackages } from '../../sales/api/packages'
 import {
-  formatServiceInterests,
   normalizeServiceInterestCodes,
   optionsFromPackages,
   type ServicePackageOption,
@@ -302,23 +301,6 @@ export function LeadEditorPage() {
       )}
 
       {!isNew && initial && <LeadNextStepsPanel key={`steps-${initial.updated_at}`} lead={initial} />}
-
-      {!isNew && initial && showQuotationLink && initial.status !== 'won' && (
-        <p className="crm-page__quotation-cta">
-          <Link
-            to={`/app/sales/quotations/new?leadId=${id}`}
-            className="crm-btn crm-btn--primary"
-          >
-            สร้างใบเสนอราคา
-          </Link>
-          {initial.services_interested.length > 0 && (
-            <span className="crm-sub" style={{ display: 'block', marginTop: '0.5rem' }}>
-              จากความสนใจ: {formatServiceInterests(initial.services_interested, serviceOptions)}
-              — ระบบจะเติมแพ็กเกจในใบเสนอราคาให้อัตโนมัติ
-            </span>
-          )}
-        </p>
-      )}
 
       {!isNew && initial && (
         <LeadPreferredChannelPanel
