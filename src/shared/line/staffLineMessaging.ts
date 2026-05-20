@@ -15,6 +15,7 @@ import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
 export {
   isLineMessagingUserId,
   isValidLineUserId,
+  clearRememberedLineChatBizAccountIfMatchesUser,
   getStaffLineChatBizAccountId,
   LINE_CHAT_BIZ_ACCOUNT_ID,
   rememberLineChatBizAccountFromInput,

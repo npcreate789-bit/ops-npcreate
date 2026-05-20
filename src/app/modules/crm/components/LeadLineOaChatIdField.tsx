@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  clearRememberedLineChatBizAccountIfMatchesUser,
   getStaffLineChatBizAccountId,
   LINE_CHAT_BIZ_ACCOUNT_ID,
   rememberLineChatBizAccountFromInput,
@@ -115,9 +116,15 @@ export function LeadLineOaChatIdField({
       setError(saveErr)
       return
     }
-    const warning = lineOaChatUserIdSaveWarning(draft, LINE_CHAT_BIZ_ACCOUNT_ID)
+    const warning = lineOaChatUserIdSaveWarning(
+      draft,
+      LINE_CHAT_BIZ_ACCOUNT_ID,
+      parsed,
+    )
     if (draft.includes('line.biz')) {
       rememberLineChatBizAccountFromInput(draft)
+    } else {
+      clearRememberedLineChatBizAccountIfMatchesUser(parsed)
     }
     setSaving(true)
     try {

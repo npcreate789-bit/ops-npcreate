@@ -19,6 +19,19 @@ function clearRememberedLineChatBizAccountId(): void {
   sessionStorage.removeItem(LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY)
 }
 
+/** ล้างค่า session ที่จำผิด (เอา user id ลูกค้าไปเป็น account) */
+export function clearRememberedLineChatBizAccountIfMatchesUser(chatUserId: string): void {
+  if (typeof sessionStorage === 'undefined') return
+  const uid = chatUserId.trim().toLowerCase()
+  if (!uid) return
+  const remembered = normalizeLineChatBizAccountId(
+    sessionStorage.getItem(LINE_CHAT_BIZ_ACCOUNT_STORAGE_KEY) ?? '',
+  )
+  if (remembered && remembered.toLowerCase() === uid) {
+    clearRememberedLineChatBizAccountId()
+  }
+}
+
 /** จำ account จาก URL เต็ม chat.line.biz / manager.line.biz เท่านั้น */
 export function rememberLineChatBizAccountFromInput(input: string): void {
   if (typeof sessionStorage === 'undefined') return

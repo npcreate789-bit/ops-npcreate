@@ -1,5 +1,6 @@
 import {
   isLineMessagingUserIdForUrl,
+  parseLineChatBizAccountFromUrl,
   parseLineChatBizUrl,
 } from './lineChatBizUrl'
 import { isLineMessagingUserId } from './lineStaffOpenUrl'
@@ -27,23 +28,30 @@ export function lineOaChatUserIdSaveError(
   return null
 }
 
-/** ไม่บล็อก — แจ้งเมื่อ account ในลิงก์ไม่ตรง env (มักตั้ง VITE_LINE_CHAT_BIZ_ACCOUNT_ID ผิด) */
+/** ไม่บล็อก — แจ้งเมื่อ account ใน URL เต็มไม่ตรง env */
 export function lineOaChatUserIdSaveWarning(
   input: string,
   configuredAccountId: string,
+  parsedUserId: string,
 ): string | null {
-  const accountFromInput = parseLineChatBizAccountIdFromInput(input)
-  if (!accountFromInput) return null
+  const accountFromUrl = parseLineChatBizAccountFromUrl(input)
+  if (!accountFromUrl) return null
+  if (accountFromUrl.toLowerCase() === parsedUserId.toLowerCase()) {
+    return (
+      'ลิงก์ไม่มี account ของ OA — ต้องเป็นรูปแบบ chat.line.biz/{account}/chat/{user} ' +
+      'ไม่ใช่เฉพาะ user id ลูกค้า'
+    )
+  }
   if (
     !configuredAccountId ||
-    accountFromInput.toLowerCase() === configuredAccountId.toLowerCase()
+    accountFromUrl.toLowerCase() === configuredAccountId.toLowerCase()
   ) {
     return null
   }
   return (
-    `account ในลิงก์ (${truncateLineId(accountFromInput)}) ไม่ตรงค่าในระบบ (${truncateLineId(configuredAccountId)}) — ` +
-    `บันทึก user id แล้วและใช้ account จากลิงก์เปิดแชทในเบราว์เซอร์นี้ — ` +
-    `แนะนำตั้ง VITE_LINE_CHAT_BIZ_ACCOUNT_ID=${accountFromInput} บน Vercel`
+    `account OA ในลิงก์ (${truncateLineId(accountFromUrl)}) ไม่ตรง VITE_LINE_CHAT_BIZ_ACCOUNT_ID บนระบบ (${truncateLineId(configuredAccountId)}) — ` +
+    `บันทึก user id ลูกค้าแล้ว เปิดแชทในเบราว์เซอร์นี้ใช้ account จากลิงก์ — ` +
+    `ตั้งบน Vercel: VITE_LINE_CHAT_BIZ_ACCOUNT_ID=${accountFromUrl} (segment แรกหลัง chat.line.biz/ ไม่ใช่หลัง /chat/)`
   )
 }
 
@@ -87,9 +95,9 @@ export function parseLineOaChatUserIdFromInput(input: string): string | null {
   return null
 }
 
-/** account id จาก URL chat.line.biz (segment แรกหลังโดเมน) */
+/** account id จาก URL chat.line.biz เต็มเท่านั้น */
 export function parseLineChatBizAccountIdFromInput(input: string): string | null {
-  return parseLineChatBizUrl(input)?.accountId ?? null
+  return parseLineChatBizAccountFromUrl(input)
 }
 
 export interface LeadLineIds {
