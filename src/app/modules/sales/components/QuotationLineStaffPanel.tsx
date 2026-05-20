@@ -19,6 +19,7 @@ import {
   deliverLineMessageToCustomer,
   openLineOaWithText,
 } from '../../../../shared/line/staffLineMessaging'
+import { getLead } from '../../crm/api/leads'
 import { sendQuotationLinkViaLine } from '../sendQuotationViaLine'
 import { isQuotationSentLike } from '../constants'
 import type { Package, Quotation } from '../types'
@@ -52,7 +53,6 @@ export function QuotationLineStaffPanel({
   packages,
   saved,
 }: QuotationLineStaffPanelProps) {
-  const pushRecipient = resolveLineMessagingRecipientId(lineIds ?? {})
   const oaOpenId = resolveLineStaffChatOpenUserId(lineIds ?? {})
   const loginId = lineIds?.line_user_id?.trim()
   const [busy, setBusy] = useState<'ref' | 'send' | null>(null)
@@ -77,6 +77,21 @@ export function QuotationLineStaffPanel({
     })
   }
 
+  async function freshLineIds(): Promise<LeadLineIds | null> {
+    const lid = quotation.lead_id?.trim()
+    if (!lid) return lineIds ?? null
+    try {
+      const lead = await getLead(lid)
+      if (!lead) return lineIds ?? null
+      return {
+        line_user_id: lead.line_user_id,
+        line_oa_chat_user_id: lead.line_oa_chat_user_id,
+      }
+    } catch {
+      return lineIds ?? null
+    }
+  }
+
   async function handleReference() {
     setBusy('ref')
     setError(null)
@@ -84,19 +99,26 @@ export function QuotationLineStaffPanel({
     try {
       const text = referenceMessage()
       const copied = await copyTextToClipboard(text)
-      if (pushRecipient) {
-        const meta =
-          quotation.id && quotation.id !== 'new'
-            ? {
-                leadId: quotation.lead_id ?? undefined,
-                metadata: {
-                  quotation_id: quotation.id,
-                  quotation_number: quotation.quotation_number,
-                  source: 'quotation_reference_preview',
-                } as Record<string, unknown>,
-              }
-            : undefined
-        const result = await deliverLineMessageToCustomer(lineIds, text, meta)
+      const ids = await freshLineIds()
+      const canPush = Boolean(
+        quotation.lead_id && ids && resolveLineMessagingRecipientId(ids),
+      )
+      if (canPush) {
+        const meta = quotation.lead_id
+          ? {
+              leadId: quotation.lead_id,
+              metadata: {
+                ...(quotation.id && quotation.id !== 'new'
+                  ? {
+                      quotation_id: quotation.id,
+                      quotation_number: quotation.quotation_number,
+                    }
+                  : {}),
+                source: 'quotation_reference_preview',
+              } as Record<string, unknown>,
+            }
+          : undefined
+        const result = await deliverLineMessageToCustomer(ids, text, meta)
         setFeedback(result.message ?? 'ส่ง/เปิด LINE แล้ว')
       } else {
         openLineOaWithText(text, oaOpenId ?? loginId)
@@ -127,10 +149,11 @@ export function QuotationLineStaffPanel({
     setError(null)
     setFeedback(null)
     try {
+      const ids = await freshLineIds()
       const r = await sendQuotationLinkViaLine({
         quotation,
         brandName,
-        lineIds: lineIds ?? null,
+        lineIds: ids,
         metadataSource: 'quotation_line_panel',
       })
       if (!r.ok) {

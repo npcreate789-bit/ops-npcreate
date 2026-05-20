@@ -5,6 +5,7 @@ import {
   staffLineChatUrl,
   staffLineOaInboxUrl,
 } from './lineStaffOpenUrl'
+import { resolveLeadLinePushRecipient } from './resolveLeadLinePushRecipient'
 import {
   type LeadLineIds,
   resolveLineMessagingRecipientId,
@@ -213,21 +214,34 @@ export async function sendLinePushMessage(
   return { mode: 'push' }
 }
 
-function normalizeLineRecipient(
+/** เลือก user id สำหรับ Push — สอดคล้องแชท CRM (ข้อความเข้า OA ก่อน แล้วค่อย ID ในฟอร์ม) */
+async function resolvePushRecipient(
   lineIds: string | LeadLineIds | null | undefined,
-): string | null {
+  leadId?: string,
+): Promise<string | null> {
   if (!lineIds) return null
   if (typeof lineIds === 'string') return lineIds.trim() || null
+
+  const lid = leadId?.trim()
+  if (lid) {
+    const fromLead = await resolveLeadLinePushRecipient({
+      id: lid,
+      line_user_id: lineIds.line_user_id,
+      line_oa_chat_user_id: lineIds.line_oa_chat_user_id,
+    })
+    if (fromLead) return fromLead
+  }
+
   return resolveLineMessagingRecipientId(lineIds)
 }
 
-/** Push ถ้ามี user id + token — ใช้แชท OA ก่อน Login id */
+/** Push ถ้ามี user id + token — ใช้ ID ที่ยืนยันกับ OA แล้ว (เหมือนแชท CRM) */
 export async function deliverLineMessageToCustomer(
   lineIds: string | LeadLineIds | null | undefined,
   text: string,
   pushOptions?: SendLinePushOptions,
 ): Promise<LineSendResult> {
-  const recipient = normalizeLineRecipient(lineIds)
+  const recipient = await resolvePushRecipient(lineIds, pushOptions?.leadId)
   if (recipient) {
     return sendLinePushMessage(recipient, text, pushOptions)
   }

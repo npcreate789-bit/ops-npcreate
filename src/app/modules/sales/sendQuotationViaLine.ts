@@ -1,5 +1,6 @@
+import { resolveLeadLinePushRecipient } from '../../../shared/line/resolveLeadLinePushRecipient'
 import type { LeadLineIds } from '../../../shared/line/lineUserIdResolution'
-import { resolveLineMessagingRecipientId } from '../../../shared/line/lineUserIdResolution'
+import { lineLoginAndOaIdsMismatch } from '../../../shared/line/lineUserIdResolution'
 import { buildQuotationFlexMessage } from '../../../shared/line/quotationFlexMessage'
 import {
   buildQuotationSendMessage,
@@ -26,11 +27,29 @@ export async function sendQuotationLinkViaLine(opts: {
   if (!leadId) {
     return { ok: false, error: 'ใบเสนอราคาไม่ผูก Lead — เลือก Lead หรือเปิดจากหน้า CRM' }
   }
-  if (!resolveLineMessagingRecipientId(opts.lineIds ?? {})) {
+  const pushTo = await resolveLeadLinePushRecipient({
+    id: leadId,
+    line_user_id: opts.lineIds?.line_user_id,
+    line_oa_chat_user_id: opts.lineIds?.line_oa_chat_user_id,
+  })
+  if (!pushTo) {
+    const mismatch = opts.lineIds && lineLoginAndOaIdsMismatch(opts.lineIds)
+    return {
+      ok: false,
+      error: mismatch
+        ? 'LINE Login ID กับแชท OA ไม่ตรงกัน — บันทึก ID จาก URL แชท OA ในหน้า Lead แล้วให้ลูกค้าทัก OA อย่างน้อยหนึ่งครั้ง'
+        : 'ยังไม่มี LINE User ID สำหรับ Push — บันทึก ID จาก URL แชท OA (chat.line.biz/…/chat/U…) ในหน้า Lead',
+    }
+  }
+  if (
+    opts.lineIds &&
+    lineLoginAndOaIdsMismatch(opts.lineIds) &&
+    pushTo.toLowerCase() === opts.lineIds.line_user_id?.trim().toLowerCase()
+  ) {
     return {
       ok: false,
       error:
-        'ยังไม่มี LINE User ID สำหรับ Push — บันทึก ID จาก URL แชท OA (chat.line.biz/…/chat/U…) ในหน้า Lead',
+        'ระบบยังใช้ LINE Login ID สำหรับ Push — บันทึก ID แชท OA จาก URL แล้วให้ลูกค้าทัก OA อย่างน้อยหนึ่งครั้ง (หรือส่งจากแชท CRM)',
     }
   }
   if (!isQuotationSentLike(opts.quotation.status)) {

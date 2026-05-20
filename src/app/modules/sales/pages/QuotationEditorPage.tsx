@@ -195,6 +195,18 @@ export function QuotationEditorPage() {
     }
   }, [id, isNew, leadIdParam, initial?.lead_id])
 
+  async function refreshLeadLineIds(leadId: string) {
+    const lead = await getLead(leadId)
+    if (!lead) return lineIdsForSend
+    setLeadForBanner(lead)
+    setLeadBrandName(lead.brand_name)
+    setLeadServiceCodes(lead.services_interested ?? [])
+    return {
+      line_user_id: lead.line_user_id,
+      line_oa_chat_user_id: lead.line_oa_chat_user_id,
+    }
+  }
+
   function goToQuotationFlowWait(leadId: string, notice: string) {
     navigate(`/app/crm/${leadId}`, {
       state: {
@@ -208,17 +220,23 @@ export function QuotationEditorPage() {
     setError(null)
     setLineSendFeedback(null)
 
+    const leadIdForSend = input.lead_id?.trim() ?? ''
+    let idsForLineSend = lineIdsForSend
+    if (meta.sendLineToCustomer && leadIdForSend) {
+      idsForLineSend = await refreshLeadLineIds(leadIdForSend)
+    }
+
     if (meta.sendLineToCustomer) {
       setSaving(true)
       setSavePhase('checking')
-      const preflight = validateQuotationLineSendPreflight({
+      const preflight = await validateQuotationLineSendPreflight({
         roles,
         configured,
         isNew,
         quotationOwnerId: initial?.owner_id,
         userId: ownerId,
         input,
-        lineIds: lineIdsForSend,
+        lineIds: idsForLineSend,
       })
       if (!preflight.ok) {
         setError(preflight.error)
@@ -249,7 +267,7 @@ export function QuotationEditorPage() {
           const r = await sendQuotationLinkViaLine({
             quotation: created,
             brandName: leadBrandName ?? 'ลูกค้า',
-            lineIds: lineIdsForSend,
+            lineIds: idsForLineSend,
           })
           if (r.ok) {
             goToQuotationFlowWait(
@@ -278,7 +296,7 @@ export function QuotationEditorPage() {
           const r = await sendQuotationLinkViaLine({
             quotation: refreshed,
             brandName: leadBrandName ?? 'ลูกค้า',
-            lineIds: lineIdsForSend,
+            lineIds: idsForLineSend,
           })
           if (r.ok) {
             goToQuotationFlowWait(
@@ -307,7 +325,9 @@ export function QuotationEditorPage() {
     setLineSendFeedback(null)
     setError(null)
 
-    const preflight = validateQuotationLineSendPreflight({
+    const idsForRetry =
+      initial.lead_id != null ? await refreshLeadLineIds(initial.lead_id) : lineIdsForSend
+    const preflight = await validateQuotationLineSendPreflight({
       roles,
       configured,
       isNew: false,
@@ -330,7 +350,7 @@ export function QuotationEditorPage() {
           sort_order: item.sort_order ?? idx,
         })),
       },
-      lineIds: lineIdsForSend,
+      lineIds: idsForRetry,
     })
     if (!preflight.ok) {
       setLineSendFeedback({ ok: false, message: preflight.error })
@@ -343,7 +363,7 @@ export function QuotationEditorPage() {
       const r = await sendQuotationLinkViaLine({
         quotation: initial,
         brandName: leadBrandName ?? 'ลูกค้า',
-        lineIds: lineIdsForSend,
+        lineIds: idsForRetry,
       })
       if (r.ok && initial.lead_id) {
         goToQuotationFlowWait(
