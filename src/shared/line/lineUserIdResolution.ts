@@ -130,12 +130,21 @@ export function shouldSyncLineOaChatUserIdFromWebhook(
   return false
 }
 
-/** ID สำหรับ push Messaging API — ใช้แชท OA ก่อน แล้วค่อย LINE Login */
+function lineIdsEqual(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase()
+}
+
+/** ID สำหรับ push Messaging API — ใช้แชท OA ก่อน แล้วค่อย LINE Login (ไม่ใช้ Login เมื่อมี OA คนละค่า) */
 export function resolveLineMessagingRecipientId(ids: LeadLineIds): string | null {
-  const oa = ids.line_oa_chat_user_id?.trim()
-  if (oa && isLineMessagingUserId(oa)) return oa
-  const login = ids.line_user_id?.trim()
-  if (login && isLineMessagingUserId(login)) return login
+  const login = ids.line_user_id?.trim() ?? ''
+  const oa = ids.line_oa_chat_user_id?.trim() ?? ''
+  const mismatch = lineLoginAndOaIdsMismatch(ids)
+
+  if (oa && isLineMessagingUserId(oa)) {
+    if (!mismatch || !login || !lineIdsEqual(oa, login)) return oa
+  }
+
+  if (!mismatch && login && isLineMessagingUserId(login)) return login
   return null
 }
 
@@ -159,9 +168,9 @@ export function lineStaffChatIdHint(ids: LeadLineIds): string {
     return 'ยังไม่มี LINE User ID — ให้ลูกค้าเชื่อมต่อ LINE จากฟอร์มติดต่อหรือเพิ่มเพื่อน OA'
   }
   if (resolveLineStaffChatOpenUserId(ids)) {
-  if (lineLoginAndOaIdsMismatch(ids)) {
-    return 'มีทั้ง LINE Login และแชท OA — ส่ง Push ใช้ ID จากประวัติแชท OA ไม่ใช่ LINE Login'
-  }
+    if (lineLoginAndOaIdsMismatch(ids)) {
+      return 'มีทั้ง LINE Login และแชท OA — ส่ง Push ใช้ ID จากประวัติแชท OA ไม่ใช่ LINE Login'
+    }
     return 'เปิดแชทตรงลูกค้าบน chat.line.biz ได้ (ID จากแชท OA)'
   }
   if (ids.line_user_id?.trim() && lineLoginAndOaIdsMismatch(ids)) {

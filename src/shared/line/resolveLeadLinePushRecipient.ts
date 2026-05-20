@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '../supabase/client'
-import { isLineMessagingUserId } from './lineStaffOpenUrl'
+import { isLineMessagingUserId, LINE_CHAT_BIZ_ACCOUNT_ID } from './lineStaffOpenUrl'
 import {
   type LeadLineIds,
   lineLoginAndOaIdsMismatch,
@@ -13,6 +13,8 @@ function idsEqual(a: string, b: string): boolean {
 function usableLineId(id: string | null | undefined): string | null {
   const t = id?.trim()
   if (!t || !isLineMessagingUserId(t)) return null
+  const accountId = LINE_CHAT_BIZ_ACCOUNT_ID.trim()
+  if (accountId && t.toLowerCase() === accountId.toLowerCase()) return null
   return t
 }
 
@@ -38,8 +40,9 @@ async function pushUserIdFromMessageHistory(
 
   const skipLogin = mismatch && Boolean(login)
 
+  // ข้อความเข้าจาก webhook = user id ที่ OA ชุดนี้รู้จัก — สำคัญกว่า outbound เก่าหรือ ID ในฟอร์ม
   for (const row of data) {
-    if (row.direction !== 'outbound') continue
+    if (row.direction !== 'inbound') continue
     const id = usableLineId(row.line_user_id as string)
     if (!id) continue
     if (skipLogin && idsEqual(id, login)) continue
@@ -47,7 +50,7 @@ async function pushUserIdFromMessageHistory(
   }
 
   for (const row of data) {
-    if (row.direction !== 'inbound') continue
+    if (row.direction !== 'outbound') continue
     const id = usableLineId(row.line_user_id as string)
     if (!id) continue
     if (skipLogin && idsEqual(id, login)) continue

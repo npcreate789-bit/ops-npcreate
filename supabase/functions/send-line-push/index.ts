@@ -275,6 +275,26 @@ Deno.serve(async (req) => {
     }
 
     if (leadId) {
+      const { data: leadRow } = await admin
+        .from('leads')
+        .select('line_oa_chat_user_id')
+        .eq('id', leadId)
+        .maybeSingle()
+      const existingOa = (leadRow?.line_oa_chat_user_id as string | null)?.trim() ?? ''
+      if (existingOa.toLowerCase() !== pushTo.toLowerCase()) {
+        const { error: syncErr } = await admin
+          .from('leads')
+          .update({ line_oa_chat_user_id: pushTo })
+          .eq('id', leadId)
+        if (syncErr) {
+          console.warn('send-line-push sync line_oa_chat_user_id', leadId, syncErr.message)
+        } else if (pushTo !== to) {
+          console.info('send-line-push synced line_oa_chat_user_id', leadId, pushTo.slice(0, 10))
+        }
+      }
+    }
+
+    if (leadId) {
       const logRows: Record<string, unknown>[] = []
 
       if (imageUrl) {

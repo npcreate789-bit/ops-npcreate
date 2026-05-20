@@ -27,8 +27,8 @@ export function formatLineMessagingApiError(
 
   if (context === 'profile' && status === 404) {
     return (
-      'ระบบไม่พบลูกค้าใน OA ชุดนี้ — ตรวจ ID จาก URL แชท OA (ไม่ใช่ LINE Login) ' +
-      'ให้ลูกค้าทัก @npcreate อย่างน้อยหนึ่งครั้ง หรือส่งจากแชท CRM ที่เคยส่งสำเร็จแล้ว'
+      'ระบบไม่พบลูกค้าใน OA ชุดนี้ — User ID อาจผิดช่อง (ใส่ account id แทน user หลัง /chat/) ' +
+      'หรือเป็น LINE Login ไม่ใช่แชท OA — ให้ลูกค้าทัก @npcreate แล้วบันทึก ID จาก URL แชทลูกค้าในหน้า Lead'
     )
   }
 

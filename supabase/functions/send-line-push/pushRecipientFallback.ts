@@ -14,11 +14,14 @@ export async function collectLeadLinePushCandidates(
   const seen = new Set<string>()
   const failed = failedTo.trim().toLowerCase()
 
+  const oaAccountId = Deno.env.get('LINE_CHAT_BIZ_ACCOUNT_ID')?.trim() ?? ''
+
   const add = (id: string | null | undefined) => {
     const t = id?.trim()
     if (!t || t.length > 64) return
     const key = t.toLowerCase()
     if (key === failed || seen.has(key)) return
+    if (oaAccountId && key === oaAccountId.toLowerCase()) return
     seen.add(key)
     out.push(t)
   }
@@ -42,6 +45,13 @@ export async function collectLeadLinePushCandidates(
     .limit(50)
 
   for (const row of msgs ?? []) {
+    if (row.direction !== 'inbound') continue
+    const id = row.line_user_id as string
+    if (mismatch && login && idsEqual(id, login)) continue
+    add(id)
+  }
+
+  for (const row of msgs ?? []) {
     if (row.direction !== 'outbound') continue
     const id = row.line_user_id as string
     if (mismatch && login && idsEqual(id, login)) continue
@@ -49,13 +59,6 @@ export async function collectLeadLinePushCandidates(
   }
 
   add(oa)
-
-  for (const row of msgs ?? []) {
-    if (row.direction !== 'inbound') continue
-    const id = row.line_user_id as string
-    if (mismatch && login && idsEqual(id, login)) continue
-    add(id)
-  }
 
   if (!mismatch) add(login)
 
