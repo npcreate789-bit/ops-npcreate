@@ -10,14 +10,19 @@ import { enrichLeadLineMessages } from '../leadLineChatUtils'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
 import { LeadLineChatComposer } from './LeadLineChatComposer'
 import { LeadLineChatMessageItem } from './LeadLineChatMessageItem'
+import { LeadLineSnippetPanel } from './LeadLineSnippetPanel'
 import type { Lead } from '../types'
 import type { LeadLineMessage } from '../types/leadLineChat'
+import type { ServicePackageOption } from '../../../../shared/packages/serviceInterests'
 import '../crm.css'
 
 interface LeadLineChatPanelProps {
   lead: Lead
   senderProfileId: string | undefined
   readOnly?: boolean
+  servicesInterested?: string[]
+  serviceOptions?: ServicePackageOption[]
+  canManageSnippets?: boolean
 }
 
 function formatTime(iso: string): string {
@@ -50,6 +55,9 @@ export function LeadLineChatPanel({
   lead,
   senderProfileId,
   readOnly = false,
+  servicesInterested = [],
+  serviceOptions = [],
+  canManageSnippets = false,
 }: LeadLineChatPanelProps) {
   const [draft, setDraft] = useState('')
   const [replyTo, setReplyTo] = useState<LeadLineMessage | null>(null)
@@ -193,6 +201,17 @@ export function LeadLineChatPanel({
     }
   }
 
+  function insertSnippet(text: string) {
+    setDraft(text)
+    setReplyTo(null)
+    setImageFile(null)
+    setSelectedSticker(null)
+    setAttachError(null)
+    requestAnimationFrame(() => {
+      composerInputRef.current?.focus({ preventScroll: true })
+    })
+  }
+
   async function handleSend() {
     const text = draft.trim()
     if ((!text && !imageFile && !selectedSticker) || readOnly || outsideReplyWindow) return
@@ -234,6 +253,14 @@ export function LeadLineChatPanel({
             </p>
           </div>
         </div>
+        <LeadLineSnippetPanel
+          lead={lead}
+          servicesInterested={servicesInterested}
+          serviceOptions={serviceOptions}
+          disabled={readOnly || outsideReplyWindow}
+          canManage={canManageSnippets && !readOnly}
+          onSelect={insertSnippet}
+        />
       </header>
 
       <div className="crm-line-chat__status-row" role="status">

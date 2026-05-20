@@ -63,6 +63,9 @@ export function PackagesListPage() {
           </p>
         </div>
         <div className="sales-page__header-actions">
+          <Link to="/app/sales/line-snippets" className="crm-btn crm-btn--ghost">
+            ชุดข้อความ LINE
+          </Link>
           {canManage && (
             <Link to="/app/sales/packages/new" className="crm-btn crm-btn--primary">
               + เพิ่มแพ็กเกจ

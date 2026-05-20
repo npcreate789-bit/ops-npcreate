@@ -444,6 +444,11 @@ export function isCrmReadOnly(roles: AppRole[]): boolean {
   return roles.includes('admin') && !hasDbPrivilegedRole(roles)
 }
 
+/** จัดการชุดข้อความ LINE ใน CRM (sales + privileged) */
+export function canManageLineSnippets(roles: AppRole[]): boolean {
+  return hasDbPrivilegedRole(roles) || roles.includes('sales')
+}
+
 // --- Phase 1: Tasks ---
 
 /** มุมมองงานทั้งทีม — ตรง tasks_select (privileged, admin, account, senior_ads) */

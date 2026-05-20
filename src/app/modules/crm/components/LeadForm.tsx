@@ -121,6 +121,8 @@ export function formValuesToUpdate(values: LeadFormValues): LeadUpdate {
 interface LeadFormProps {
   initial?: Lead | null
   serviceOptions: ServicePackageOption[]
+  servicesInterested?: string[]
+  onServicesInterestedChange?: (codes: string[]) => void
   saving?: boolean
   readOnly?: boolean
   submitLabel?: string
@@ -131,6 +133,8 @@ interface LeadFormProps {
 export function LeadForm({
   initial,
   serviceOptions,
+  servicesInterested: servicesInterestedProp,
+  onServicesInterestedChange,
   saving,
   readOnly = false,
   submitLabel = 'บันทึก',
@@ -152,14 +156,20 @@ export function LeadForm({
     }
   }, [initial, serviceOptions])
 
+  const servicesInterested =
+    servicesInterestedProp ?? values.services_interested
+
+  function setServicesInterested(codes: string[]) {
+    if (onServicesInterestedChange) onServicesInterestedChange(codes)
+    setValues((v) => ({ ...v, services_interested: codes }))
+  }
+
   function toggleService(code: string) {
     if (readOnly) return
-    setValues((v) => ({
-      ...v,
-      services_interested: v.services_interested.includes(code)
-        ? v.services_interested.filter((s) => s !== code)
-        : [...v.services_interested, code],
-    }))
+    const next = servicesInterested.includes(code)
+      ? servicesInterested.filter((s) => s !== code)
+      : [...servicesInterested, code]
+    setServicesInterested(next)
   }
 
   const fromContactForm =
@@ -254,7 +264,7 @@ export function LeadForm({
                 key={pkg.code}
                 type="button"
                 className={
-                  values.services_interested.includes(pkg.code)
+                  servicesInterested.includes(pkg.code)
                     ? 'crm-chip crm-chip--on'
                     : 'crm-chip'
                 }

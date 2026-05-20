@@ -6,6 +6,7 @@ import {
   canCreateCrmLead,
   canEditCrmLead,
   canCreateSalesQuotation,
+  canManageLineSnippets,
   hasDbPrivilegedRole,
   isCrmReadOnly,
 } from '../../../../shared/auth/access'
@@ -13,6 +14,7 @@ import { useAcknowledgeLeadNotificationOnView } from '../../notifications/useAck
 import { listPackages } from '../../sales/api/packages'
 import {
   formatServiceInterests,
+  normalizeServiceInterestCodes,
   optionsFromPackages,
   type ServicePackageOption,
 } from '../../../../shared/packages/serviceInterests'
@@ -55,6 +57,7 @@ export function LeadEditorPage() {
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
   const [initial, setInitial] = useState<Lead | null>(null)
   const [serviceOptions, setServiceOptions] = useState<ServicePackageOption[]>([])
+  const [servicesInterested, setServicesInterested] = useState<string[]>([])
   const acknowledgeLeadNotif =
     (canAccessNotifications(roles) || !configured) && !isNew && !!initial
   useAcknowledgeLeadNotificationOnView(userId, acknowledgeLeadNotif ? id : undefined, true)
@@ -67,6 +70,16 @@ export function LeadEditorPage() {
     setInitial(lead)
     setSaveNotice(notice ?? null)
   }, [])
+
+  useEffect(() => {
+    if (!initial) {
+      setServicesInterested([])
+      return
+    }
+    setServicesInterested(
+      normalizeServiceInterestCodes(initial.services_interested ?? [], serviceOptions),
+    )
+  }, [initial, serviceOptions])
 
   useEffect(() => {
     let cancelled = false
@@ -313,6 +326,9 @@ export function LeadEditorPage() {
           lead={initial}
           senderProfileId={userId}
           readOnly={readOnly}
+          servicesInterested={servicesInterested}
+          serviceOptions={serviceOptions}
+          canManageSnippets={canManageLineSnippets(roles)}
         />
       ) : null}
 
@@ -320,6 +336,8 @@ export function LeadEditorPage() {
         <LeadForm
           initial={initial}
           serviceOptions={serviceOptions}
+          servicesInterested={servicesInterested}
+          onServicesInterestedChange={setServicesInterested}
           saving={saving}
           readOnly={readOnly}
           submitLabel={

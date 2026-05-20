@@ -77,6 +77,9 @@ export function SalesPage() {
           <Link to="/app/sales/packages" className="crm-btn crm-btn--ghost">
             จัดการแพ็กเกจ
           </Link>
+          <Link to="/app/sales/line-snippets" className="crm-btn crm-btn--ghost">
+            ชุดข้อความ LINE
+          </Link>
           {showWorkLink && (
             <Link to="/app/work" className="crm-btn crm-btn--ghost">
               งานของฉัน

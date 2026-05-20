@@ -14,6 +14,8 @@ import { SalesPage } from './modules/sales/pages/SalesPage'
 import { QuotationEditorPage } from './modules/sales/pages/QuotationEditorPage'
 import { PackagesListPage } from './modules/sales/pages/PackagesListPage'
 import { PackageEditorPage } from './modules/sales/pages/PackageEditorPage'
+import { LineSnippetsListPage } from './modules/sales/pages/LineSnippetsListPage'
+import { LineSnippetEditorPage } from './modules/sales/pages/LineSnippetEditorPage'
 import { FinancePage } from './modules/finance/pages/FinancePage'
 import { PaymentEditorPage } from './modules/finance/pages/PaymentEditorPage'
 import { OnboardingListPage } from './modules/onboarding/pages/OnboardingListPage'
@@ -108,6 +110,14 @@ export function AppRoutes() {
         <Route
           path="sales/packages/:id"
           element={<Module path="/app/sales" element={<PackageEditorPage />} />}
+        />
+        <Route
+          path="sales/line-snippets"
+          element={<Module path="/app/sales" element={<LineSnippetsListPage />} />}
+        />
+        <Route
+          path="sales/line-snippets/:id"
+          element={<Module path="/app/sales" element={<LineSnippetEditorPage />} />}
         />
         <Route path="finance" element={<Module path="/app/finance" element={<FinancePage />} />} />
         <Route
