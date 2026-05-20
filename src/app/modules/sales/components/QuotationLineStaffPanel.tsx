@@ -9,9 +9,9 @@ import {
 import type { LeadLineIds } from '../../../../shared/line/lineUserIdResolution'
 import {
   lineLoginAndOaIdsMismatch,
-  resolveLineMessagingRecipientId,
   resolveLineStaffChatOpenUserId,
 } from '../../../../shared/line/lineUserIdResolution'
+import { resolveLeadLinePushRecipient } from '../../../../shared/line/resolveLeadLinePushRecipient'
 import { formatServiceInterests } from '../../../../shared/packages/serviceInterests'
 import {
   buildQuotationReferenceMessage,
@@ -100,8 +100,15 @@ export function QuotationLineStaffPanel({
       const text = referenceMessage()
       const copied = await copyTextToClipboard(text)
       const ids = await freshLineIds()
+      const leadId = quotation.lead_id?.trim()
       const canPush = Boolean(
-        quotation.lead_id && ids && resolveLineMessagingRecipientId(ids),
+        leadId &&
+          ids &&
+          (await resolveLeadLinePushRecipient({
+            id: leadId,
+            line_user_id: ids.line_user_id,
+            line_oa_chat_user_id: ids.line_oa_chat_user_id,
+          })),
       )
       if (canPush) {
         const meta = quotation.lead_id

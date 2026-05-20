@@ -41,15 +41,17 @@ export async function sendQuotationLinkViaLine(opts: {
         : 'ยังไม่มี LINE User ID สำหรับ Push — บันทึก ID จาก URL แชท OA (chat.line.biz/…/chat/U…) ในหน้า Lead',
     }
   }
+  const oaId = opts.lineIds?.line_oa_chat_user_id?.trim()
   if (
     opts.lineIds &&
     lineLoginAndOaIdsMismatch(opts.lineIds) &&
+    !oaId &&
     pushTo.toLowerCase() === opts.lineIds.line_user_id?.trim().toLowerCase()
   ) {
     return {
       ok: false,
       error:
-        'ระบบยังใช้ LINE Login ID สำหรับ Push — บันทึก ID แชท OA จาก URL แล้วให้ลูกค้าทัก OA อย่างน้อยหนึ่งครั้ง (หรือส่งจากแชท CRM)',
+        'ยังใช้เฉพาะ LINE Login ID — บันทึก ID แชท OA จาก URL ในหน้า Lead ก่อนส่งลิงก์ใบเสนอราคา',
     }
   }
   if (!isQuotationSentLike(opts.quotation.status)) {

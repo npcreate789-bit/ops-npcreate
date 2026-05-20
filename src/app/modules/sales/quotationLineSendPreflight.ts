@@ -67,10 +67,11 @@ export async function validateQuotationLineSendPreflight(opts: {
     }
   }
 
+  const oaId = opts.lineIds?.line_oa_chat_user_id?.trim()
   if (
     opts.lineIds &&
     lineLoginAndOaIdsMismatch(opts.lineIds) &&
-    !opts.lineIds.line_oa_chat_user_id?.trim() &&
+    !oaId &&
     pushTo.toLowerCase() === opts.lineIds.line_user_id?.trim().toLowerCase()
   ) {
     return {
