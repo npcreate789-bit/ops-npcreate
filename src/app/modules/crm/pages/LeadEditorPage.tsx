@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
@@ -10,16 +10,16 @@ import {
   isCrmReadOnly,
 } from '../../../../shared/auth/access'
 import { useAcknowledgeLeadNotificationOnView } from '../../notifications/useAcknowledgeLeadNotificationOnView'
-import { isSupabaseConfigured } from '../../../../shared/supabase/client'
 import { listPackages } from '../../sales/api/packages'
 import {
   formatServiceInterests,
   optionsFromPackages,
   type ServicePackageOption,
 } from '../../../../shared/packages/serviceInterests'
+import { statusLabel } from '../constants'
 import { createLead, deleteLead, getLead, updateLead } from '../api/leads'
-import { canViewLeadAttachments } from '../access'
-import { LeadAttachmentsSection } from '../components/LeadAttachmentsSection'
+import { leadDisplayName } from '../leadDisplay'
+import { mergeAutoLeadStatus } from '../leadWorkflow'
 import { LeadNextStepsPanel } from '../components/LeadNextStepsPanel'
 import { LeadLineChatPanel } from '../components/LeadLineChatPanel'
 import { LeadPreferredChannelPanel } from '../components/LeadPreferredChannelPanel'
@@ -29,6 +29,7 @@ import {
   formValuesToUpdate,
   type LeadFormValues,
 } from '../components/LeadForm'
+import type { Lead } from '../types'
 import '../../phase2/phase2.css'
 import '../crm.css'
 
@@ -51,7 +52,8 @@ export function LeadEditorPage() {
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [initial, setInitial] = useState<Awaited<ReturnType<typeof getLead>>>(null)
+  const [saveNotice, setSaveNotice] = useState<string | null>(null)
+  const [initial, setInitial] = useState<Lead | null>(null)
   const [serviceOptions, setServiceOptions] = useState<ServicePackageOption[]>([])
   const acknowledgeLeadNotif =
     (canAccessNotifications(roles) || !configured) && !isNew && !!initial
@@ -60,6 +62,11 @@ export function LeadEditorPage() {
     (isNew ? canCreate : canEditCrmLead(roles, initial?.owner_id, userId)) ||
     !configured
   const readOnly = !canEdit && configured
+
+  const applyLead = useCallback((lead: Lead | null, notice?: string | null) => {
+    setInitial(lead)
+    setSaveNotice(notice ?? null)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -78,22 +85,22 @@ export function LeadEditorPage() {
   useEffect(() => {
     if (isNew) {
       setLoading(false)
-      setInitial(null)
+      applyLead(null)
       setError(null)
       return
     }
     let cancelled = false
     setLoading(true)
     setError(null)
-    setInitial(null)
-    getLead(id)
+    applyLead(null)
+    getLead(id!)
       .then((lead) => {
         if (!cancelled) {
           if (!lead) {
             setError('ไม่พบ Lead')
             return
           }
-          setInitial(lead)
+          applyLead(lead)
         }
       })
       .catch((e) => {
@@ -105,25 +112,67 @@ export function LeadEditorPage() {
     return () => {
       cancelled = true
     }
-  }, [id, isNew])
+  }, [id, isNew, applyLead])
+
+  async function persistLeadUpdate(
+    leadId: string,
+    values: LeadFormValues,
+    previous: Lead | null,
+  ): Promise<{ lead: Lead | null; notice: string | null }> {
+    await updateLead(leadId, formValuesToUpdate(values))
+    let lead = await getLead(leadId)
+    if (!lead) return { lead: null, notice: null }
+
+    const mergedStatus = mergeAutoLeadStatus(lead, previous, values.status)
+    let notice: string | null = null
+
+    if (mergedStatus !== lead.status) {
+      lead = await updateLead(leadId, { status: mergedStatus })
+      notice = `อัปเดตสถานะเป็น "${statusLabel(mergedStatus)}" อัตโนมัติ — ขั้นถัดไปพร้อมส่งใบเสนอราคา`
+    } else if (mergedStatus === 'quotation_sent' && previous?.status !== 'quotation_sent') {
+      notice = 'สถานะพร้อมส่งใบเสนอราคา — ดูขั้นถัดไปด้านบน'
+    }
+
+    return { lead, notice }
+  }
 
   async function handleSubmit(values: LeadFormValues) {
     setSaving(true)
     setError(null)
+    setSaveNotice(null)
     try {
       if (isNew) {
         const created = await createLead(formValuesToPayload(values, ownerId))
         navigate(`/app/crm/${created.id}`, { replace: true })
       } else if (id) {
-        await updateLead(id, formValuesToUpdate(values))
-        const refreshed = await getLead(id)
-        setInitial(refreshed)
+        const previous = initial
+        const { lead, notice } = await persistLeadUpdate(id, values, previous)
+        applyLead(lead, notice)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleLeadPatched(updated: Lead, notice?: string | null) {
+    const previous = initial
+    applyLead(updated, notice)
+    if (!id || !previous) return
+    const mergedStatus = mergeAutoLeadStatus(updated, previous, updated.status)
+    if (mergedStatus === updated.status) return
+    void (async () => {
+      try {
+        const lead = await updateLead(id, { status: mergedStatus })
+        applyLead(
+          lead,
+          `เชื่อมต่อ LINE แล้ว — อัปเดตสถานะเป็น "${statusLabel(mergedStatus)}"`,
+        )
+      } catch {
+        /* แสดง lead ที่บันทึก ID แล้วแม้ auto-status ล้มเหลว */
+      }
+    })()
   }
 
   async function handleDelete() {
@@ -136,9 +185,6 @@ export function LeadEditorPage() {
       setError(e instanceof Error ? e.message : 'ลบไม่สำเร็จ')
     }
   }
-
-  const canViewAttachments =
-    canViewLeadAttachments(roles, initial?.owner_id, userId) || !configured
 
   if (loading) {
     return (
@@ -188,11 +234,21 @@ export function LeadEditorPage() {
         <h1>
           {isNew
             ? 'เพิ่ม Lead ใหม่'
-            : `แก้ไข: ${initial?.contact_name?.trim() || initial?.brand_name || ''}`}
+            : `แก้ไข: ${initial ? leadDisplayName(initial) : ''}`}
         </h1>
+        {!isNew && initial ? (
+          <p className="crm-sub">
+            สถานะ: <strong>{statusLabel(initial.status)}</strong>
+          </p>
+        ) : null}
       </header>
 
       {error && <p className="crm-error">{error}</p>}
+      {saveNotice ? (
+        <p className="crm-banner crm-banner--ok" role="status">
+          {saveNotice}
+        </p>
+      ) : null}
 
       {readOnly && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
@@ -200,8 +256,16 @@ export function LeadEditorPage() {
         </p>
       )}
 
+      {initial?.customer_id && (
+        <p className="crm-banner crm-banner--ok">
+          ปิดการขายแล้ว — มี Customer ในระบบ · ลูกค้าเข้า Client Workspace ได้หลังได้บัญชี
+        </p>
+      )}
+
+      {!isNew && initial && <LeadNextStepsPanel key={`steps-${initial.updated_at}`} lead={initial} />}
+
       {!isNew && initial && showQuotationLink && initial.status !== 'won' && (
-        <p style={{ marginBottom: '1rem' }}>
+        <p className="crm-page__quotation-cta">
           <Link
             to={`/app/sales/quotations/new?leadId=${id}`}
             className="crm-btn crm-btn--primary"
@@ -217,25 +281,22 @@ export function LeadEditorPage() {
         </p>
       )}
 
-      {initial?.customer_id && (
-        <p className="crm-banner crm-banner--ok">
-          ปิดการขายแล้ว — มี Customer ในระบบ · ลูกค้าเข้า Client Workspace ได้หลังได้บัญชี
-        </p>
-      )}
-
       {!isNew && initial && (
         <LeadPreferredChannelPanel
           lead={initial}
           readOnly={readOnly}
-          onLeadUpdated={(updated) => setInitial(updated)}
+          onLeadUpdated={(updated) => handleLeadPatched(updated)}
         />
       )}
 
       {!isNew && initial && initial.preferred_contact_channel === 'line' ? (
-        <LeadLineChatPanel lead={initial} senderProfileId={userId} readOnly={readOnly} />
+        <LeadLineChatPanel
+          key={`line-chat-${initial.id}-${initial.line_oa_chat_user_id ?? ''}-${initial.updated_at}`}
+          lead={initial}
+          senderProfileId={userId}
+          readOnly={readOnly}
+        />
       ) : null}
-
-      {!isNew && initial && <LeadNextStepsPanel lead={initial} />}
 
       <section className="card card--wide">
         <LeadForm
@@ -247,14 +308,6 @@ export function LeadEditorPage() {
           onCancel={() => navigate('/app/crm')}
         />
       </section>
-
-      {!isNew && id && initial && isSupabaseConfigured && canViewAttachments && (
-        <LeadAttachmentsSection
-          leadId={id}
-          ownerId={initial.owner_id}
-          canUpload={canEdit}
-        />
-      )}
 
       {!isNew && canDelete && (
         <section className="crm-danger-zone">

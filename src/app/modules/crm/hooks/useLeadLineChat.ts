@@ -65,6 +65,17 @@ export function useLeadLineChat(
     void load({ silent: false })
   }, [load])
 
+  const lineRecipientKey = [
+    lead?.line_oa_chat_user_id?.trim() ?? '',
+    lead?.line_user_id?.trim() ?? '',
+  ].join('|')
+
+  useEffect(() => {
+    if (!leadId || !lineRecipientKey) return
+    if (!hasLoadedOnceRef.current) return
+    void load({ silent: true })
+  }, [leadId, lineRecipientKey, load])
+
   useEffect(() => {
     return () => {
       if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)

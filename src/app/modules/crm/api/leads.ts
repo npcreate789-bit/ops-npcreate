@@ -8,7 +8,6 @@ import type {
   SalesSummaryRow,
 } from '../types'
 import { ACTIVE_STATUSES } from '../constants'
-import { validateLeadUploadFile } from '../leadFiles'
 import { mockLeadsApi } from './mockStore'
 
 export async function listLeads(filters: LeadFilters = {}): Promise<Lead[]> {
@@ -142,13 +141,6 @@ export async function fetchSalesSummary(): Promise<SalesSummaryRow[]> {
   return [...map.values()].sort((a, b) => b.total - a.total)
 }
 
-function assertLeadFilePath(path: string, leadId: string, ownerId: string): void {
-  const prefix = `${ownerId}/${leadId}/`
-  if (!path.startsWith(prefix)) {
-    throw new Error('เส้นทางไฟล์ไม่ถูกต้อง')
-  }
-}
-
 function storageErrorMessage(message: string, fallback: string): string {
   const lower = message.toLowerCase()
   if (lower.includes('payload too large') || lower.includes('exceeded')) {
@@ -166,41 +158,6 @@ function storageErrorMessage(message: string, fallback: string): string {
   return fallback
 }
 
-export async function uploadLeadFile(
-  leadId: string,
-  ownerId: string,
-  file: File,
-): Promise<string> {
-  if (!supabase) throw new Error('ต้องตั้งค่า Supabase สำหรับอัปโหลดไฟล์')
-  const invalid = validateLeadUploadFile(file)
-  if (invalid) throw new Error(invalid)
-  const path = `${ownerId}/${leadId}/${Date.now()}_${file.name}`
-  const { error } = await supabase.storage.from('leads').upload(path, file, { upsert: false })
-  if (error) throw new Error(storageErrorMessage(error.message, 'อัปโหลดไม่สำเร็จ'))
-  await logAudit('lead.file_upload', 'lead', leadId, { file_name: file.name, path })
-  return path
-}
-
-export interface LeadFile {
-  name: string
-  path: string
-}
-
-export async function listLeadFiles(leadId: string, ownerId: string): Promise<LeadFile[]> {
-  if (!supabase) return []
-  const prefix = `${ownerId}/${leadId}`
-  const { data, error } = await supabase.storage.from('leads').list(`${ownerId}/${leadId}`)
-  if (error) throw new Error(error.message)
-  return (data ?? [])
-    .filter(
-      (f) =>
-        f.name &&
-        !f.name.endsWith('/') &&
-        f.name !== '.emptyFolderPlaceholder',
-    )
-    .map((f) => ({ name: f.name, path: `${prefix}/${f.name}` }))
-}
-
 const SIGNED_URL_TTL_SEC = 3600
 
 export async function getLeadFileUrl(
@@ -214,16 +171,4 @@ export async function getLeadFileUrl(
   })
   if (error) throw new Error(storageErrorMessage(error.message, 'ไม่สามารถเปิดไฟล์ได้'))
   return data.signedUrl
-}
-
-export async function deleteLeadFile(
-  path: string,
-  leadId: string,
-  ownerId: string,
-): Promise<void> {
-  if (!supabase) throw new Error('ต้องตั้งค่า Supabase สำหรับลบไฟล์')
-  assertLeadFilePath(path, leadId, ownerId)
-  const { error } = await supabase.storage.from('leads').remove([path])
-  if (error) throw new Error(storageErrorMessage(error.message, 'ลบไฟล์ไม่สำเร็จ'))
-  await logAudit('lead.file_delete', 'lead', leadId, { path })
 }

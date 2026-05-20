@@ -20,9 +20,6 @@ import {
   customer360MetricKeysForRoles,
   isCustomer360Scoped,
 } from '../access'
-import { canViewLeadAttachments } from '../../crm/access'
-import { getLead } from '../../crm/api/leads'
-import { LeadAttachmentsSection } from '../../crm/components/LeadAttachmentsSection'
 import { CustomerTimelineSection } from '../components/CustomerTimelineSection'
 import { getCustomer360 } from '../api/customers'
 import { listProjectsForCustomer } from '../../projects/api/projects'
@@ -60,9 +57,7 @@ export function Customer360Page() {
   const [data, setData] = useState<Customer360 | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [leadOwnerId, setLeadOwnerId] = useState<string | null>(null)
   const [customerProjects, setCustomerProjects] = useState<Project[]>([])
-  const userId = profile?.id ?? ''
   const showProjects = canShowCustomer360Link(roles, '/app/projects') || !configured
   const showChat = canLinkCustomerChat(roles) || !configured
   const primaryProject = useMemo(
@@ -124,30 +119,6 @@ export function Customer360Page() {
       cancelled = true
     }
   }, [id, showProjects])
-
-  const leadId = data?.customer.lead_id ?? null
-
-  useEffect(() => {
-    if (!configured || !leadId) {
-      setLeadOwnerId(null)
-      return
-    }
-    let cancelled = false
-    getLead(leadId)
-      .then((lead) => {
-        if (!cancelled) setLeadOwnerId(lead?.owner_id ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setLeadOwnerId(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [configured, leadId])
-
-  const showLeadAttachments =
-    Boolean(leadId && leadOwnerId) &&
-    (canViewLeadAttachments(roles, leadOwnerId ?? undefined, userId) || !configured)
 
   function exportSummary() {
     if (!data) return
@@ -349,14 +320,6 @@ export function Customer360Page() {
             </div>
 
           </section>
-
-          {showLeadAttachments && leadId && leadOwnerId && (
-            <LeadAttachmentsSection
-              leadId={leadId}
-              ownerId={leadOwnerId}
-              canUpload={false}
-            />
-          )}
 
           {showProjects && (
             <section className="card card--wide">

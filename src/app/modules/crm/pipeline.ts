@@ -1,4 +1,5 @@
 import { preferredContactChannelLabel } from '../../../shared/crm/preferredContactChannel'
+import { hasLeadBrief, isLineMessagingReady } from './leadWorkflow'
 import type { Lead, LeadStatus } from './types'
 
 /** ลำดับ pipeline หลัก (ก่อนปิดการขาย) */
@@ -28,30 +29,49 @@ export function buildLeadNextSteps(lead: Lead): LeadNextStep[] {
   switch (lead.status) {
     case 'interested':
     case 'scheduled':
-    case 'follow_up':
-      if (lead.preferred_contact_channel) {
+    case 'follow_up': {
+      const lineReady = isLineMessagingReady(lead)
+      const brief = hasLeadBrief(lead)
+      const quotationStep = {
+        label: 'สร้างใบเสนอราคา',
+        path: `/app/sales/quotations/new?leadId=${id}`,
+        detail: lineReady
+          ? brief
+            ? 'สรุปความต้องการแล้ว — ส่งใบเสนอราคาให้ลูกค้า'
+            : 'กรอก pain points / บริการที่สนใจในฟอร์ม แล้วส่งใบเสนอราคา'
+          : 'ขั้นถัดไปของ Sales',
+        primary: lineReady || !lead.preferred_contact_channel,
+      }
+
+      if (lead.preferred_contact_channel === 'line' && lineReady) {
+        steps.push(quotationStep)
+        steps.push({
+          label: 'แชท LINE ใน CRM',
+          path: `/app/crm/${id}`,
+          detail: 'ดูประวัติและส่งข้อความจากระบบ',
+        })
+      } else if (lead.preferred_contact_channel) {
         const ch = preferredContactChannelLabel(lead.preferred_contact_channel)
         steps.push({
           label: `ติดต่อลูกค้าทาง ${ch}`,
           path: `/app/crm/${id}`,
-          detail: 'คุยและสรุปความต้องการนอกระบบก่อนส่งใบเสนอราคา',
-          primary: true,
+          detail: lineReady
+            ? 'เชื่อมต่อแล้ว — คุยและสรุปความต้องการ'
+            : 'บันทึก ID แชท / เปิดช่องทางก่อนส่งใบเสนอราคา',
+          primary: !lineReady,
         })
+        steps.push({ ...quotationStep, primary: lineReady })
+      } else {
+        steps.push({ ...quotationStep, primary: true })
       }
-      steps.push({
-        label: 'สร้างใบเสนอราคา',
-        path: `/app/sales/quotations/new?leadId=${id}`,
-        detail: lead.preferred_contact_channel
-          ? 'หลังคุยลูกค้าและสรุปความต้องการแล้ว'
-          : 'ขั้นถัดไปของ Sales',
-        primary: !lead.preferred_contact_channel,
-      })
+
       steps.push({
         label: 'งานของฉัน — นัดติดตาม',
         path: '/app/work',
         detail: 'Reminder ปรากฏเมื่อถึงเวลา',
       })
       break
+    }
     case 'quotation_sent':
       steps.push({
         label: 'จัดการใบเสนอราคา',
