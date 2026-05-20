@@ -157,12 +157,19 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ to, messages: lineMessages }),
     })
 
+    const pushRaw = await lineRes.text()
+    let pushJson: { sentMessages?: { id?: string }[] } = {}
+    try {
+      pushJson = pushRaw ? (JSON.parse(pushRaw) as { sentMessages?: { id?: string }[] }) : {}
+    } catch {
+      pushJson = {}
+    }
+
     if (!lineRes.ok) {
-      const errText = await lineRes.text()
-      console.error('LINE push failed', lineRes.status, to, errText)
+      console.error('LINE push failed', lineRes.status, to, pushRaw)
       return json(
         {
-          error: formatLineMessagingApiError(lineRes.status, errText, 'push'),
+          error: formatLineMessagingApiError(lineRes.status, pushRaw, 'push'),
           to,
         },
         502,
@@ -199,7 +206,13 @@ Deno.serve(async (req) => {
         })
       }
 
-      for (const row of logRows) {
+      const sentIds = (pushJson.sentMessages ?? [])
+        .map((m) => m.id?.trim())
+        .filter((id): id is string => Boolean(id))
+
+      for (let i = 0; i < logRows.length; i++) {
+        const row = logRows[i]
+        if (sentIds[i]) row.line_message_id = sentIds[i]
         const { error: logErr } = await admin.from('lead_line_messages').insert(row)
         if (logErr) {
           console.error('send-line-push log message', logErr)

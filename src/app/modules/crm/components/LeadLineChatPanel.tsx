@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   lineLoginAndOaIdsMismatch,
   resolveLineMessagingRecipientId,
 } from '../../../../shared/line/lineUserIdResolution'
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
 import { validateLineChatImage } from '../api/leadLineChat'
+import { enrichLeadLineMessages } from '../leadLineChatUtils'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
 import { LeadLineChatComposer } from './LeadLineChatComposer'
 import { LeadLineChatMessageItem } from './LeadLineChatMessageItem'
@@ -68,10 +69,11 @@ export function LeadLineChatPanel({
   const idMismatch = lineLoginAndOaIdsMismatch(lineIds)
   const onlyLoginId = Boolean(lineIds.line_user_id?.trim()) && !lineIds.line_oa_chat_user_id?.trim()
 
-  const { messages, loading, sending, error, send } = useLeadLineChat(
+  const { messages, loading, sending, deletingId, error, send, remove } = useLeadLineChat(
     lead,
     senderProfileId,
   )
+  const messageViews = useMemo(() => enrichLeadLineMessages(messages), [messages])
   const replyWindow = getLineReplyWindowStatus(messages)
 
   const hasInbound = messages.some((m) => m.direction === 'inbound')
@@ -91,6 +93,17 @@ export function LeadLineChatPanel({
     const thread = threadRef.current
     if (!thread) return
     thread.scrollTo({ top: thread.scrollHeight, behavior })
+  }, [])
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const thread = threadRef.current
+    if (!thread) return
+    const el = thread.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`)
+    if (!el) return
+    const top = el.offsetTop - thread.clientHeight / 3
+    thread.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+    el.classList.add('crm-line-chat__msg--highlight')
+    window.setTimeout(() => el.classList.remove('crm-line-chat__msg--highlight'), 1400)
   }, [])
 
   useEffect(() => {
@@ -151,6 +164,21 @@ export function LeadLineChatPanel({
     }
     setAttachError(null)
     setImageFile(file)
+  }
+
+  async function handleDelete(messageId: string) {
+    if (
+      !window.confirm(
+        'ลบข้อความนี้จากประวัติแชทในระบบ?\n(ข้อความในแอป LINE ของลูกค้ายังอยู่)',
+      )
+    ) {
+      return
+    }
+    try {
+      await remove(messageId)
+    } catch {
+      composerInputRef.current?.focus({ preventScroll: true })
+    }
   }
 
   async function handleSend() {
@@ -238,18 +266,22 @@ export function LeadLineChatPanel({
           </p>
         ) : (
           <ul className="crm-line-chat__messages">
-            {messages.map((m) => (
+            {messageViews.map((m) => (
               <LeadLineChatMessageItem
                 key={m.id}
                 message={m}
                 formattedTime={formatTime(m.created_at)}
                 canReply={!readOnly && canPush && !outsideReplyWindow}
+                canDelete={!readOnly && m.direction === 'outbound'}
+                deleting={deletingId === m.id}
                 onReply={(msg) => {
                   setReplyTo(msg)
                   requestAnimationFrame(() => {
                     composerInputRef.current?.focus({ preventScroll: true })
                   })
                 }}
+                onDelete={(msg) => void handleDelete(msg.id)}
+                onJumpToReply={scrollToMessage}
               />
             ))}
           </ul>

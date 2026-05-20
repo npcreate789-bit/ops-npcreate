@@ -1170,6 +1170,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   margin-top: 0.15rem;
+  flex-wrap: wrap;
 }
 
 .crm-line-chat__time {
@@ -1192,6 +1193,7 @@
 }
 
 .crm-line-chat__msg-inner:hover .crm-line-chat__msg-action,
+.crm-line-chat__msg-actions:focus-within .crm-line-chat__msg-action,
 .crm-line-chat__msg-action:focus-visible {
   opacity: 1;
 }
@@ -1200,29 +1202,95 @@
   background: rgba(6, 199, 85, 0.12);
 }
 
-.crm-line-chat__reply-quote {
-  padding: 0.35rem 0.5rem;
-  margin-bottom: 0.15rem;
+/* LINE OA style reply quote (inbound + outbound เหมือนกัน) */
+.crm-line-reply-quote {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.35rem;
+  padding: 0.4rem 0.55rem;
+  border: none;
   border-radius: 8px;
-  border-left: 3px solid rgba(6, 199, 85, 0.65);
-  background: rgba(0, 0, 0, 0.18);
+  border-left: 4px solid #06c755;
+  background: rgba(0, 0, 0, 0.2);
+  text-align: left;
+  cursor: default;
+  font: inherit;
+}
+
+button.crm-line-reply-quote {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+button.crm-line-reply-quote:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.crm-line-reply-quote--outbound {
+  border-left-color: rgba(134, 239, 172, 0.85);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.crm-line-reply-quote__sender {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #86efac;
+  margin-bottom: 0.12rem;
+  line-height: 1.2;
+}
+
+.crm-line-reply-quote--inbound .crm-line-reply-quote__sender {
+  color: #6ee7b7;
+}
+
+.crm-line-reply-quote__text {
+  display: block;
   font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.72);
   line-height: 1.35;
-}
-
-.crm-line-chat__reply-quote-label {
-  display: block;
-  font-weight: 600;
-  color: rgba(6, 199, 85, 0.95);
-  margin-bottom: 0.1rem;
-}
-
-.crm-line-chat__reply-quote-text {
-  display: block;
-  color: var(--npc-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.crm-line-chat__msg--deleted .crm-line-chat__msg-inner {
+  opacity: 0.72;
+}
+
+.crm-line-chat__deleted {
+  margin: 0;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--npc-text-muted);
+}
+
+.crm-line-chat__msg-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.crm-line-chat__msg-action--danger {
+  color: #fca5a5 !important;
+}
+
+.crm-line-chat__msg-action--danger:hover {
+  background: rgba(248, 113, 113, 0.12) !important;
+}
+
+.crm-line-chat__msg--highlight .crm-line-chat__msg-inner {
+  animation: crm-line-chat-highlight 1.4s ease;
+}
+
+@keyframes crm-line-chat-highlight {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  30% {
+    box-shadow: 0 0 0 2px rgba(6, 199, 85, 0.55);
+  }
 }
 
 .crm-line-chat__error {

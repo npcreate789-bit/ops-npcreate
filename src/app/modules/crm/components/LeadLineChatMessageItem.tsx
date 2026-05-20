@@ -1,53 +1,83 @@
 import { LeadLineMessageBody } from './LeadLineMessageBody'
-import { parseLineChatReplyMeta } from '../leadLineChatUtils'
-import type { LeadLineMessage } from '../types/leadLineChat'
+import { LeadLineReplyQuote } from './LeadLineReplyQuote'
+import type { LeadLineMessageView } from '../types/leadLineChat'
 
 interface LeadLineChatMessageItemProps {
-  message: LeadLineMessage
+  message: LeadLineMessageView
   formattedTime: string
   canReply: boolean
-  onReply: (message: LeadLineMessage) => void
+  canDelete: boolean
+  deleting?: boolean
+  onReply: (message: LeadLineMessageView) => void
+  onDelete?: (message: LeadLineMessageView) => void
+  onJumpToReply?: (messageId: string) => void
 }
 
 export function LeadLineChatMessageItem({
   message,
   formattedTime,
   canReply,
+  canDelete,
+  deleting = false,
   onReply,
+  onDelete,
+  onJumpToReply,
 }: LeadLineChatMessageItemProps) {
-  const replyMeta = parseLineChatReplyMeta(message.metadata)
   const isOutbound = message.direction === 'outbound'
+  const isDeleted = Boolean(message.deleted_at)
 
   return (
     <li
-      className={`crm-line-chat__msg crm-line-chat__msg--${message.direction}`}
+      className={`crm-line-chat__msg crm-line-chat__msg--${message.direction}${isDeleted ? ' crm-line-chat__msg--deleted' : ''}`}
       data-message-id={message.id}
     >
       <div className="crm-line-chat__msg-inner">
         <span className="crm-line-chat__sender">{isOutbound ? 'ทีม' : 'ลูกค้า'}</span>
-        {replyMeta ? (
-          <div className="crm-line-chat__reply-quote" aria-label="อ้างอิงข้อความที่ตอบ">
-            <span className="crm-line-chat__reply-quote-label">
-              ตอบกลับ {replyMeta.reply_from === 'inbound' ? 'ลูกค้า' : 'ทีม'}
-            </span>
-            <span className="crm-line-chat__reply-quote-text">{replyMeta.reply_preview}</span>
-          </div>
+
+        {!isDeleted ? (
+          <LeadLineReplyQuote
+            message={message}
+            onJump={
+              message.reply_to_id && onJumpToReply
+                ? () => onJumpToReply(message.reply_to_id!)
+                : undefined
+            }
+          />
         ) : null}
-        <LeadLineMessageBody message={message} />
+
+        {isDeleted ? (
+          <p className="crm-line-chat__deleted">ข้อความถูกลบแล้ว</p>
+        ) : (
+          <LeadLineMessageBody message={message} />
+        )}
+
         <div className="crm-line-chat__msg-foot">
           <time className="crm-line-chat__time" dateTime={message.created_at}>
             {formattedTime}
           </time>
-          {canReply ? (
-            <button
-              type="button"
-              className="crm-line-chat__msg-action"
-              onClick={() => onReply(message)}
-              aria-label="ตอบกลับข้อความนี้"
-            >
-              ตอบกลับ
-            </button>
-          ) : null}
+          <div className="crm-line-chat__msg-actions">
+            {canReply && !isDeleted ? (
+              <button
+                type="button"
+                className="crm-line-chat__msg-action"
+                onClick={() => onReply(message)}
+                aria-label="ตอบกลับข้อความนี้"
+              >
+                ตอบกลับ
+              </button>
+            ) : null}
+            {canDelete && !isDeleted && onDelete ? (
+              <button
+                type="button"
+                className="crm-line-chat__msg-action crm-line-chat__msg-action--danger"
+                disabled={deleting}
+                onClick={() => onDelete(message)}
+                aria-label="ลบข้อความที่ส่ง"
+              >
+                {deleting ? '…' : 'ลบ'}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </li>

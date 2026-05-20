@@ -1,5 +1,5 @@
 import { useId, useRef, type FormEvent, type KeyboardEvent, type RefObject } from 'react'
-import { lineChatMessagePreview } from '../leadLineChatUtils'
+import { lineChatMessagePreview, lineChatReplySenderLabel } from '../leadLineChatUtils'
 import type { LeadLineMessage } from '../types/leadLineChat'
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp'
@@ -119,7 +119,7 @@ export function LeadLineChatComposer({
         <div className="crm-line-chat__reply-bar">
           <div className="crm-line-chat__reply-bar-main">
             <span className="crm-line-chat__reply-bar-label">
-              ตอบกลับ {replyTo.direction === 'inbound' ? 'ลูกค้า' : 'ทีม'}
+              ตอบกลับ {lineChatReplySenderLabel(replyTo.direction)}
             </span>
             <span className="crm-line-chat__reply-bar-text">
               {lineChatMessagePreview(replyTo, 90)}

@@ -44,6 +44,53 @@ interface LineWebhookBody {
   events?: LineEvent[]
 }
 
+async function buildInboundReplyMetadata(
+  admin: ReturnType<typeof createClient>,
+  leadId: string,
+  quotedMessageId: string | undefined,
+): Promise<Record<string, unknown>> {
+  const quoted = quotedMessageId?.trim()
+  if (!quoted) return {}
+
+  const { data: parent, error: parentErr } = await admin
+    .from('lead_line_messages')
+    .select('id, direction, body, message_type, deleted_at')
+    .eq('lead_id', leadId)
+    .eq('line_message_id', quoted)
+    .maybeSingle()
+
+  if (parentErr) {
+    console.warn('line-webhook reply parent lookup', quoted, parentErr.message)
+  }
+
+  if (!parent) {
+    console.warn(
+      'line-webhook: quoted parent not in CRM —',
+      quoted,
+      '(ข้อความอาจส่งจาก chat.line.biz ก่อนบันทึกในระบบ)',
+    )
+    return {
+      quoted_line_message_id: quoted,
+      reply_from: 'outbound',
+      reply_preview: 'ข้อความจากทีม (LINE)',
+    }
+  }
+
+  const direction = parent.direction as string
+  const from = direction === 'inbound' || direction === 'outbound' ? direction : 'inbound'
+  let preview = (parent.body as string)?.trim() || ''
+  if ((parent.message_type as string) === 'image') preview = 'รูปภาพ'
+  if ((parent.message_type as string) === 'sticker') preview = 'สติกเกอร์'
+  if (preview.length > 100) preview = `${preview.slice(0, 100)}…`
+
+  return {
+    reply_to_id: parent.id as string,
+    reply_preview: preview,
+    reply_from: from,
+    quoted_line_message_id: quoted,
+  }
+}
+
 async function findLeadIdForLineUser(
   admin: ReturnType<typeof createClient>,
   lineUserId: string,
@@ -128,13 +175,15 @@ Deno.serve(async (req) => {
         console.error('line-webhook sync line_oa_chat_user_id', syncErr)
       }
 
+      const replyMeta = await buildInboundReplyMetadata(admin, leadId, msg.quotedMessageId)
+
       const row: Record<string, unknown> = {
         lead_id: leadId,
         line_user_id: lineUserId,
         direction: 'inbound',
         body: summarized.body,
         message_type: summarized.message_type,
-        metadata: summarized.metadata,
+        metadata: { ...summarized.metadata, ...replyMeta },
       }
       if (msg.id) row.line_message_id = msg.id
 

@@ -70,10 +70,30 @@ export async function listLeadLineMessages(leadId: string): Promise<LeadLineMess
     .order('created_at', { ascending: true })
 
   if (error) throw new Error(error.message)
-  return (data ?? []).map((row) => ({
-    ...(row as LeadLineMessage),
-    metadata: ((row as LeadLineMessage).metadata as Record<string, unknown> | null) ?? {},
-  }))
+  return (data ?? []).map((row) => mapLeadLineMessageRow(row))
+}
+
+function mapLeadLineMessageRow(row: Record<string, unknown>): LeadLineMessage {
+  const message = row as unknown as LeadLineMessage
+  return {
+    ...message,
+    metadata: (message.metadata as Record<string, unknown> | null) ?? {},
+    deleted_at: message.deleted_at ?? null,
+    deleted_by: message.deleted_by ?? null,
+  }
+}
+
+export async function deleteLeadLineChatMessage(messageId: string): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) {
+    const { mockLeadLineMessages } = await import('./mockLeadLineChat')
+    mockLeadLineMessages.softDelete(messageId)
+    return
+  }
+
+  const { error } = await supabase.rpc('soft_delete_lead_line_message', {
+    p_message_id: messageId,
+  })
+  if (error) throw new Error(error.message)
 }
 
 export async function sendLeadLineChatMessage(

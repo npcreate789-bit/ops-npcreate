@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import {
+  deleteLeadLineChatMessage,
   listLeadLineMessages,
   sendLeadLineChatMessage,
   type SendLeadLineChatInput,
@@ -18,6 +19,7 @@ export function useLeadLineChat(
   const [messages, setMessages] = useState<LeadLineMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasLoadedOnceRef = useRef(false)
@@ -111,12 +113,31 @@ export function useLeadLineChat(
     [lead, senderProfileId, load],
   )
 
+  const remove = useCallback(
+    async (messageId: string) => {
+      setDeletingId(messageId)
+      setError(null)
+      try {
+        await deleteLeadLineChatMessage(messageId)
+        await load({ silent: true })
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'ลบไม่สำเร็จ')
+        throw e
+      } finally {
+        setDeletingId(null)
+      }
+    },
+    [load],
+  )
+
   return {
     messages,
     loading,
     sending,
+    deletingId,
     error,
     send,
+    remove,
     reload: load,
   }
 }
