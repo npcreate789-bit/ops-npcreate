@@ -25,6 +25,8 @@ interface LeadLineSnippetPanelProps {
   lead: Lead
   servicesInterested: string[]
   serviceOptions: ServicePackageOption[]
+  /** แสดงใต้ฟอร์มแชท (เต็มความกว้าง) */
+  placement?: 'header' | 'dock'
   disabled?: boolean
   canManage?: boolean
   onSelect: (text: string) => void
@@ -34,6 +36,7 @@ export function LeadLineSnippetPanel({
   lead,
   servicesInterested,
   serviceOptions,
+  placement = 'header',
   disabled = false,
   canManage = false,
   onSelect,
@@ -104,7 +107,13 @@ export function LeadLineSnippetPanel({
   }
 
   return (
-    <div className="crm-line-snippets">
+    <div
+      className={
+        placement === 'dock'
+          ? 'crm-line-snippets crm-line-snippets--dock'
+          : 'crm-line-snippets'
+      }
+    >
       <div className="crm-line-snippets__head">
         <span className="crm-line-snippets__label">ชุดข้อความ</span>
         <div className="crm-line-snippets__head-actions">

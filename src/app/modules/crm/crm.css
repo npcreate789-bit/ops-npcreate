@@ -812,10 +812,20 @@
 .crm-line-chat__head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.65rem;
-  flex-wrap: wrap;
+}
+
+.crm-line-chat__footer {
+  flex-shrink: 0;
+  padding: 0.75rem 0 0;
+  margin-top: 0.35rem;
+  border-top: 1px solid rgba(6, 199, 85, 0.18);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.crm-line-chat__footer .crm-line-chat__composer {
+  padding: 0 0 0.65rem;
 }
 
 /* --- LINE snippet quick replies (ชุดข้อความ) --- */
@@ -828,6 +838,31 @@
   border-radius: 10px;
   border: 1px solid rgba(6, 199, 85, 0.28);
   background: rgba(0, 0, 0, 0.22);
+}
+
+.crm-line-snippets--dock {
+  flex: none;
+  width: 100%;
+  max-width: none;
+  margin-top: 0;
+  padding: 0.65rem 0.75rem;
+}
+
+.crm-line-snippets--dock .crm-line-snippets__list {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.2rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.crm-line-snippets--dock .crm-line-snippets__card {
+  flex: 0 0 auto;
+  min-width: 10.5rem;
+  max-width: 16rem;
 }
 
 .crm-line-snippets__head {
@@ -1045,9 +1080,14 @@
 }
 
 @media (max-width: 720px) {
-  .crm-line-snippets {
+  .crm-line-snippets:not(.crm-line-snippets--dock) {
     flex: 1 1 100%;
     max-width: none;
+  }
+
+  .crm-line-snippets--dock .crm-line-snippets__card {
+    min-width: 9rem;
+    max-width: 14rem;
   }
 }
 

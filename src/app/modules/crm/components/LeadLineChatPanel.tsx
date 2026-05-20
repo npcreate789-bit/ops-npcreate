@@ -253,14 +253,6 @@ export function LeadLineChatPanel({
             </p>
           </div>
         </div>
-        <LeadLineSnippetPanel
-          lead={lead}
-          servicesInterested={servicesInterested}
-          serviceOptions={serviceOptions}
-          disabled={readOnly || outsideReplyWindow}
-          canManage={canManageSnippets && !readOnly}
-          onSelect={insertSnippet}
-        />
       </header>
 
       <div className="crm-line-chat__status-row" role="status">
@@ -339,23 +331,36 @@ export function LeadLineChatPanel({
         </p>
       ) : null}
 
-      {!readOnly && canPush ? (
-        <LeadLineChatComposer
-          inputRef={composerInputRef}
-          disabled={false}
-          sending={sending}
-          outsideReplyWindow={outsideReplyWindow}
-          draft={draft}
-          onDraftChange={setDraft}
-          replyTo={replyTo}
-          onClearReply={() => setReplyTo(null)}
-          imageFile={imageFile}
-          imagePreviewUrl={imagePreviewUrl}
-          onImagePick={handleImagePick}
-          selectedSticker={selectedSticker}
-          onStickerPick={handleStickerPick}
-          onSubmit={handleSend}
-        />
+      {canPush ? (
+        <div className="crm-line-chat__footer">
+          {!readOnly ? (
+            <LeadLineChatComposer
+              inputRef={composerInputRef}
+              disabled={false}
+              sending={sending}
+              outsideReplyWindow={outsideReplyWindow}
+              draft={draft}
+              onDraftChange={setDraft}
+              replyTo={replyTo}
+              onClearReply={() => setReplyTo(null)}
+              imageFile={imageFile}
+              imagePreviewUrl={imagePreviewUrl}
+              onImagePick={handleImagePick}
+              selectedSticker={selectedSticker}
+              onStickerPick={handleStickerPick}
+              onSubmit={handleSend}
+            />
+          ) : null}
+          <LeadLineSnippetPanel
+            lead={lead}
+            servicesInterested={servicesInterested}
+            serviceOptions={serviceOptions}
+            placement="dock"
+            disabled={readOnly || outsideReplyWindow}
+            canManage={canManageSnippets && !readOnly}
+            onSelect={insertSnippet}
+          />
+        </div>
       ) : null}
     </section>
   )
