@@ -11,7 +11,6 @@ import { computeLineOaChatSyncState } from '../../../../shared/line/lineOaChatSy
 import { resolveLineStaffChatOpenUserId } from '../../../../shared/line/lineUserIdResolution'
 import { openStaffLineChatFromUserId } from '../../../../shared/line/staffLineMessaging'
 import { useLeadLatestInboundLineUserId } from '../hooks/useLeadLatestInboundLineUserId'
-import { LeadLineOaChatIdField } from './LeadLineOaChatIdField'
 import '../crm.css'
 
 const EXTERNAL_SALES_CHECKLIST = [
@@ -34,6 +33,9 @@ export function LeadPreferredChannelPanel({
   readOnly = false,
   onLeadUpdated,
 }: LeadPreferredChannelPanelProps) {
+  void readOnly
+  void onLeadUpdated
+
   const channel = lead.preferred_contact_channel
   const isLineChannel = channel === 'line'
   const latestInboundLineUserId = useLeadLatestInboundLineUserId(
@@ -51,16 +53,17 @@ export function LeadPreferredChannelPanel({
   const label = preferredContactChannelLabel(ch)
   const isLine = ch === 'line'
   const openHref = openUrlForPreferredChannel(ch, lineIds)
-  const hasOaChat = Boolean(resolveLineStaffChatOpenUserId(lineIds))
+  const staffChatOpenId = resolveLineStaffChatOpenUserId(lineIds, latestInboundLineUserId)
+  const canOpenLineChat = Boolean(staffChatOpenId)
 
   const [openLineError, setOpenLineError] = useState<string | null>(null)
 
   function handleOpenLine() {
     setOpenLineError(null)
-    const oaOpenId = resolveLineStaffChatOpenUserId(lineIds)
+    const oaOpenId = resolveLineStaffChatOpenUserId(lineIds, latestInboundLineUserId)
     if (!oaOpenId) {
       setOpenLineError(
-        'บันทึก LINE User ID จาก URL แชท OA ก่อน (วางลิงก์เต็ม chat.line.biz/…/chat/U…)',
+        'ยังเปิดแชทตรงไม่ได้ — ให้ลูกค้าทัก OA ก่อน หรือกด「ใช้ ID จากข้อความลูกค้า」ในแผงแชทด้านล่าง',
       )
       return
     }
@@ -120,20 +123,15 @@ export function LeadPreferredChannelPanel({
               <span className="crm-preferred-channel__pill crm-preferred-channel__pill--ok">
                 {sync.shouldOfferInboundSync ? 'ส่งข้อความได้ (ID จากแชท)' : 'เชื่อมต่อ OA แล้ว'}
               </span>
-            ) : hasOaChat ? (
+            ) : canOpenLineChat ? (
               <span className="crm-preferred-channel__pill crm-preferred-channel__pill--muted">
-                บันทึก ID แล้ว — รอลูกค้าทัก OA
+                เปิดแชทได้เมื่อมีข้อความจากลูกค้า
               </span>
             ) : (
               <span className="crm-preferred-channel__pill crm-preferred-channel__pill--muted">
-                บันทึก ID แชทเพื่อเปิดแชทตรง
+                รอลูกค้าทัก OA
               </span>
             )}
-            {sync.canPush && !sync.shouldOfferInboundSync && sync.savedOaId ? (
-              <span className="crm-preferred-channel__pill crm-preferred-channel__pill--ok">
-                ID พร้อมใช้งาน
-              </span>
-            ) : null}
             {openLineError ? (
               <p className="crm-preferred-channel__open-error" role="alert">
                 {openLineError}
@@ -175,15 +173,6 @@ export function LeadPreferredChannelPanel({
           </span>
         ) : null}
       </div>
-
-      {isLine ? (
-        <LeadLineOaChatIdField
-          lead={lead}
-          latestInboundLineUserId={latestInboundLineUserId}
-          readOnly={readOnly}
-          onSaved={onLeadUpdated}
-        />
-      ) : null}
 
       {variant === 'default' ? (
         <details className="crm-preferred-channel__steps">

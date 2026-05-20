@@ -360,7 +360,7 @@ export function LeadLineChatPanel({
 
       {showSetupBanner ? (
         <div className="crm-line-chat__notice crm-line-chat__notice--warn">
-          <p>ยังส่งจากระบบไม่ได้ — บันทึก LINE User ID จาก URL แชท OA ในส่วนด้านบน</p>
+          <p>ยังส่งจากระบบไม่ได้ — ให้ลูกค้าทัก OA ก่อน</p>
         </div>
       ) : null}
 
@@ -368,8 +368,8 @@ export function LeadLineChatPanel({
         <div className="crm-line-chat__notice crm-line-chat__notice--info">
           <p>
             {idMismatch
-              ? 'มี ID จากฟอร์มติดต่อกับแชท OA คนละตัว — ให้ลูกค้าทัก OA หนึ่งครั้ง หรือบันทึก ID จาก chat.line.biz'
-              : 'มีเฉพาะ ID จากฟอร์ม — ถ้าส่งไม่ผ่าน ให้บันทึก ID จาก chat.line.biz'}
+              ? 'มี ID จากฟอร์มติดต่อกับแชท OA คนละตัว — ให้ลูกค้าทัก OA หนึ่งครั้ง หรือกดปุ่มด้านล่างเมื่อมีข้อความเข้า'
+              : 'มีเฉพาะ ID จากฟอร์ม — ให้ลูกค้าทัก OA หนึ่งครั้ง'}
           </p>
         </div>
       ) : null}

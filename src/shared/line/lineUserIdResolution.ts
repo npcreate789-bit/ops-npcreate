@@ -2,6 +2,7 @@ import {
   isDocumentedLineChatBizAccountExampleId,
   isLegacyDocLineChatUserExampleId,
 } from './lineDocumentedExampleIds'
+import { isUsableLinePushUserId } from './linePushEligibility'
 import {
   isLineMessagingUserIdForUrl,
   parseLineChatBizAccountFromUrl,
@@ -159,11 +160,23 @@ export function resolveLineMessagingRecipientId(ids: LeadLineIds): string | null
   return null
 }
 
-/** ID สำหรับเปิดแชทตรงบน chat.line.biz — ต้องเป็น user id จากแชท OA เท่านั้น (ไม่ใช่ตัวอย่าง) */
-export function resolveLineStaffChatOpenUserId(ids: LeadLineIds): string | null {
-  const oa = ids.line_oa_chat_user_id?.trim()
+/** ID สำหรับเปิดแชทตรงบน chat.line.biz — ใช้ inbound เมื่อไม่มี OA ที่บันทึกหรือไม่ตรงแชทจริง */
+export function resolveLineStaffChatOpenUserId(
+  ids: LeadLineIds,
+  latestInboundLineUserId?: string | null,
+): string | null {
+  const inbound = isUsableLinePushUserId(latestInboundLineUserId)
+    ? latestInboundLineUserId!.trim()
+    : ''
+  const oa = ids.line_oa_chat_user_id?.trim() ?? ''
+
+  if (inbound) {
+    if (!oa || isLegacyDocLineChatUserExampleId(oa)) return inbound
+    if (oa.toLowerCase() !== inbound.toLowerCase()) return inbound
+  }
+
   if (oa && isLineMessagingUserId(oa)) return oa
-  return null
+  return inbound || null
 }
 
 export function lineLoginAndOaIdsMismatch(ids: LeadLineIds): boolean {
