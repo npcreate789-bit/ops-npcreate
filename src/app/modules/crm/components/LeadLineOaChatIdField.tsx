@@ -101,7 +101,17 @@ export function LeadLineOaChatIdField({
   const [saveWarning, setSaveWarning] = useState<string | null>(null)
 
   useEffect(() => {
+    const oaFromLead = lead.line_oa_chat_user_id?.trim() ?? ''
+    const parsedFromDraft = parseLineOaChatUserIdFromInput(draft)
     setDraft(formatOaChatDraftValue(lead.line_oa_chat_user_id))
+    if (
+      oaFromLead &&
+      parsedFromDraft &&
+      oaFromLead.toLowerCase() !== parsedFromDraft.toLowerCase()
+    ) {
+      setSaveWarning(null)
+      setError(null)
+    }
   }, [lead.id, lead.line_oa_chat_user_id])
 
   const loginId = lead.line_user_id?.trim() ?? ''

@@ -91,7 +91,6 @@ export function LeadLineChatPanel({
   const prevMessageCountRef = useRef(0)
   const shouldStickThreadRef = useRef(true)
   const lastInboundKeyRef = useRef('')
-  const autoSyncedOaRef = useRef<string | null>(null)
 
   const lineIds = {
     line_user_id: lead.line_user_id,
@@ -158,27 +157,6 @@ export function LeadLineChatPanel({
     setActiveLeadLineChatFocus(lead.id)
     return () => clearActiveLeadLineChatFocus()
   }, [lead.id])
-
-  useEffect(() => {
-    autoSyncedOaRef.current = null
-  }, [lead.id])
-
-  useEffect(() => {
-    if (readOnly || !onLeadUpdated || !savedOaLegacyDocExample || !latestInboundLineUserId) return
-    if (autoSyncedOaRef.current === latestInboundLineUserId) return
-    autoSyncedOaRef.current = latestInboundLineUserId
-    void updateLead(lead.id, { line_oa_chat_user_id: latestInboundLineUserId })
-      .then(onLeadUpdated)
-      .catch(() => {
-        autoSyncedOaRef.current = null
-      })
-  }, [
-    lead.id,
-    readOnly,
-    onLeadUpdated,
-    savedOaLegacyDocExample,
-    latestInboundLineUserId,
-  ])
 
   useEffect(() => {
     if (!focusComposerOnMount || readOnly || !canPush) return
