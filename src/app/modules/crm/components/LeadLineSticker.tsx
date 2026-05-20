@@ -5,18 +5,21 @@ interface LeadLineStickerProps {
   stickerId: string
   className?: string
   alt?: string
+  /** ใน picker ใช้รูปนิ่ง — ขนาดสม่ำเสมอ */
+  preferStatic?: boolean
 }
 
 export function LeadLineSticker({
   stickerId,
   className = 'crm-line-chat__sticker',
   alt = 'สติกเกอร์ LINE',
+  preferStatic = false,
 }: LeadLineStickerProps) {
-  const animUrl = lineStickerAnimationUrl(stickerId)
+  const animUrl = preferStatic ? null : lineStickerAnimationUrl(stickerId)
   const staticUrl = lineStickerStaticUrl(stickerId)
-  const [src, setSrc] = useState(animUrl ?? staticUrl)
+  const [src, setSrc] = useState(staticUrl ?? animUrl)
   const [stage, setStage] = useState<'animation' | 'static' | 'failed'>(
-    animUrl ? 'animation' : staticUrl ? 'static' : 'failed',
+    staticUrl ? 'static' : animUrl ? 'animation' : 'failed',
   )
 
   if (stage === 'failed' || !src) {

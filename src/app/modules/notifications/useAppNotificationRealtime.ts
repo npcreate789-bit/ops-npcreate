@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { isSupabaseConfigured, supabase } from '../../../shared/supabase/client'
 import { mapNotificationRow } from './leadNotification'
+import { isLeadLineMessageNotification } from './leadLineMessageNotification'
 import { isStaffAlertNotification } from './staffAlertNotification'
 import { tryPlayIncomingNotificationSound } from './notificationSound'
 import type { UserNotification } from './types'
@@ -59,6 +60,9 @@ export function useAppNotificationRealtime(
         (payload) => {
           const row = mapNotificationRow(payload.new as Record<string, unknown>)
           onUnreadRef.current()
+          if (!row.read_at && isLeadLineMessageNotification(row.dedupe_key)) {
+            tryPlayIncomingNotificationSound(row)
+          }
           if (isStaffAlertNotification(row.dedupe_key)) {
             onStaffAlertUpdateRef.current(row)
           }

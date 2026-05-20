@@ -1913,7 +1913,9 @@ button.crm-line-reply-quote:hover {
 }
 
 .crm-line-sticker-panel__grid {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, 3.1rem);
+  gap: 2px;
+  justify-content: start;
 }
 
 .crm-line-emoji-panel__item {
@@ -1978,7 +1980,17 @@ button.crm-line-reply-quote:hover {
   }
 
   .crm-line-sticker-panel__grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, 2.85rem);
+  }
+
+  .crm-line-sticker-panel__item {
+    width: 2.85rem;
+    height: 2.85rem;
+  }
+
+  .crm-line-sticker-panel__item-img {
+    width: 2.6rem;
+    height: 2.6rem;
   }
 }
 

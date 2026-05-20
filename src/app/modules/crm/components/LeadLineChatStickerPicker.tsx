@@ -171,11 +171,12 @@ export function LeadLineChatStickerPicker({
                   className="crm-line-sticker-panel__item"
                   onClick={() => pick(sticker)}
                 >
-                  <LeadLineSticker
-                    stickerId={sticker.stickerId}
-                    className="crm-line-sticker-panel__item-img"
-                    alt="สติกเกอร์"
-                  />
+                <LeadLineSticker
+                  stickerId={sticker.stickerId}
+                  className="crm-line-sticker-panel__item-img"
+                  alt="สติกเกอร์"
+                  preferStatic
+                />
                 </button>
               ))}
             </div>
@@ -194,6 +195,7 @@ export function LeadLineChatStickerPicker({
                   stickerId={sticker.stickerId}
                   className="crm-line-sticker-panel__item-img"
                   alt={sticker.label ?? 'สติกเกอร์'}
+                  preferStatic
                 />
               </button>
             ))}

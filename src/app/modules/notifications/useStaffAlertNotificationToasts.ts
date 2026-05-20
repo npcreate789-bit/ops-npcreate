@@ -9,7 +9,11 @@ import { isLeadNotification } from './leadNotification'
 import { isLeadLineMessageNotification } from './leadLineMessageNotification'
 import { NOTIFICATION_PUSH_EVENT } from './leadNotification'
 import { useNotificationRealtime } from './NotificationRealtimeContext'
-import { stopLeadAlertLoop, syncLeadAlertLoop } from './notificationSound'
+import {
+  playLineMessageNotificationSound,
+  stopLeadAlertLoop,
+  syncLeadAlertLoop,
+} from './notificationSound'
 import type { UserNotification } from './types'
 
 function shouldShowStaffAlertToast(row: UserNotification): boolean {
@@ -63,7 +67,11 @@ export function useStaffAlertNotificationToasts(userId: string | undefined, enab
   }, [userId, enabled, applyToasts])
 
   const handleInsert = useCallback((row: UserNotification) => {
-    if (!shouldShowStaffAlertToast(row)) return
+    const show = shouldShowStaffAlertToast(row)
+    if (show && isLeadLineMessageNotification(row.dedupe_key)) {
+      playLineMessageNotificationSound()
+    }
+    if (!show) return
     setToasts((prev) => {
       knownKeysRef.current.add(row.dedupe_key)
       return upsertToast(prev, row)

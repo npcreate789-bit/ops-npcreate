@@ -20,11 +20,13 @@ const DEFAULT_CHIME_PATTERN = [
   { freq: 1174.66, at: 0.14, dur: 0.18 },
 ] as const
 
-/** เสียงข้อความใหม่แบบ LINE — pop สองโน้ตสั้น */
+/** เสียงข้อความใหม่แบบ LINE — pop สองโน้ตสั้น (ให้ได้ยินชัดขึ้น) */
 const LINE_MESSAGE_SOUND_PATTERN = [
-  { freq: 659.25, at: 0, dur: 0.055, gain: 0.2 },
-  { freq: 987.77, at: 0.065, dur: 0.09, gain: 0.18 },
+  { freq: 659.25, at: 0, dur: 0.08, gain: 0.32 },
+  { freq: 987.77, at: 0.085, dur: 0.12, gain: 0.28 },
 ] as const
+
+const LINE_MESSAGE_DEBOUNCE_MS = 450
 
 /** เสียงแชทโปรเจกต์ (เดิม) */
 const CHAT_CHIME_PATTERN = LINE_MESSAGE_SOUND_PATTERN
@@ -107,30 +109,41 @@ function runChime(
   }
 }
 
-function shouldDebounce(): boolean {
+function shouldDebounce(ms = DEBOUNCE_MS): boolean {
   const now = Date.now()
-  if (now - lastPlayedAt < DEBOUNCE_MS) return true
+  if (now - lastPlayedAt < ms) return true
   lastPlayedAt = now
   return false
 }
 
+async function ensureAudioRunning(ctx: AudioContext): Promise<boolean> {
+  if (ctx.state === 'suspended') {
+    try {
+      await ctx.resume()
+    } catch {
+      return false
+    }
+  }
+  return ctx.state !== 'closed'
+}
+
 function playPattern(
   pattern: readonly { freq: number; at: number; dur: number; gain?: number }[],
-  opts?: { debounce?: boolean },
+  opts?: { debounce?: boolean; debounceMs?: number },
 ) {
   if (!isNotificationSoundEnabled()) return
-  if (opts?.debounce !== false && shouldDebounce()) return
+  const debounceMs = opts?.debounceMs ?? DEBOUNCE_MS
+  if (opts?.debounce !== false && shouldDebounce(debounceMs)) return
+
+  primeNotificationSound()
 
   const ctx = getAudioContext()
   if (!ctx) return
 
-  const run = () => runChime(ctx, pattern)
-
-  if (ctx.state === 'suspended') {
-    void ctx.resume().then(run).catch(() => {})
-    return
-  }
-  run()
+  void ensureAudioRunning(ctx).then((ok) => {
+    if (!ok) return
+    runChime(ctx, pattern)
+  })
 }
 
 /** เสียงแจ้งเตือนทั่วไป (สองโน้ต) — ครั้งเดียว */
@@ -150,7 +163,7 @@ export function playChatNotificationSound() {
 
 /** เสียงข้อความ LINE เข้าใหม่ (ใช้เมื่อเปิดแชทอยู่หรือแจ้งเตือน LINE) */
 export function playLineMessageNotificationSound() {
-  playPattern(LINE_MESSAGE_SOUND_PATTERN)
+  playPattern(LINE_MESSAGE_SOUND_PATTERN, { debounceMs: LINE_MESSAGE_DEBOUNCE_MS })
 }
 
 /** เลือกเสียงตามประเภทแจ้งเตือน — ครั้งเดียว */
