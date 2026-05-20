@@ -1,10 +1,11 @@
-import { useId, useRef, type FormEvent, type KeyboardEvent } from 'react'
+import { useId, useRef, type FormEvent, type KeyboardEvent, type RefObject } from 'react'
 import { lineChatMessagePreview } from '../leadLineChatUtils'
 import type { LeadLineMessage } from '../types/leadLineChat'
 
-const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp'
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/*,.jpg,.jpeg,.png,.webp'
 
 interface LeadLineChatComposerProps {
+  inputRef?: RefObject<HTMLTextAreaElement | null>
   disabled: boolean
   sending: boolean
   outsideReplyWindow: boolean
@@ -60,6 +61,7 @@ function IconClose() {
 }
 
 export function LeadLineChatComposer({
+  inputRef,
   disabled,
   sending,
   outsideReplyWindow,
@@ -176,6 +178,7 @@ export function LeadLineChatComposer({
         </div>
 
         <textarea
+          ref={inputRef}
           id={inputId}
           className="crm-line-chat__input"
           rows={1}

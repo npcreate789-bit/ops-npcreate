@@ -8,6 +8,8 @@ import {
 import type { Lead } from '../types'
 import type { LeadLineMessage } from '../types/leadLineChat'
 
+const REALTIME_RELOAD_MS = 200
+
 export function useLeadLineChat(
   lead: Pick<Lead, 'id' | 'owner_id' | 'line_user_id' | 'line_oa_chat_user_id'> | null,
   senderProfileId: string | undefined,
@@ -17,34 +19,55 @@ export function useLeadLineChat(
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hasLoadedOnceRef = useRef(false)
 
-  const load = useCallback(async () => {
-    if (!leadId) {
-      setMessages([])
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      setMessages(await listLeadLineMessages(leadId))
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'โหลดแชทไม่สำเร็จ')
-    } finally {
-      setLoading(false)
-    }
-  }, [leadId])
+  const load = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!leadId) {
+        setMessages([])
+        setLoading(false)
+        hasLoadedOnceRef.current = false
+        return
+      }
+
+      const silent = options?.silent ?? hasLoadedOnceRef.current
+      if (!silent) setLoading(true)
+
+      try {
+        const rows = await listLeadLineMessages(leadId)
+        setMessages(rows)
+        hasLoadedOnceRef.current = true
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'โหลดแชทไม่สำเร็จ')
+      } finally {
+        if (!silent) setLoading(false)
+      }
+    },
+    [leadId],
+  )
+
+  const scheduleReload = useCallback(
+    (silent = true) => {
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
+      reloadTimerRef.current = setTimeout(() => {
+        reloadTimerRef.current = null
+        void load({ silent })
+      }, REALTIME_RELOAD_MS)
+    },
+    [load],
+  )
 
   useEffect(() => {
-    void load()
+    hasLoadedOnceRef.current = false
+    void load({ silent: false })
   }, [load])
 
   useEffect(() => {
-    if (!loading) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    return () => {
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
     }
-  }, [messages, loading])
+  }, [])
 
   useEffect(() => {
     if (!leadId || !isSupabaseConfigured || !supabase) return
@@ -60,7 +83,7 @@ export function useLeadLineChat(
           filter: `lead_id=eq.${leadId}`,
         },
         () => {
-          void load()
+          scheduleReload(true)
         },
       )
       .subscribe()
@@ -68,7 +91,7 @@ export function useLeadLineChat(
     return () => {
       void supabase!.removeChannel(sub)
     }
-  }, [leadId, load])
+  }, [leadId, scheduleReload])
 
   const send = useCallback(
     async (input: SendLeadLineChatInput) => {
@@ -77,9 +100,10 @@ export function useLeadLineChat(
       setError(null)
       try {
         await sendLeadLineChatMessage(lead, input, senderProfileId)
-        await load()
+        await load({ silent: true })
       } catch (e) {
         setError(e instanceof Error ? e.message : 'ส่งไม่สำเร็จ')
+        throw e
       } finally {
         setSending(false)
       }
@@ -92,7 +116,6 @@ export function useLeadLineChat(
     loading,
     sending,
     error,
-    bottomRef,
     send,
     reload: load,
   }

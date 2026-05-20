@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   lineLoginAndOaIdsMismatch,
   resolveLineMessagingRecipientId,
 } from '../../../../shared/line/lineUserIdResolution'
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
+import { validateLineChatImage } from '../api/leadLineChat'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
 import { LeadLineChatComposer } from './LeadLineChatComposer'
 import { LeadLineChatMessageItem } from './LeadLineChatMessageItem'
@@ -39,6 +40,10 @@ function formatWindowExpiry(date: Date): string {
   })
 }
 
+function isThreadNearBottom(thread: HTMLElement, threshold = 96): boolean {
+  return thread.scrollHeight - thread.scrollTop - thread.clientHeight <= threshold
+}
+
 export function LeadLineChatPanel({
   lead,
   senderProfileId,
@@ -48,6 +53,12 @@ export function LeadLineChatPanel({
   const [replyTo, setReplyTo] = useState<LeadLineMessage | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+  const [attachError, setAttachError] = useState<string | null>(null)
+
+  const threadRef = useRef<HTMLDivElement>(null)
+  const composerInputRef = useRef<HTMLTextAreaElement>(null)
+  const prevMessageCountRef = useRef(0)
+  const shouldStickThreadRef = useRef(true)
 
   const lineIds = {
     line_user_id: lead.line_user_id,
@@ -57,7 +68,7 @@ export function LeadLineChatPanel({
   const idMismatch = lineLoginAndOaIdsMismatch(lineIds)
   const onlyLoginId = Boolean(lineIds.line_user_id?.trim()) && !lineIds.line_oa_chat_user_id?.trim()
 
-  const { messages, loading, sending, error, bottomRef, send } = useLeadLineChat(
+  const { messages, loading, sending, error, send } = useLeadLineChat(
     lead,
     senderProfileId,
   )
@@ -76,6 +87,12 @@ export function LeadLineChatPanel({
     hasInbound && replyWindow.expiresAt && !replyWindow.withinWindow,
   )
 
+  const scrollThreadToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const thread = threadRef.current
+    if (!thread) return
+    thread.scrollTo({ top: thread.scrollHeight, behavior })
+  }, [])
+
   useEffect(() => {
     if (!imageFile) {
       setImagePreviewUrl(null)
@@ -86,22 +103,79 @@ export function LeadLineChatPanel({
     return () => URL.revokeObjectURL(url)
   }, [imageFile])
 
+  useEffect(() => {
+    const thread = threadRef.current
+    if (!thread || loading) return
+
+    const prevCount = prevMessageCountRef.current
+    const grew = messages.length > prevCount
+    prevMessageCountRef.current = messages.length
+
+    if (!grew) return
+
+    if (prevCount === 0 || shouldStickThreadRef.current || isThreadNearBottom(thread)) {
+      requestAnimationFrame(() => scrollThreadToBottom(prevCount === 0 ? 'auto' : 'smooth'))
+    }
+  }, [messages, loading, scrollThreadToBottom])
+
+  useEffect(() => {
+    const thread = threadRef.current
+    if (!thread) return
+
+    const onScroll = () => {
+      shouldStickThreadRef.current = isThreadNearBottom(thread)
+    }
+
+    thread.addEventListener('scroll', onScroll, { passive: true })
+    return () => thread.removeEventListener('scroll', onScroll)
+  }, [])
+
   function clearComposer() {
     setDraft('')
     setReplyTo(null)
     setImageFile(null)
+    setAttachError(null)
+  }
+
+  function handleImagePick(file: File | null) {
+    if (!file) {
+      setImageFile(null)
+      setAttachError(null)
+      return
+    }
+    const invalid = validateLineChatImage(file)
+    if (invalid) {
+      setAttachError(invalid)
+      setImageFile(null)
+      return
+    }
+    setAttachError(null)
+    setImageFile(file)
   }
 
   async function handleSend() {
     const text = draft.trim()
     if ((!text && !imageFile) || readOnly || outsideReplyWindow) return
-    await send({
-      text: text || undefined,
-      imageFile: imageFile ?? undefined,
-      replyTo,
-    })
-    clearComposer()
+
+    shouldStickThreadRef.current = true
+
+    try {
+      await send({
+        text: text || undefined,
+        imageFile: imageFile ?? undefined,
+        replyTo,
+      })
+      clearComposer()
+      requestAnimationFrame(() => {
+        scrollThreadToBottom('smooth')
+        composerInputRef.current?.focus({ preventScroll: true })
+      })
+    } catch {
+      composerInputRef.current?.focus({ preventScroll: true })
+    }
   }
+
+  const displayError = attachError ?? error
 
   return (
     <section className="card card--wide crm-line-chat" aria-label="แชท LINE">
@@ -155,8 +229,8 @@ export function LeadLineChatPanel({
         </div>
       ) : null}
 
-      <div className="crm-line-chat__thread" aria-live="polite">
-        {loading ? (
+      <div ref={threadRef} className="crm-line-chat__thread" aria-live="polite">
+        {loading && messages.length === 0 ? (
           <p className="crm-line-chat__empty">กำลังโหลดข้อความ…</p>
         ) : messages.length === 0 ? (
           <p className="crm-line-chat__empty">
@@ -170,18 +244,32 @@ export function LeadLineChatPanel({
                 message={m}
                 formattedTime={formatTime(m.created_at)}
                 canReply={!readOnly && canPush && !outsideReplyWindow}
-                onReply={setReplyTo}
+                onReply={(msg) => {
+                  setReplyTo(msg)
+                  requestAnimationFrame(() => {
+                    composerInputRef.current?.focus({ preventScroll: true })
+                  })
+                }}
               />
             ))}
           </ul>
         )}
-        <div ref={bottomRef} />
+        {sending ? (
+          <p className="crm-line-chat__thread-status" aria-live="polite">
+            กำลังส่ง…
+          </p>
+        ) : null}
       </div>
 
-      {error ? <p className="crm-line-chat__error">{error}</p> : null}
+      {displayError ? (
+        <p className="crm-line-chat__error" role="alert">
+          {displayError}
+        </p>
+      ) : null}
 
       {!readOnly && canPush ? (
         <LeadLineChatComposer
+          inputRef={composerInputRef}
           disabled={false}
           sending={sending}
           outsideReplyWindow={outsideReplyWindow}
@@ -191,7 +279,7 @@ export function LeadLineChatPanel({
           onClearReply={() => setReplyTo(null)}
           imageFile={imageFile}
           imagePreviewUrl={imagePreviewUrl}
-          onImagePick={setImageFile}
+          onImagePick={handleImagePick}
           onSubmit={handleSend}
         />
       ) : null}

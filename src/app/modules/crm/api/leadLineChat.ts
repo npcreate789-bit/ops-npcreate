@@ -1,8 +1,15 @@
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { resolveLeadLinePushRecipient } from '../../../../shared/line/resolveLeadLinePushRecipient'
 import { parseFunctionInvokeError } from '../../../../shared/supabase/parseFunctionInvokeError'
-import { getLeadFileUrl, uploadLeadFile } from './leads'
+import { logAudit } from '../../../../shared/audit/logAudit'
+import { getLeadFileUrl } from './leads'
 import { lineChatReplyMeta } from '../leadLineChatUtils'
+import {
+  inferLineChatImageContentType,
+  lineChatImageStorageError,
+  sanitizeLineChatFileName,
+  validateLineChatImage,
+} from '../leadLineChatImage'
 import type { Lead } from '../types'
 import type { LeadLineMessage } from '../types/leadLineChat'
 
@@ -12,18 +19,6 @@ export interface SendLeadLineChatInput {
   replyTo?: LeadLineMessage | null
 }
 
-const LINE_IMAGE_MIME = /^image\/(jpeg|png|webp)$/i
-const LINE_IMAGE_EXT = /\.(jpe?g|png|webp)$/i
-
-function validateLineChatImage(file: File): string | null {
-  if (file.size > 10 * 1024 * 1024) {
-    return 'รูปใหญ่เกินไป (สูงสุด 10 MB)'
-  }
-  if (file.type && LINE_IMAGE_MIME.test(file.type)) return null
-  if (LINE_IMAGE_EXT.test(file.name)) return null
-  return 'รองรับเฉพาะรูป JPEG, PNG หรือ WebP'
-}
-
 export async function uploadLeadLineChatImage(
   lead: Pick<Lead, 'id' | 'owner_id'>,
   file: File,
@@ -31,11 +26,36 @@ export async function uploadLeadLineChatImage(
   const invalid = validateLineChatImage(file)
   if (invalid) throw new Error(invalid)
 
-  const storagePath = await uploadLeadFile(lead.id, lead.owner_id, file)
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('ต้องเชื่อมต่อ Supabase เพื่อแนบรูป')
+  }
+
+  const contentType = inferLineChatImageContentType(file)
+  if (!contentType) {
+    throw new Error('รองรับเฉพาะรูป JPEG, PNG หรือ WebP')
+  }
+
+  const storagePath = `${lead.owner_id}/${lead.id}/line_chat_${Date.now()}_${sanitizeLineChatFileName(file.name)}`
+  const { error } = await supabase.storage.from('leads').upload(storagePath, file, {
+    upsert: false,
+    contentType,
+    cacheControl: '3600',
+  })
+
+  if (error) throw new Error(lineChatImageStorageError(error.message))
+
+  await logAudit('lead.line_chat_image_upload', 'lead', lead.id, {
+    file_name: file.name,
+    path: storagePath,
+    content_type: contentType,
+  })
+
   const signedUrl = await getLeadFileUrl(storagePath)
   if (!signedUrl) throw new Error('ไม่สามารถสร้างลิงก์รูปสำหรับส่ง LINE ได้')
   return { storagePath, signedUrl }
 }
+
+export { validateLineChatImage } from '../leadLineChatImage'
 
 export async function listLeadLineMessages(leadId: string): Promise<LeadLineMessage[]> {
   if (!isSupabaseConfigured || !supabase) {
