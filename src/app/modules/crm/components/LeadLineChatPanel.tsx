@@ -4,6 +4,7 @@ import {
   resolveLineMessagingRecipientId,
 } from '../../../../shared/line/lineUserIdResolution'
 import { getLineReplyWindowStatus } from '../../../../shared/line/lineMessageDisplay'
+import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
 import { validateLineChatImage } from '../api/leadLineChat'
 import { enrichLeadLineMessages } from '../leadLineChatUtils'
 import { useLeadLineChat } from '../hooks/useLeadLineChat'
@@ -54,6 +55,7 @@ export function LeadLineChatPanel({
   const [replyTo, setReplyTo] = useState<LeadLineMessage | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
+  const [selectedSticker, setSelectedSticker] = useState<LineStaffSticker | null>(null)
   const [attachError, setAttachError] = useState<string | null>(null)
 
   const threadRef = useRef<HTMLDivElement>(null)
@@ -147,6 +149,7 @@ export function LeadLineChatPanel({
     setDraft('')
     setReplyTo(null)
     setImageFile(null)
+    setSelectedSticker(null)
     setAttachError(null)
   }
 
@@ -164,6 +167,15 @@ export function LeadLineChatPanel({
     }
     setAttachError(null)
     setImageFile(file)
+    if (file) setSelectedSticker(null)
+  }
+
+  function handleStickerPick(sticker: LineStaffSticker | null) {
+    setSelectedSticker(sticker)
+    if (sticker) {
+      setImageFile(null)
+      setAttachError(null)
+    }
   }
 
   async function handleDelete(messageId: string) {
@@ -183,7 +195,7 @@ export function LeadLineChatPanel({
 
   async function handleSend() {
     const text = draft.trim()
-    if ((!text && !imageFile) || readOnly || outsideReplyWindow) return
+    if ((!text && !imageFile && !selectedSticker) || readOnly || outsideReplyWindow) return
 
     shouldStickThreadRef.current = true
 
@@ -191,6 +203,7 @@ export function LeadLineChatPanel({
       await send({
         text: text || undefined,
         imageFile: imageFile ?? undefined,
+        sticker: selectedSticker,
         replyTo,
       })
       clearComposer()
@@ -312,6 +325,8 @@ export function LeadLineChatPanel({
           imageFile={imageFile}
           imagePreviewUrl={imagePreviewUrl}
           onImagePick={handleImagePick}
+          selectedSticker={selectedSticker}
+          onStickerPick={handleStickerPick}
           onSubmit={handleSend}
         />
       ) : null}

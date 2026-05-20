@@ -10,12 +10,14 @@ import {
   sanitizeLineChatFileName,
   validateLineChatImage,
 } from '../leadLineChatImage'
+import type { LineStaffSticker } from '../../../../shared/line/lineStickers'
 import type { Lead } from '../types'
 import type { LeadLineMessage } from '../types/leadLineChat'
 
 export interface SendLeadLineChatInput {
   text?: string
   imageFile?: File
+  sticker?: LineStaffSticker | null
   replyTo?: LeadLineMessage | null
 }
 
@@ -111,7 +113,8 @@ export async function sendLeadLineChatMessage(
     storagePath = uploaded.storagePath
   }
 
-  if (!text && !imageUrl) throw new Error('กรุณาพิมพ์ข้อความหรือแนบรูป')
+  const sticker = input.sticker
+  if (!text && !imageUrl && !sticker) throw new Error('กรุณาพิมพ์ข้อความ แนบรูป หรือเลือกสติกเกอร์')
 
   const to = await resolveLeadLinePushRecipient({
     id: lead.id,
@@ -127,6 +130,10 @@ export async function sendLeadLineChatMessage(
   const replyMeta = input.replyTo ? lineChatReplyMeta(input.replyTo) : null
   const baseMetadata: Record<string, unknown> = replyMeta ? { ...replyMeta } : {}
   if (storagePath) baseMetadata.storage_path = storagePath
+  if (sticker) {
+    baseMetadata.packageId = sticker.packageId
+    baseMetadata.stickerId = sticker.stickerId
+  }
 
   if (!isSupabaseConfigured || !supabase) {
     const { mockLeadLineMessages } = await import('./mockLeadLineChat')
@@ -141,6 +148,17 @@ export async function sendLeadLineChatMessage(
         metadata: { ...baseMetadata, image_url: imageUrl },
       })
     }
+    if (sticker) {
+      mockLeadLineMessages.append(lead.id, {
+        line_user_id: to,
+        direction: 'outbound',
+        body: sticker.label?.trim() || '[สติกเกอร์]',
+        message_type: 'sticker',
+        line_message_id: null,
+        sender_profile_id: senderProfileId ?? null,
+        metadata: { ...baseMetadata },
+      })
+    }
     if (text) {
       mockLeadLineMessages.append(lead.id, {
         line_user_id: to,
@@ -149,7 +167,7 @@ export async function sendLeadLineChatMessage(
         message_type: 'text',
         line_message_id: null,
         sender_profile_id: senderProfileId ?? null,
-        metadata: imageUrl ? baseMetadata : { ...baseMetadata },
+        metadata: imageUrl || sticker ? baseMetadata : { ...baseMetadata },
       })
     }
     return
@@ -160,6 +178,8 @@ export async function sendLeadLineChatMessage(
       to,
       text: text || undefined,
       image_url: imageUrl,
+      sticker_package_id: sticker?.packageId,
+      sticker_id: sticker?.stickerId,
       lead_id: lead.id,
       reply_to_message_id: input.replyTo?.id,
       metadata: baseMetadata,

@@ -1387,6 +1387,22 @@ button.crm-line-reply-quote:hover {
   object-fit: cover;
 }
 
+.crm-line-chat__attach-preview--sticker {
+  padding: 0.35rem;
+  border-radius: 12px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.crm-line-chat__sticker--preview {
+  max-width: 5.5rem;
+  max-height: 5.5rem;
+}
+
+.crm-line-chat__composer-wrap {
+  position: relative;
+}
+
 .crm-line-chat__attach-remove {
   position: absolute;
   top: 0.25rem;
@@ -1444,6 +1460,110 @@ button.crm-line-reply-quote:hover {
 .crm-line-chat__tool-btn:hover:not(:disabled) {
   background: rgba(6, 199, 85, 0.12);
   color: rgba(6, 199, 85, 0.95);
+}
+
+.crm-line-chat__tool-btn--active {
+  background: rgba(6, 199, 85, 0.18);
+  color: rgba(6, 199, 85, 0.98);
+}
+
+.crm-line-chat__sticker-picker {
+  position: absolute;
+  bottom: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  max-height: min(16rem, 42vh);
+  border-radius: 14px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(18, 22, 28, 0.98);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.crm-line-chat__sticker-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid var(--npc-glass-border);
+}
+
+.crm-line-chat__sticker-picker-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.crm-line-chat__sticker-picker-close {
+  border: none;
+  background: transparent;
+  color: var(--npc-text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.crm-line-chat__sticker-picker-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--npc-glass-border);
+}
+
+.crm-line-chat__sticker-picker-tab {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.72rem;
+  background: transparent;
+  color: var(--npc-text-muted);
+  cursor: pointer;
+}
+
+.crm-line-chat__sticker-picker-tab--active {
+  background: rgba(6, 199, 85, 0.2);
+  color: rgba(6, 199, 85, 0.98);
+}
+
+.crm-line-chat__sticker-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(3.25rem, 1fr));
+  gap: 0.25rem;
+  padding: 0.45rem;
+  overflow-y: auto;
+}
+
+.crm-line-chat__sticker-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.crm-line-chat__sticker-picker-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.crm-line-chat__sticker-picker-img {
+  width: 2.75rem;
+  height: 2.75rem;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.crm-line-chat__media--sticker .crm-line-chat__type-tag {
+  display: none;
 }
 
 .crm-line-chat__tool-btn:disabled {

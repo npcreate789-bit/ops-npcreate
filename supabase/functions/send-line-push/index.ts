@@ -12,6 +12,8 @@ interface PushBody {
   to?: string
   text?: string
   image_url?: string
+  sticker_package_id?: string
+  sticker_id?: string
   lead_id?: string
   reply_to_message_id?: string
   metadata?: Record<string, unknown>
@@ -129,13 +131,16 @@ Deno.serve(async (req) => {
         : {}
     const storagePath = body.storage_path?.trim() ?? ''
     const imageName = body.image_name?.trim() ?? ''
+    const stickerPackageId = body.sticker_package_id?.trim() ?? ''
+    const stickerId = body.sticker_id?.trim() ?? ''
+    const hasSticker = Boolean(stickerPackageId && stickerId)
 
     if (!to || to.length > 64) {
       return json({ error: 'LINE User ID ไม่ถูกต้อง' }, 400)
     }
 
-    if (!text && !imageUrl) {
-      return json({ error: 'ต้องมีข้อความหรือรูปภาพ' }, 400)
+    if (!text && !imageUrl && !hasSticker) {
+      return json({ error: 'ต้องมีข้อความ รูปภาพ หรือสติกเกอร์' }, 400)
     }
 
     if (text.length > 5000) {
@@ -185,6 +190,15 @@ Deno.serve(async (req) => {
         originalContentUrl: imageUrl,
         previewImageUrl: imageUrl,
       })
+    }
+    if (hasSticker) {
+      const stickerMsg: Record<string, string> = {
+        type: 'sticker',
+        packageId: stickerPackageId,
+        stickerId,
+      }
+      if (quoteToken && !text && !imageUrl) stickerMsg.quoteToken = quoteToken
+      lineMessages.push(stickerMsg)
     }
     if (text) {
       const textMsg: Record<string, string> = { type: 'text', text }
@@ -238,6 +252,23 @@ Deno.serve(async (req) => {
         })
       }
 
+      if (hasSticker) {
+        const stickerMeta: Record<string, unknown> = {
+          ...metadata,
+          packageId: stickerPackageId,
+          stickerId,
+        }
+        logRows.push({
+          lead_id: leadId,
+          line_user_id: to,
+          direction: 'outbound',
+          body: '[สติกเกอร์]',
+          message_type: 'sticker',
+          metadata: stickerMeta,
+          sender_profile_id: caller.id,
+        })
+      }
+
       if (text) {
         logRows.push({
           lead_id: leadId,
@@ -275,6 +306,7 @@ Deno.serve(async (req) => {
       metadata: {
         char_count: text.length,
         has_image: Boolean(imageUrl),
+        has_sticker: hasSticker,
       },
     })
 

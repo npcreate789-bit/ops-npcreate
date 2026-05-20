@@ -30,9 +30,20 @@ export function getLineReplyWindowStatus(
   }
 }
 
-export function lineStickerImageUrl(stickerId: string | number | undefined): string | null {
+export function lineStickerStaticUrl(stickerId: string | number | undefined): string | null {
   if (stickerId == null || stickerId === '') return null
   return `https://stickershop.line-scdn.net/stickershop/v1/sticker/${stickerId}/ANDROID/sticker.png`
+}
+
+/** APNG — แสดงเคลื่อนไหวในเบราว์เซอร์สมัยใหม่ */
+export function lineStickerAnimationUrl(stickerId: string | number | undefined): string | null {
+  if (stickerId == null || stickerId === '') return null
+  return `https://stickershop.line-scdn.net/stickershop/v1/sticker/${stickerId}/ANDROID/sticker_animation.png`
+}
+
+/** @deprecated ใช้ lineStickerStaticUrl */
+export function lineStickerImageUrl(stickerId: string | number | undefined): string | null {
+  return lineStickerStaticUrl(stickerId)
 }
 
 export function lineMessageTypeLabel(messageType: string): string {

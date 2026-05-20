@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
-import {
-  lineMessageTypeLabel,
-  lineStickerImageUrl,
-} from '../../../../shared/line/lineMessageDisplay'
+import { lineMessageTypeLabel } from '../../../../shared/line/lineMessageDisplay'
+import { LeadLineSticker } from './LeadLineSticker'
 import { fetchLineMessageContentObjectUrl } from '../../../../shared/line/lineMessageContentUrl'
 import { getLeadFileUrl } from '../api/leads'
 import type { LeadLineMessage } from '../types/leadLineChat'
@@ -104,12 +102,11 @@ export function LeadLineMessageBody({ message }: LeadLineMessageBodyProps) {
 
   if (message.message_type === 'sticker') {
     const stickerId = metaString(metadata, 'stickerId')
-    const stickerSrc = lineStickerImageUrl(stickerId ?? undefined)
     return (
-      <div className="crm-line-chat__media">
+      <div className="crm-line-chat__media crm-line-chat__media--sticker">
         <span className="crm-line-chat__type-tag">{typeLabel}</span>
-        {stickerSrc ? (
-          <img className="crm-line-chat__sticker" src={stickerSrc} alt="สติกเกอร์ LINE" loading="lazy" />
+        {stickerId ? (
+          <LeadLineSticker stickerId={stickerId} />
         ) : (
           <p className="crm-line-chat__body">{message.body}</p>
         )}
