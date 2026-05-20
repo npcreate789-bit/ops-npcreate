@@ -102,6 +102,11 @@ export function stateToInput(state: QuotationFormState, ownerId: string): Quotat
   }
 }
 
+export interface QuotationSubmitMeta {
+  /** หลังบันทึกสำเร็จ → ส่งข้อความพร้อมลิงก์ใบเสนอราคาทาง LINE และบันทึกในแชท CRM */
+  sendLineToCustomer: boolean
+}
+
 interface QuotationFormProps {
   initial?: Quotation | null
   leadId?: string
@@ -114,7 +119,12 @@ interface QuotationFormProps {
   readOnly?: boolean
   /** มาจาก CRM หลังบันทึก Lead */
   fromLeadSave?: boolean
-  onSubmit: (input: QuotationInput) => void | Promise<void>
+  /** แสดงตัวเลือกส่ง LINE หลังบันทึก (มี Lead + ผูก Lead ในฟอร์ม) */
+  lineAutoSendAvailable?: boolean
+  /** ติ๊กส่ง LINE หลังบันทึก */
+  sendLineAfterSave?: boolean
+  onSendLineAfterSaveChange?: (value: boolean) => void
+  onSubmit: (input: QuotationInput, meta: QuotationSubmitMeta) => void | Promise<void>
   onCancel: () => void
 }
 
@@ -129,6 +139,9 @@ export function QuotationForm({
   saving,
   readOnly = false,
   fromLeadSave = false,
+  lineAutoSendAvailable = false,
+  sendLineAfterSave = false,
+  onSendLineAfterSaveChange,
   onSubmit,
   onCancel,
 }: QuotationFormProps) {
@@ -230,8 +243,16 @@ export function QuotationForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (readOnly) return
-    await onSubmit(stateToInput(state, ownerId))
+    await onSubmit(stateToInput(state, ownerId), {
+      sendLineToCustomer:
+        lineAutoSendAvailable && sendLineAfterSave && Boolean(state.lead_id?.trim()),
+    })
   }
+
+  const submitLabel =
+    lineAutoSendAvailable && sendLineAfterSave && Boolean(state.lead_id?.trim())
+      ? 'บันทึกและส่งลิงก์ใบเสนอราคาไป LINE'
+      : 'บันทึก'
 
   return (
     <form className="crm-form qt-form" onSubmit={handleSubmit}>
@@ -427,13 +448,36 @@ export function QuotationForm({
       </div>
       </fieldset>
 
+      {!readOnly && lineAutoSendAvailable ? (
+        <label className="qt-form__line-send qt-form__full">
+          <span className="qt-form__line-send-row">
+            <input
+              type="checkbox"
+              checked={sendLineAfterSave}
+              onChange={(e) => onSendLineAfterSaveChange?.(e.target.checked)}
+              disabled={!state.lead_id.trim()}
+            />
+            <span>
+              <strong>หลังบันทึกส่งลิงก์ใบเสนอราคาไปแชท LINE</strong>
+              <span className="crm-sub">
+                {' '}
+                ลูกค้าเปิดลิงก์แล้วพิมพ์/บันทึกเป็น PDF ได้ — ประวัติแสดงในแชท CRM
+              </span>
+            </span>
+          </span>
+          {!state.lead_id.trim() ? (
+            <span className="crm-sub">เลือกผูก Lead (หรือเปิดใบเสนอราคาจากหน้า CRM) เพื่อเปิดใช้การส่งอัตโนมัติ</span>
+          ) : null}
+        </label>
+      ) : null}
+
       <div className="crm-form__actions">
         <button type="button" className="crm-btn crm-btn--ghost" onClick={onCancel}>
           {readOnly ? 'กลับ' : 'ยกเลิก'}
         </button>
         {!readOnly && (
           <button type="submit" className="crm-btn crm-btn--primary" disabled={saving}>
-            {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+            {saving ? 'กำลังบันทึก...' : submitLabel}
           </button>
         )}
       </div>

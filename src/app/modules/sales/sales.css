@@ -2,6 +2,33 @@
   margin-bottom: 1rem;
 }
 
+.qt-form__line-send {
+  display: block;
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.qt-form__line-send-row {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
+.qt-form__line-send-row input[type='checkbox'] {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.qt-line-send-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
 .qt-line-staff__actions {
   display: flex;
   flex-wrap: wrap;

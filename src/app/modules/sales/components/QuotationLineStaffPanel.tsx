@@ -15,12 +15,11 @@ import {
 import { formatServiceInterests } from '../../../../shared/packages/serviceInterests'
 import {
   buildQuotationReferenceMessage,
-  buildQuotationSendMessage,
   copyTextToClipboard,
   deliverLineMessageToCustomer,
   openLineOaWithText,
 } from '../../../../shared/line/staffLineMessaging'
-import { ensureQuotationPublicToken, quotationPublicUrl } from '../api/quotations'
+import { sendQuotationLinkViaLine } from '../sendQuotationViaLine'
 import { isQuotationSentLike } from '../constants'
 import type { Package, Quotation } from '../types'
 import '../sales.css'
@@ -86,7 +85,18 @@ export function QuotationLineStaffPanel({
       const text = referenceMessage()
       const copied = await copyTextToClipboard(text)
       if (pushRecipient) {
-        const result = await deliverLineMessageToCustomer(lineIds, text)
+        const meta =
+          quotation.id && quotation.id !== 'new'
+            ? {
+                leadId: quotation.lead_id ?? undefined,
+                metadata: {
+                  quotation_id: quotation.id,
+                  quotation_number: quotation.quotation_number,
+                  source: 'quotation_reference_preview',
+                } as Record<string, unknown>,
+              }
+            : undefined
+        const result = await deliverLineMessageToCustomer(lineIds, text, meta)
         setFeedback(result.message ?? 'ส่ง/เปิด LINE แล้ว')
       } else {
         openLineOaWithText(text, oaOpenId ?? loginId)
@@ -117,19 +127,20 @@ export function QuotationLineStaffPanel({
     setError(null)
     setFeedback(null)
     try {
-      const token = quotation.public_token ?? (await ensureQuotationPublicToken(quotation.id))
-      const text = buildQuotationSendMessage({
+      const r = await sendQuotationLinkViaLine({
+        quotation,
         brandName,
-        quotationNumber: quotation.quotation_number,
-        publicUrl: quotationPublicUrl(token),
-        totalLabel,
-        contractMonths: quotation.contract_months,
+        lineIds: lineIds ?? null,
+        metadataSource: 'quotation_line_panel',
       })
-      const result = await deliverLineMessageToCustomer(lineIds, text)
+      if (!r.ok) {
+        setError(r.error)
+        return
+      }
       setFeedback(
-        result.mode === 'push'
-          ? 'ส่งใบเสนอราคาทาง LINE แล้ว'
-          : (result.message ?? 'คัดลอก/เปิด LINE แล้ว — ส่งข้อความให้ลูกค้า'),
+        r.mode === 'push'
+          ? 'ส่งการ์ดใบเสนอราคา (ปุ่มเปิดดู + PDF) ทาง LINE แล้ว'
+          : 'คัดลอก/เปิด LINE แล้ว — ส่งข้อความให้ลูกค้า',
       )
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ส่งใบเสนอราคาไม่สำเร็จ')
@@ -200,7 +211,7 @@ export function QuotationLineStaffPanel({
           onClick={() => void handleSendQuotation()}
           title={!saved ? 'บันทึกใบเสนอราคาก่อน' : undefined}
         >
-          {busy === 'send' ? 'กำลังส่ง…' : 'ส่งไฟล์ใบเสนอราคาไปแชท LINE'}
+          {busy === 'send' ? 'กำลังส่ง…' : 'ส่งลิงก์ใบเสนอราคาไปแชท LINE'}
         </button>
         {quotation.lead_id ? (
           <Link
@@ -226,8 +237,8 @@ export function QuotationLineStaffPanel({
 
       {!saved && (
         <p className="muted qt-line-staff__hint">
-          บันทึกใบเสนอราคาก่อน — จากนั้นตั้งสถานะ &quot;ส่งแล้ว&quot; แล้วกดส่งไฟล์ใบเสนอราคาไปแชท LINE
-          (ลูกค้าได้ลิงก์เปิดดู PDF/ใบเสนอออนไลน์)
+          บันทึกใบเสนอราคาก่อน — จากนั้นตั้งสถานะ &quot;ส่งแล้ว&quot; แล้วกดส่งลิงก์ไปแชท LINE
+          (ลูกค้าเปิดลิงก์แล้วพิมพ์/บันทึกเป็น PDF ได้)
         </p>
       )}
     </section>

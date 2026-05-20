@@ -132,6 +132,35 @@ export function LeadLineMessageBody({ message }: LeadLineMessageBodyProps) {
     )
   }
 
+  if (message.message_type === 'flex') {
+    const publicUrl = metaString(metadata, 'public_quotation_url')
+    const pdfUrl = metaString(metadata, 'pdf_download_url')
+    const qtNo = metaString(metadata, 'quotation_number')
+    return (
+      <div className="crm-line-chat__media crm-line-chat__media--flex">
+        <span className="crm-line-chat__type-tag">{typeLabel}</span>
+        <p className="crm-line-chat__body">{message.body}</p>
+        {qtNo ? (
+          <p className="crm-sub" style={{ margin: '0.35rem 0 0' }}>
+            {qtNo}
+          </p>
+        ) : null}
+        <div className="crm-line-chat__flex-links">
+          {publicUrl ? (
+            <a href={publicUrl} target="_blank" rel="noopener noreferrer" className="crm-inline-link">
+              เปิดใบเสนอราคาออนไลน์
+            </a>
+          ) : null}
+          {pdfUrl ? (
+            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="crm-inline-link">
+              ดาวน์โหลด PDF
+            </a>
+          ) : null}
+        </div>
+      </div>
+    )
+  }
+
   if (message.message_type === 'location') {
     const lat = metadata.latitude
     const lng = metadata.longitude

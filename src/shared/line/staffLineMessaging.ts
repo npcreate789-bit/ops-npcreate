@@ -11,6 +11,7 @@ import {
 } from './lineUserIdResolution'
 import { isSupabaseConfigured, supabase } from '../supabase/client'
 import { parseFunctionInvokeError } from '../supabase/parseFunctionInvokeError'
+import type { QuotationFlexPayload } from './quotationFlexMessage'
 
 export {
   isLineMessagingUserId,
@@ -100,21 +101,28 @@ export function buildQuotationSendMessage(input: {
   publicUrl: string
   totalLabel: string
   contractMonths?: number | null
+  /** ลิงก์ดาวน์โหลด PDF จาก Storage (signed URL) */
+  pdfDownloadUrl?: string | null
 }): string {
   const months =
     input.contractMonths != null && input.contractMonths > 0
       ? `ระยะสัญญา ${input.contractMonths} เดือน · `
       : ''
-  return [
+  const lines = [
     `สวัสดีครับ/ค่ะ — ใบเสนอราคา ${input.quotationNumber} สำหรับ ${input.brandName}`,
     '',
     `${months}ยอดรวม ${input.totalLabel}`,
     '',
-    'เปิดดูและยอมรับใบเสนอราคาได้ที่ลิงก์:',
+    'เปิดดูและยอมรับใบเสนอราคาออนไลน์:',
     input.publicUrl,
-    '',
-    'หากมีคำถาม ตอบกลับทางแชทนี้ได้เลยครับ/ค่ะ — ทีม NP Create',
-  ].join('\n')
+  ]
+  if (input.pdfDownloadUrl?.trim()) {
+    lines.push('', 'ดาวน์โหลดไฟล์ PDF โดยตรง:', input.pdfDownloadUrl.trim())
+  } else {
+    lines.push('', '(เปิดลิงก์ด้านบนแล้วกดพิมพ์ / บันทึกเป็น PDF ได้)')
+  }
+  lines.push('', 'หากมีคำถาม ตอบกลับทางแชทนี้ได้เลยครับ/ค่ะ — ทีม NP Create')
+  return lines.join('\n')
 }
 
 export function buildClientPortalCredentialsMessage(input: {
@@ -135,11 +143,18 @@ export function buildClientPortalCredentialsMessage(input: {
   ].join('\n')
 }
 
+export interface SendLinePushOptions {
+  leadId?: string
+  metadata?: Record<string, unknown>
+  /** LINE Flex bubble (ส่งคู่ข้อความ text สั้น ๆ ได้) */
+  flex?: QuotationFlexPayload
+}
+
 /** ส่ง push ผ่าน Edge Function — ต้องมี LINE_MESSAGING_CHANNEL_ACCESS_TOKEN บน Supabase */
 export async function sendLinePushMessage(
   lineUserId: string,
   text: string,
-  options?: { leadId?: string },
+  options?: SendLinePushOptions,
 ): Promise<LineSendResult> {
   const to = lineUserId.trim()
   if (!to) {
@@ -152,12 +167,23 @@ export async function sendLinePushMessage(
     return { mode: 'open_oa', message: 'โหมดพัฒนา — เปิด LINE และคัดลอกข้อความแล้ว' }
   }
 
+  const trimmed = text.trim()
+  if (!trimmed && !options?.flex) {
+    throw new Error('ต้องมีข้อความหรือ Flex Message')
+  }
+
+  const body: Record<string, unknown> = { to }
+  if (trimmed) body.text = trimmed
+  if (options?.leadId) body.lead_id = options.leadId
+  if (options?.metadata && typeof options.metadata === 'object')
+    body.metadata = options.metadata
+  if (options?.flex) {
+    body.flex_alt_text = options.flex.altText
+    body.flex_contents = options.flex.contents
+  }
+
   const { data, error } = await supabase.functions.invoke('send-line-push', {
-    body: {
-      to,
-      text,
-      ...(options?.leadId ? { lead_id: options.leadId } : {}),
-    },
+    body,
   })
 
   if (error) {
@@ -199,10 +225,11 @@ function normalizeLineRecipient(
 export async function deliverLineMessageToCustomer(
   lineIds: string | LeadLineIds | null | undefined,
   text: string,
+  pushOptions?: SendLinePushOptions,
 ): Promise<LineSendResult> {
   const recipient = normalizeLineRecipient(lineIds)
   if (recipient) {
-    return sendLinePushMessage(recipient, text)
+    return sendLinePushMessage(recipient, text, pushOptions)
   }
   const copied = await copyTextToClipboard(text)
   openLineOaWithText(text, typeof lineIds === 'string' ? lineIds : lineIds?.line_user_id)

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { formatBangkokDateTime } from '../../../../shared/dates/bangkok'
+import { ensureQuotationPdfDownloadUrl } from '../api/quotationPdf'
 import { ensureQuotationPublicToken, quotationPublicUrl } from '../api/quotations'
 import { isQuotationSentLike } from '../constants'
 import type { Quotation } from '../types'
@@ -61,10 +62,24 @@ export function QuotationPublicLink({ quotation, onTokenReady }: QuotationPublic
     }
   }
 
+  async function handlePdfDownload(regenerate = false) {
+    setBusy(true)
+    setError(null)
+    try {
+      const r = await ensureQuotationPdfDownloadUrl(quotation.id, { regenerate })
+      if (!r.ok) throw new Error(r.error)
+      window.open(r.pdfUrl, '_blank', 'noopener,noreferrer')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'สร้าง PDF ไม่สำเร็จ')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="qt-public-link">
       <p className="qt-public-link__lead">
-        ส่งลิงก์นี้ให้ลูกค้า — ระบบจะบันทึกเมื่อเปิดดูและเมื่อกดยอมรับใบเสนอราคา
+        ส่งลิงก์ออนไลน์หรือ PDF ให้ลูกค้า — ระบบบันทึกเมื่อเปิดดูและเมื่อกดยอมรับ
       </p>
       <div className="qt-public-link__actions">
         <button
@@ -82,6 +97,15 @@ export function QuotationPublicLink({ quotation, onTokenReady }: QuotationPublic
           onClick={() => void handleOpen()}
         >
           เปิดตัวอย่าง
+        </button>
+        <button
+          type="button"
+          className="crm-btn crm-btn--ghost"
+          disabled={busy}
+          onClick={() => void handlePdfDownload(false)}
+          title="สร้าง PDF บนระบบ (ใช้เมื่อส่ง LINE อัตโนมัติด้วย)"
+        >
+          {busy ? 'กำลังสร้าง…' : 'ดาวน์โหลด PDF'}
         </button>
       </div>
       {(quotation.viewed_at || quotation.accepted_at) && (

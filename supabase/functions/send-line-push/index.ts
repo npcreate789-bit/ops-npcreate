@@ -19,6 +19,9 @@ interface PushBody {
   metadata?: Record<string, unknown>
   storage_path?: string
   image_name?: string
+  /** LINE Flex Message — ใบเสนอราคา / การ์ดปุ่ม */
+  flex_alt_text?: string
+  flex_contents?: Record<string, unknown>
 }
 
 interface LineSentMessage {
@@ -134,13 +137,24 @@ Deno.serve(async (req) => {
     const stickerPackageId = body.sticker_package_id?.trim() ?? ''
     const stickerId = body.sticker_id?.trim() ?? ''
     const hasSticker = Boolean(stickerPackageId && stickerId)
+    const flexAlt = body.flex_alt_text?.trim() ?? ''
+    const flexContents =
+      body.flex_contents && typeof body.flex_contents === 'object' &&
+        !Array.isArray(body.flex_contents)
+        ? body.flex_contents
+        : null
+    const hasFlex = Boolean(flexAlt && flexContents)
 
     if (!to || to.length > 64) {
       return json({ error: 'LINE User ID ไม่ถูกต้อง' }, 400)
     }
 
-    if (!text && !imageUrl && !hasSticker) {
-      return json({ error: 'ต้องมีข้อความ รูปภาพ หรือสติกเกอร์' }, 400)
+    if (!text && !imageUrl && !hasSticker && !hasFlex) {
+      return json({ error: 'ต้องมีข้อความ รูปภาพ สติกเกอร์ หรือ Flex' }, 400)
+    }
+
+    if (flexAlt.length > 400) {
+      return json({ error: 'Flex alt text ยาวเกินไป' }, 400)
     }
 
     if (text.length > 5000) {
@@ -183,7 +197,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const lineMessages: Record<string, string>[] = []
+    const lineMessages: Record<string, unknown>[] = []
     if (imageUrl) {
       lineMessages.push({
         type: 'image',
@@ -192,18 +206,27 @@ Deno.serve(async (req) => {
       })
     }
     if (hasSticker) {
-      const stickerMsg: Record<string, string> = {
+      const stickerMsg: Record<string, unknown> = {
         type: 'sticker',
         packageId: stickerPackageId,
         stickerId,
       }
-      if (quoteToken && !text && !imageUrl) stickerMsg.quoteToken = quoteToken
+      if (quoteToken && !text && !imageUrl && !hasFlex) stickerMsg.quoteToken = quoteToken
       lineMessages.push(stickerMsg)
     }
     if (text) {
-      const textMsg: Record<string, string> = { type: 'text', text }
-      if (quoteToken) textMsg.quoteToken = quoteToken
+      const textMsg: Record<string, unknown> = { type: 'text', text }
+      if (quoteToken && !hasFlex) textMsg.quoteToken = quoteToken
       lineMessages.push(textMsg)
+    }
+    if (hasFlex) {
+      const flexMsg: Record<string, unknown> = {
+        type: 'flex',
+        altText: flexAlt,
+        contents: flexContents,
+      }
+      if (quoteToken) flexMsg.quoteToken = quoteToken
+      lineMessages.push(flexMsg)
     }
 
     const lineRes = await fetch('https://api.line.me/v2/bot/message/push', {
@@ -281,6 +304,18 @@ Deno.serve(async (req) => {
         })
       }
 
+      if (hasFlex) {
+        logRows.push({
+          lead_id: leadId,
+          line_user_id: to,
+          direction: 'outbound',
+          body: flexAlt,
+          message_type: 'flex',
+          metadata: { ...metadata, flex: true },
+          sender_profile_id: caller.id,
+        })
+      }
+
       const sent = pushJson.sentMessages ?? []
 
       for (let i = 0; i < logRows.length; i++) {
@@ -307,6 +342,7 @@ Deno.serve(async (req) => {
         char_count: text.length,
         has_image: Boolean(imageUrl),
         has_sticker: hasSticker,
+        has_flex: hasFlex,
       },
     })
 

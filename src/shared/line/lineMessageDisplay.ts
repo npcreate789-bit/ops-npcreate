@@ -62,6 +62,8 @@ export function lineMessageTypeLabel(messageType: string): string {
       return 'ไฟล์'
     case 'location':
       return 'ตำแหน่ง'
+    case 'flex':
+      return 'การ์ดใบเสนอราคา'
     default:
       return messageType
   }

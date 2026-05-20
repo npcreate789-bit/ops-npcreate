@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
@@ -18,7 +18,13 @@ import {
   updateQuotation,
 } from '../api/quotations'
 import type { QuotationInput, Package, Quotation } from '../types'
-import { QuotationForm } from '../components/QuotationForm'
+import { QuotationForm, type QuotationSubmitMeta } from '../components/QuotationForm'
+import { resolveLineMessagingRecipientId } from '../../../../shared/line/lineUserIdResolution'
+import type { LineDeliveryMode } from '../../../../shared/line/staffLineMessaging'
+import { sendQuotationLinkViaLine } from '../sendQuotationViaLine'
+import { copyTextToClipboard } from '../../../../shared/line/staffLineMessaging'
+import { quotationPublicUrl } from '../api/quotations'
+import { isQuotationSentLike } from '../constants'
 import { printDocument } from '../../../../shared/print/printDocument'
 import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import { QuotationPublicLink } from '../components/QuotationPublicLink'
@@ -31,14 +37,37 @@ import '../sales.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
+function lineSendSuccessBannerMessage(mode: LineDeliveryMode): string {
+  switch (mode) {
+    case 'push':
+      return 'ส่งการ์ดใบเสนอราคา (Flex) ทาง LINE แล้ว — ดูประวัติในแชท CRM'
+    case 'open_oa':
+      return 'เปิด LINE เพื่อส่งลิงก์ใบเสนอราคาให้ลูกค้าแล้ว'
+    case 'copy_only':
+      return 'คัดลอกข้อความพร้อมลิงก์แล้ว — วางส่งในแชท LINE'
+    default:
+      return 'ดำเนินการส่งลิงก์ใบเสนอราคาแล้ว'
+  }
+}
+
+type QuotationLineSendFeedbackState = {
+  ok: boolean
+  message: string
+  publicUrl?: string
+}
+
 export function QuotationEditorPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const location = useLocation()
   const leadIdParam = searchParams.get('leadId')
   const fromLeadSave = searchParams.get('fromLead') === '1'
-  const leadSaveNotice =
-    (location.state as { leadSaveNotice?: string } | null)?.leadSaveNotice ?? null
+  const navState =
+    location.state as {
+      leadSaveNotice?: string
+      quotationLineSendFeedback?: QuotationLineSendFeedbackState
+    } | null
+  const leadSaveNotice = navState?.leadSaveNotice ?? null
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
   const { profile, configured } = useAuth()
@@ -57,6 +86,51 @@ export function QuotationEditorPage() {
   const [leadServiceCodes, setLeadServiceCodes] = useState<string[]>([])
   const [suggestedPackage, setSuggestedPackage] = useState<Package | null>(null)
 
+  const lineSendPrefTouchedRef = useRef(false)
+  const [sendLineAfterSave, setSendLineAfterSave] = useState(false)
+  const [lineSendFeedback, setLineSendFeedback] =
+    useState<QuotationLineSendFeedbackState | null>(null)
+
+  const lineIdsForSend = useMemo(
+    () =>
+      leadForBanner
+        ? {
+            line_user_id: leadForBanner.line_user_id,
+            line_oa_chat_user_id: leadForBanner.line_oa_chat_user_id,
+          }
+        : null,
+    [leadForBanner?.line_user_id, leadForBanner?.line_oa_chat_user_id],
+  )
+
+  const effectiveLeadId = leadIdParam ?? initial?.lead_id ?? ''
+  const lineAutoSendAvailable = Boolean(
+    effectiveLeadId.trim() &&
+      leadForBanner &&
+      resolveLineMessagingRecipientId(lineIdsForSend ?? {}),
+  )
+
+  useEffect(() => {
+    if (lineSendPrefTouchedRef.current) return
+    setSendLineAfterSave(lineAutoSendAvailable)
+  }, [lineAutoSendAvailable])
+
+  /** ยก feedback จาก navigate(…, { state }) ขึ้น state แล้วล้าง history state — ไม่ให้ข้อความค้างหลังบันทึกรอบถัดไป */
+  useEffect(() => {
+    const s = location.state as {
+      quotationLineSendFeedback?: QuotationLineSendFeedbackState
+      leadSaveNotice?: string
+    } | null
+    const fb = s?.quotationLineSendFeedback
+    if (!fb) return
+    setLineSendFeedback(fb)
+    navigate(`${location.pathname}${location.search}`, {
+      replace: true,
+      state: s?.leadSaveNotice != null ? { leadSaveNotice: s.leadSaveNotice } : {},
+    })
+  }, [location.state, location.pathname, location.search, navigate])
+
+  const quotationLineFeedback = lineSendFeedback
+
   const canEdit =
     (isNew
       ? canCreate
@@ -70,7 +144,7 @@ export function QuotationEditorPage() {
         const pkgs = await listPackages()
         if (!cancelled) setPackages(pkgs)
 
-        const lid = leadIdParam ?? initial?.lead_id
+        const lid = leadIdParam ?? initial?.lead_id ?? undefined
         if (lid) {
           const lead = await getLead(lid)
           if (!cancelled && lead) {
@@ -105,22 +179,96 @@ export function QuotationEditorPage() {
     return () => {
       cancelled = true
     }
-  }, [id, isNew, leadIdParam])
+  }, [id, isNew, leadIdParam, initial?.lead_id])
 
-  async function handleSubmit(input: QuotationInput) {
+  async function handleSubmit(input: QuotationInput, meta: QuotationSubmitMeta) {
     setSaving(true)
     setError(null)
+    setLineSendFeedback(null)
+
+    let toSave: QuotationInput = { ...input, owner_id: ownerId }
+    if (
+      meta.sendLineToCustomer &&
+      input.lead_id &&
+      !isQuotationSentLike(toSave.status)
+    ) {
+      toSave = { ...toSave, status: 'sent' }
+    }
+
     try {
       if (isNew) {
-        const created = await createQuotation({ ...input, owner_id: ownerId })
-        navigate(`/app/sales/quotations/${created.id}`, { replace: true })
+        const created = await createQuotation(toSave)
+        let navFeedback: QuotationLineSendFeedbackState | undefined
+        if (meta.sendLineToCustomer) {
+          const r = await sendQuotationLinkViaLine({
+            quotation: created,
+            brandName: leadBrandName ?? 'ลูกค้า',
+            lineIds: lineIdsForSend,
+          })
+          const publicUrl =
+            created.public_token != null ? quotationPublicUrl(created.public_token) : undefined
+          navFeedback = r.ok
+            ? { ok: true, message: lineSendSuccessBannerMessage(r.mode), publicUrl }
+            : { ok: false, message: r.error }
+        }
+        navigate(`/app/sales/quotations/${created.id}`, {
+          replace: true,
+          state: navFeedback ? { quotationLineSendFeedback: navFeedback } : undefined,
+        })
       } else if (id) {
-        await updateQuotation(id, { ...input, owner_id: ownerId })
+        await updateQuotation(id, toSave)
         const refreshed = await getQuotation(id)
         setInitial(refreshed)
+        if (meta.sendLineToCustomer && refreshed) {
+          const r = await sendQuotationLinkViaLine({
+            quotation: refreshed,
+            brandName: leadBrandName ?? 'ลูกค้า',
+            lineIds: lineIdsForSend,
+          })
+          const publicUrl =
+            refreshed.public_token != null
+              ? quotationPublicUrl(refreshed.public_token)
+              : undefined
+          setLineSendFeedback(
+            r.ok
+              ? { ok: true, message: lineSendSuccessBannerMessage(r.mode), publicUrl }
+              : { ok: false, message: r.error },
+          )
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function retrySendQuotationLine() {
+    if (!initial || isNew) return
+    setSaving(true)
+    setLineSendFeedback(null)
+    try {
+      const r = await sendQuotationLinkViaLine({
+        quotation: initial,
+        brandName: leadBrandName ?? 'ลูกค้า',
+        lineIds: lineIdsForSend,
+      })
+      setLineSendFeedback(
+        r.ok
+          ? {
+              ok: true,
+              message: lineSendSuccessBannerMessage(r.mode),
+              publicUrl:
+                initial.public_token != null
+                  ? quotationPublicUrl(initial.public_token)
+                  : undefined,
+            }
+          : { ok: false, message: r.error },
+      )
+      if (r.ok && id) {
+        const refreshed = await getQuotation(id)
+        if (refreshed) setInitial(refreshed)
+      }
     } finally {
       setSaving(false)
     }
@@ -161,6 +309,51 @@ export function QuotationEditorPage() {
       </header>
 
       {error && <p className="crm-error no-print">{error}</p>}
+
+      {quotationLineFeedback ? (
+        <div
+          className={`crm-banner no-print qt-line-send-banner ${quotationLineFeedback.ok ? 'crm-banner--ok' : 'crm-banner--warn'}`}
+          role="status"
+        >
+          <p>{quotationLineFeedback.message}</p>
+          <div className="qt-line-send-banner__actions">
+            {quotationLineFeedback.ok && effectiveLeadId.trim() ? (
+              <Link to={`/app/crm/${effectiveLeadId}`} className="crm-btn crm-btn--ghost">
+                เปิดแชท CRM
+              </Link>
+            ) : null}
+            {quotationLineFeedback.ok && quotationLineFeedback.publicUrl ? (
+              <button
+                type="button"
+                className="crm-btn crm-btn--ghost"
+                onClick={() =>
+                  void copyTextToClipboard(quotationLineFeedback.publicUrl!).then((ok) => {
+                    if (ok) {
+                      setLineSendFeedback((prev) =>
+                        prev
+                          ? { ...prev, message: 'คัดลอกลิงก์ลูกค้าแล้ว — วางส่งช่องทางอื่นได้' }
+                          : prev,
+                      )
+                    }
+                  })
+                }
+              >
+                คัดลอกลิงก์ลูกค้า
+              </button>
+            ) : null}
+            {!quotationLineFeedback.ok && initial && !isNew ? (
+              <button
+                type="button"
+                className="crm-btn crm-btn--primary"
+                disabled={saving}
+                onClick={() => void retrySendQuotationLine()}
+              >
+                {saving ? 'กำลังส่ง…' : 'ลองส่งอีกครั้ง'}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {fromLeadSave && leadSaveNotice ? (
         <p className="crm-banner crm-banner--ok no-print" role="status">
@@ -292,6 +485,12 @@ export function QuotationEditorPage() {
           saving={saving}
           readOnly={readOnly}
           fromLeadSave={fromLeadSave}
+          lineAutoSendAvailable={lineAutoSendAvailable}
+          sendLineAfterSave={sendLineAfterSave}
+          onSendLineAfterSaveChange={(v) => {
+            lineSendPrefTouchedRef.current = true
+            setSendLineAfterSave(v)
+          }}
           onSubmit={handleSubmit}
           onCancel={() =>
             leadIdParam ? navigate(`/app/crm/${leadIdParam}`) : navigate('/app/sales')
