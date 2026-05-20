@@ -304,13 +304,15 @@ export function LeadEditorPage() {
         />
       ) : null}
 
-      {!isNew && initial && (
-        <LeadPreferredChannelPanel
-          lead={initial}
-          readOnly={readOnly}
-          onLeadUpdated={(updated) => handleLeadPatched(updated)}
-        />
-      )}
+      {!isNew &&
+        initial &&
+        initial.preferred_contact_channel !== 'line' && (
+          <LeadPreferredChannelPanel
+            lead={initial}
+            readOnly={readOnly}
+            onLeadUpdated={(updated) => handleLeadPatched(updated)}
+          />
+        )}
       </div>
 
       <section className="card card--wide crm-lead-form-card">
