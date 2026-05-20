@@ -176,6 +176,7 @@ Deno.serve(async (req) => {
       }
 
       const replyMeta = await buildInboundReplyMetadata(admin, leadId, msg.quotedMessageId)
+      const quoteToken = msg.quoteToken?.trim()
 
       const row: Record<string, unknown> = {
         lead_id: leadId,
@@ -183,7 +184,11 @@ Deno.serve(async (req) => {
         direction: 'inbound',
         body: summarized.body,
         message_type: summarized.message_type,
-        metadata: { ...summarized.metadata, ...replyMeta },
+        metadata: {
+          ...summarized.metadata,
+          ...replyMeta,
+          ...(quoteToken ? { quote_token: quoteToken } : {}),
+        },
       }
       if (msg.id) row.line_message_id = msg.id
 

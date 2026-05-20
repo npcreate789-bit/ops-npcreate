@@ -2,6 +2,7 @@ export interface LineInboundMessage {
   type: string
   id?: string
   quotedMessageId?: string
+  quoteToken?: string
   text?: string
   packageId?: string
   stickerId?: string

@@ -13,9 +13,35 @@ interface PushBody {
   text?: string
   image_url?: string
   lead_id?: string
+  reply_to_message_id?: string
   metadata?: Record<string, unknown>
   storage_path?: string
   image_name?: string
+}
+
+interface LineSentMessage {
+  id?: string
+  quoteToken?: string
+}
+
+async function loadParentQuoteToken(
+  admin: ReturnType<typeof createClient>,
+  replyToMessageId: string,
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from('lead_line_messages')
+    .select('metadata')
+    .eq('id', replyToMessageId)
+    .maybeSingle()
+
+  if (error) {
+    console.warn('send-line-push quote_token lookup', replyToMessageId, error.message)
+    return null
+  }
+
+  const meta = data?.metadata as Record<string, unknown> | null
+  const token = meta?.quote_token
+  return typeof token === 'string' && token.trim() ? token.trim() : null
 }
 
 function json(body: unknown, status = 200) {
@@ -136,6 +162,22 @@ Deno.serve(async (req) => {
       )
     }
 
+    const replyToMessageId =
+      body.reply_to_message_id?.trim() ??
+      (typeof metadata.reply_to_id === 'string' ? metadata.reply_to_id.trim() : '')
+
+    let quoteToken: string | null = null
+    if (replyToMessageId) {
+      quoteToken = await loadParentQuoteToken(admin, replyToMessageId)
+      if (!quoteToken) {
+        console.warn(
+          'send-line-push: no quote_token on parent message',
+          replyToMessageId,
+          '(ข้อความเก่าก่อนอัปเดตระบบ — ให้ลูกค้าทักใหม่หรือส่งข้อความใหม่จาก CRM)',
+        )
+      }
+    }
+
     const lineMessages: Record<string, string>[] = []
     if (imageUrl) {
       lineMessages.push({
@@ -145,7 +187,9 @@ Deno.serve(async (req) => {
       })
     }
     if (text) {
-      lineMessages.push({ type: 'text', text })
+      const textMsg: Record<string, string> = { type: 'text', text }
+      if (quoteToken) textMsg.quoteToken = quoteToken
+      lineMessages.push(textMsg)
     }
 
     const lineRes = await fetch('https://api.line.me/v2/bot/message/push', {
@@ -158,9 +202,9 @@ Deno.serve(async (req) => {
     })
 
     const pushRaw = await lineRes.text()
-    let pushJson: { sentMessages?: { id?: string }[] } = {}
+    let pushJson: { sentMessages?: LineSentMessage[] } = {}
     try {
-      pushJson = pushRaw ? (JSON.parse(pushRaw) as { sentMessages?: { id?: string }[] }) : {}
+      pushJson = pushRaw ? (JSON.parse(pushRaw) as { sentMessages?: LineSentMessage[] }) : {}
     } catch {
       pushJson = {}
     }
@@ -206,13 +250,16 @@ Deno.serve(async (req) => {
         })
       }
 
-      const sentIds = (pushJson.sentMessages ?? [])
-        .map((m) => m.id?.trim())
-        .filter((id): id is string => Boolean(id))
+      const sent = pushJson.sentMessages ?? []
 
       for (let i = 0; i < logRows.length; i++) {
         const row = logRows[i]
-        if (sentIds[i]) row.line_message_id = sentIds[i]
+        const sentItem = sent[i]
+        if (sentItem?.id) row.line_message_id = String(sentItem.id).trim()
+        const rowMeta = row.metadata as Record<string, unknown>
+        if (sentItem?.quoteToken?.trim()) {
+          rowMeta.quote_token = sentItem.quoteToken.trim()
+        }
         const { error: logErr } = await admin.from('lead_line_messages').insert(row)
         if (logErr) {
           console.error('send-line-push log message', logErr)

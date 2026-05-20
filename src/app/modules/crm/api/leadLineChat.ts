@@ -161,6 +161,7 @@ export async function sendLeadLineChatMessage(
       text: text || undefined,
       image_url: imageUrl,
       lead_id: lead.id,
+      reply_to_message_id: input.replyTo?.id,
       metadata: baseMetadata,
       storage_path: storagePath,
       image_name: input.imageFile?.name,
