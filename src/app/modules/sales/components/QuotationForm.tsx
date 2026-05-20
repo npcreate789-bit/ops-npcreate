@@ -116,6 +116,8 @@ interface QuotationFormProps {
   ownerId: string
   packages: Package[]
   saving?: boolean
+  /** ข้อความปุ่มบันทึกขณะกำลังทำงาน (เช่น ตรวจสิทธิ์ / บันทึก / ส่ง LINE) */
+  savingLabel?: string
   readOnly?: boolean
   /** มาจาก CRM หลังบันทึก Lead */
   fromLeadSave?: boolean
@@ -137,6 +139,7 @@ export function QuotationForm({
   ownerId,
   packages,
   saving,
+  savingLabel,
   readOnly = false,
   fromLeadSave = false,
   lineAutoSendAvailable = false,
@@ -259,7 +262,9 @@ export function QuotationForm({
       <fieldset disabled={readOnly}>
       {fromLeadSave && leadId && (
         <p className="crm-banner crm-banner--ok qt-form__flow-banner">
-          บันทึก Lead แล้ว — กรอกใบเสนอราคาด้านล่าง แล้วกด <strong>บันทึก</strong> เพื่อส่งลิงก์/ไฟล์ใบเสนอราคาไปแชท LINE
+          บันทึก Lead แล้ว — กรอกใบเสนอราคาด้านล่าง แล้วกด{' '}
+          <strong>บันทึกและส่งลิงก์ใบเสนอราคาไป LINE</strong> — ระบบตรวจสิทธิ์ทันที
+          แล้วพาไปแชท CRM ขั้นถัดไป
         </p>
       )}
 
@@ -477,7 +482,7 @@ export function QuotationForm({
         </button>
         {!readOnly && (
           <button type="submit" className="crm-btn crm-btn--primary" disabled={saving}>
-            {saving ? 'กำลังบันทึก...' : submitLabel}
+            {saving ? (savingLabel ?? 'กำลังบันทึก…') : submitLabel}
           </button>
         )}
       </div>

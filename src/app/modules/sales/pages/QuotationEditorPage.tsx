@@ -21,6 +21,7 @@ import type { QuotationInput, Package, Quotation } from '../types'
 import { QuotationForm, type QuotationSubmitMeta } from '../components/QuotationForm'
 import { resolveLineMessagingRecipientId } from '../../../../shared/line/lineUserIdResolution'
 import type { LineDeliveryMode } from '../../../../shared/line/staffLineMessaging'
+import { validateQuotationLineSendPreflight } from '../quotationLineSendPreflight'
 import { sendQuotationLinkViaLine } from '../sendQuotationViaLine'
 import { copyTextToClipboard } from '../../../../shared/line/staffLineMessaging'
 import { quotationPublicUrl } from '../api/quotations'
@@ -56,6 +57,18 @@ type QuotationLineSendFeedbackState = {
   publicUrl?: string
 }
 
+type QuotationSavePhase = 'idle' | 'checking' | 'saving' | 'sending_line'
+
+function quotationSavingLabel(
+  phase: QuotationSavePhase,
+  sendLine: boolean,
+): string | undefined {
+  if (phase === 'checking') return 'กำลังตรวจสอบสิทธิ์…'
+  if (phase === 'saving') return 'กำลังบันทึก…'
+  if (phase === 'sending_line' && sendLine) return 'กำลังส่งลิงก์ไป LINE…'
+  return undefined
+}
+
 export function QuotationEditorPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
@@ -78,6 +91,7 @@ export function QuotationEditorPage() {
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savePhase, setSavePhase] = useState<QuotationSavePhase>('idle')
   const [error, setError] = useState<string | null>(null)
   const [initial, setInitial] = useState<Quotation | null>(null)
   const [packages, setPackages] = useState<Package[]>([])
@@ -181,10 +195,42 @@ export function QuotationEditorPage() {
     }
   }, [id, isNew, leadIdParam, initial?.lead_id])
 
+  function goToQuotationFlowWait(leadId: string, notice: string) {
+    navigate(`/app/crm/${leadId}`, {
+      state: {
+        leadSaveNotice: notice,
+        focusLineChat: true,
+      },
+    })
+  }
+
   async function handleSubmit(input: QuotationInput, meta: QuotationSubmitMeta) {
-    setSaving(true)
     setError(null)
     setLineSendFeedback(null)
+
+    if (meta.sendLineToCustomer) {
+      setSaving(true)
+      setSavePhase('checking')
+      const preflight = validateQuotationLineSendPreflight({
+        roles,
+        configured,
+        isNew,
+        quotationOwnerId: initial?.owner_id,
+        userId: ownerId,
+        input,
+        lineIds: lineIdsForSend,
+      })
+      if (!preflight.ok) {
+        setError(preflight.error)
+        setSaving(false)
+        setSavePhase('idle')
+        return
+      }
+      setSavePhase('saving')
+    } else {
+      setSaving(true)
+      setSavePhase('saving')
+    }
 
     let toSave: QuotationInput = { ...input, owner_id: ownerId }
     if (
@@ -198,61 +244,114 @@ export function QuotationEditorPage() {
     try {
       if (isNew) {
         const created = await createQuotation(toSave)
-        let navFeedback: QuotationLineSendFeedbackState | undefined
-        if (meta.sendLineToCustomer) {
+        if (meta.sendLineToCustomer && created.lead_id) {
+          setSavePhase('sending_line')
           const r = await sendQuotationLinkViaLine({
             quotation: created,
             brandName: leadBrandName ?? 'ลูกค้า',
             lineIds: lineIdsForSend,
           })
+          if (r.ok) {
+            goToQuotationFlowWait(
+              created.lead_id,
+              `${lineSendSuccessBannerMessage(r.mode)} — ขั้นถัดไป: ติดตามลูกค้าในแชท LINE`,
+            )
+            return
+          }
           const publicUrl =
             created.public_token != null ? quotationPublicUrl(created.public_token) : undefined
-          navFeedback = r.ok
-            ? { ok: true, message: lineSendSuccessBannerMessage(r.mode), publicUrl }
-            : { ok: false, message: r.error }
+          navigate(`/app/sales/quotations/${created.id}`, {
+            replace: true,
+            state: {
+              quotationLineSendFeedback: { ok: false, message: r.error, publicUrl },
+            },
+          })
+          return
         }
-        navigate(`/app/sales/quotations/${created.id}`, {
-          replace: true,
-          state: navFeedback ? { quotationLineSendFeedback: navFeedback } : undefined,
-        })
+        navigate(`/app/sales/quotations/${created.id}`, { replace: true })
       } else if (id) {
         await updateQuotation(id, toSave)
         const refreshed = await getQuotation(id)
         setInitial(refreshed)
-        if (meta.sendLineToCustomer && refreshed) {
+        if (meta.sendLineToCustomer && refreshed?.lead_id) {
+          setSavePhase('sending_line')
           const r = await sendQuotationLinkViaLine({
             quotation: refreshed,
             brandName: leadBrandName ?? 'ลูกค้า',
             lineIds: lineIdsForSend,
           })
+          if (r.ok) {
+            goToQuotationFlowWait(
+              refreshed.lead_id,
+              `${lineSendSuccessBannerMessage(r.mode)} — ขั้นถัดไป: ติดตามลูกค้าในแชท LINE`,
+            )
+            return
+          }
           const publicUrl =
             refreshed.public_token != null
               ? quotationPublicUrl(refreshed.public_token)
               : undefined
-          setLineSendFeedback(
-            r.ok
-              ? { ok: true, message: lineSendSuccessBannerMessage(r.mode), publicUrl }
-              : { ok: false, message: r.error },
-          )
+          setLineSendFeedback({ ok: false, message: r.error, publicUrl })
         }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'บันทึกไม่สำเร็จ')
     } finally {
       setSaving(false)
+      setSavePhase('idle')
     }
   }
 
   async function retrySendQuotationLine() {
     if (!initial || isNew) return
-    setSaving(true)
     setLineSendFeedback(null)
+    setError(null)
+
+    const preflight = validateQuotationLineSendPreflight({
+      roles,
+      configured,
+      isNew: false,
+      quotationOwnerId: initial.owner_id,
+      userId: ownerId,
+      input: {
+        lead_id: initial.lead_id,
+        owner_id: ownerId,
+        status: initial.status,
+        discount: initial.discount,
+        vat_rate: initial.vat_rate,
+        contract_months: initial.contract_months,
+        terms: initial.terms,
+        notes: initial.notes,
+        items: (initial.items ?? []).map((item, idx) => ({
+          package_id: item.package_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          sort_order: item.sort_order ?? idx,
+        })),
+      },
+      lineIds: lineIdsForSend,
+    })
+    if (!preflight.ok) {
+      setLineSendFeedback({ ok: false, message: preflight.error })
+      return
+    }
+
+    setSaving(true)
+    setSavePhase('sending_line')
     try {
       const r = await sendQuotationLinkViaLine({
         quotation: initial,
         brandName: leadBrandName ?? 'ลูกค้า',
         lineIds: lineIdsForSend,
       })
+      if (r.ok && initial.lead_id) {
+        goToQuotationFlowWait(
+          initial.lead_id,
+          `${lineSendSuccessBannerMessage(r.mode)} — ขั้นถัดไป: ติดตามลูกค้าในแชท LINE`,
+        )
+        return
+      }
       setLineSendFeedback(
         r.ok
           ? {
@@ -271,6 +370,7 @@ export function QuotationEditorPage() {
       }
     } finally {
       setSaving(false)
+      setSavePhase('idle')
     }
   }
 
@@ -483,6 +583,7 @@ export function QuotationEditorPage() {
           ownerId={ownerId}
           packages={packages}
           saving={saving}
+          savingLabel={quotationSavingLabel(savePhase, sendLineAfterSave)}
           readOnly={readOnly}
           fromLeadSave={fromLeadSave}
           lineAutoSendAvailable={lineAutoSendAvailable}

@@ -500,6 +500,25 @@ export function canEditSalesQuotation(
   )
 }
 
+/** ส่ง Push ข้อความ LINE ให้ลูกค้า — สอดคล้อง send-line-push (privileged sales team) */
+export const LINE_PUSH_STAFF_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'dev',
+  'admin',
+  'account',
+  'sales',
+]
+
+export function canSendLinePushAsStaff(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.every((r) => r === 'client')) return false
+  return (
+    hasDbPrivilegedRole(roles) ||
+    roles.some((r) => LINE_PUSH_STAFF_ROLES.includes(r))
+  )
+}
+
 /** จัดการแพ็กเกจบริการ — ตรง packages_insert/update RLS */
 export const PACKAGES_MANAGE_ROLES: AppRole[] = ['sales', ...DB_PRIVILEGED_ROLES]
 
