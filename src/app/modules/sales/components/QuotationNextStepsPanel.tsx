@@ -12,7 +12,7 @@ export function QuotationNextStepsPanel({ quotation }: QuotationNextStepsPanelPr
   if (steps.length === 0) return null
 
   return (
-    <section className="card card--wide sales-next-steps" aria-label="ขั้นถัดไป">
+    <section className="card card--wide sales-next-steps no-print" aria-label="ขั้นถัดไป">
       <header className="sales-next-steps__head">
         <h2>ขั้นถัดไป</h2>
         <span className="muted">

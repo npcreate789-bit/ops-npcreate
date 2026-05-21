@@ -12,7 +12,7 @@ export function ProjectNextStepsPanel({ project }: ProjectNextStepsPanelProps) {
   if (steps.length === 0) return null
 
   return (
-    <section className="card card--wide projects-next-steps" aria-label="ขั้นถัดไป">
+    <section className="card card--wide projects-next-steps no-print" aria-label="ขั้นถัดไป">
       <header className="projects-next-steps__head">
         <h2>ขั้นถัดไป</h2>
         <span className="muted">

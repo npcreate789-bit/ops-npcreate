@@ -44,3 +44,25 @@ select {
 ::selection {
   background: rgba(110, 231, 255, 0.35);
 }
+
+/* ---------- Print: hide internal navigation everywhere ---------- */
+/* รักษาเฉพาะตัวเอกสาร PDF — ซ่อน sidebar / breadcrumb / next-steps / cta ทั่วทั้งแอป */
+@media print {
+  html,
+  body,
+  #root {
+    overflow: visible !important;
+    height: auto !important;
+    background: #fff !important;
+  }
+
+  .sidebar,
+  .breadcrumb,
+  .no-print,
+  .sales-next-steps,
+  .finance-next-steps,
+  .projects-next-steps,
+  .onboarding-next-steps {
+    display: none !important;
+  }
+}
