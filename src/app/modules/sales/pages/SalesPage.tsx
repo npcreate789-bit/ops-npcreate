@@ -12,6 +12,8 @@ import type { Quotation, QuotationStatus } from '../types'
 import { QuotationStatusBadge } from '../components/QuotationStatusBadge'
 import { SalesPipelineBar } from '../components/SalesPipelineBar'
 import { SalesRoleGuide } from '../components/SalesRoleGuide'
+import { EmptyState } from '../../../components/EmptyState'
+import { TableSkeleton } from '../../../components/TableSkeleton'
 import '../../crm/crm.css'
 import '../sales.css'
 
@@ -142,14 +144,33 @@ export function SalesPage() {
 
         <h2 className="crm-section-title">รายการใบเสนอราคา</h2>
         {error && <p className="crm-error">{error}</p>}
-        {loading && <p className="muted">กำลังโหลด...</p>}
+        {loading && (
+          <div className="crm-table-wrap" aria-hidden>
+            <TableSkeleton rows={5} columns={5} ariaLabel="กำลังโหลดใบเสนอราคา" />
+          </div>
+        )}
 
         {!loading && displayedRows.length === 0 && (
-          <p className="muted">
-            {statusFilter === 'all'
-              ? 'ยังไม่มีใบเสนอราคา — สร้างจาก Lead ใน CRM หรือกดปุ่มด้านบน'
-              : 'ไม่มีรายการในสถานะนี้'}
-          </p>
+          statusFilter === 'all' ? (
+            <EmptyState
+              icon="fileText"
+              title="ยังไม่มีใบเสนอราคา"
+              description="สร้างใบเสนอราคาจาก Lead ใน CRM เพื่อบันทึกข้อมูลและส่งให้ลูกค้าผ่านลิงก์ LINE"
+              action={
+                canCreate
+                  ? { label: '+ สร้างใบเสนอราคา', to: '/app/sales/quotations/new' }
+                  : undefined
+              }
+              secondary={showCrmLink ? { label: 'ไปที่ CRM', to: '/app/crm' } : undefined}
+            />
+          ) : (
+            <EmptyState
+              icon="fileText"
+              title="ไม่มีรายการในสถานะนี้"
+              description="ลองเลือกสถานะอื่น หรือดูใบเสนอราคาทั้งหมด"
+              secondary={{ label: 'ดูทั้งหมด', to: '/app/sales' }}
+            />
+          )
         )}
 
         {!loading && displayedRows.length > 0 && (

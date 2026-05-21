@@ -1,14 +1,38 @@
 import { Link } from 'react-router-dom'
 import type { Payment } from '../types'
-import { buildPaymentNextSteps } from '../pipeline'
+import { buildPaymentNextSteps, type FinanceNextStep } from '../pipeline'
 import { paymentStatusLabel } from '../constants'
 
 interface PaymentNextStepsPanelProps {
   payment: Payment
+  /** Lead id ที่ผูกผ่านใบเสนอราคา — render ปุ่ม "Lead ต้นทาง" */
+  leadId?: string | null
+  /** ชื่อแบรนด์จาก Lead — แสดงเป็น detail ของปุ่ม Lead */
+  leadBrandName?: string | null
 }
 
-export function PaymentNextStepsPanel({ payment }: PaymentNextStepsPanelProps) {
-  const steps = buildPaymentNextSteps(payment)
+export function PaymentNextStepsPanel({
+  payment,
+  leadId,
+  leadBrandName,
+}: PaymentNextStepsPanelProps) {
+  const base = buildPaymentNextSteps(payment)
+  const steps: FinanceNextStep[] = [...base]
+
+  if (leadId) {
+    const insertAt = base.findIndex((s) => s.path.startsWith('/app/sales/quotations'))
+    const leadStep: FinanceNextStep = {
+      label: 'Lead ต้นทาง',
+      path: `/app/crm/${leadId}`,
+      detail: leadBrandName ? `CRM · ${leadBrandName}` : 'CRM',
+    }
+    if (insertAt >= 0) {
+      steps.splice(insertAt + 1, 0, leadStep)
+    } else {
+      steps.unshift(leadStep)
+    }
+  }
+
   if (steps.length === 0) return null
 
   return (

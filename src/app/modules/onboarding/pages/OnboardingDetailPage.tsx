@@ -178,8 +178,18 @@ export function OnboardingDetailPage() {
 
   if (loading || !detail) {
     return (
-      <div className="page">
-        <p className="muted">{loading ? 'กำลังโหลด...' : 'ไม่พบลูกค้า'}</p>
+      <div className="page onboarding-detail-page">
+        <header className="page__header">
+          <Link to="/app/onboarding" className="crm-back">
+            ← กลับรายการ
+          </Link>
+          <h1>{loading ? 'กำลังโหลดลูกค้า…' : 'ไม่พบลูกค้า'}</h1>
+          <p className="muted">
+            {loading
+              ? 'โปรดรอสักครู่ — กำลังดึงข้อมูลรับบรีฟ'
+              : 'ตรวจสอบลิงก์ หรือกลับไปเลือกลูกค้าจากรายการ'}
+          </p>
+        </header>
       </div>
     )
   }

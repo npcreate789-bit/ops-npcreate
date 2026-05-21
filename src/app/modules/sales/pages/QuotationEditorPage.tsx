@@ -33,6 +33,7 @@ import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import { QuotationPublicLink } from '../components/QuotationPublicLink'
 import { QuotationNextStepsPanel } from '../components/QuotationNextStepsPanel'
 import { QuotationEditorHeader } from '../components/QuotationEditorHeader'
+import { usePageEntityLabel } from '../../../layout/PageHeadingContext'
 import { PaymentInstructionsPanel } from '../components/PaymentInstructionsPanel'
 import { cancelQuotationAfterAccept } from '../api/quotationCancel'
 import '../../crm/crm.css'
@@ -430,10 +431,26 @@ export function QuotationEditorPage() {
     }
   }
 
+  usePageEntityLabel(
+    isNew
+      ? 'สร้างใหม่'
+      : initial
+        ? `${initial.quotation_number || 'QT'}${leadBrandName ? ` · ${leadBrandName}` : ''}`
+        : null,
+  )
+
   if (loading) {
     return (
-      <div className="page">
-        <p className="muted">กำลังโหลด...</p>
+      <div className="page sales-page">
+        <QuotationEditorHeader
+          isNew={isNew}
+          quotationNumber={initial?.quotation_number}
+          status={initial?.status}
+          leadBrandName={leadBrandName}
+          leadId={effectiveLeadId || null}
+          backTo={leadIdParam ? `/app/crm/${leadIdParam}` : '/app/sales'}
+        />
+        <p className="muted">กำลังโหลดใบเสนอราคา — โปรดรอสักครู่</p>
       </div>
     )
   }

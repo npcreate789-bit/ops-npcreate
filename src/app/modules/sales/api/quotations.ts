@@ -29,6 +29,65 @@ export async function listQuotations(): Promise<Quotation[]> {
   })
 }
 
+/** ดึงใบเสนอราคาของลูกค้าใดเดียว — ใช้บนหน้า Customer 360 (รวมที่ยังเป็น lead) */
+export async function listQuotationsByCustomer(
+  customerId: string,
+  leadId?: string | null,
+): Promise<Quotation[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    const all = await mockSalesApi.listQuotations()
+    return all.filter(
+      (q) => q.customer_id === customerId || (leadId ? q.lead_id === leadId : false),
+    )
+  }
+
+  const orClause = leadId
+    ? `customer_id.eq.${customerId},lead_id.eq.${leadId}`
+    : `customer_id.eq.${customerId}`
+
+  const { data, error } = await supabase
+    .from('quotations')
+    .select('*, leads(brand_name)')
+    .or(orClause)
+    .order('updated_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>
+    const leads = r.leads as { brand_name: string } | null
+    return {
+      ...(r as unknown as Quotation),
+      lead_brand_name: leads?.brand_name ?? null,
+    }
+  })
+}
+
+/** ดึงใบเสนอราคาของ Lead ใดเดียว — ใช้บนหน้า Lead detail */
+export async function listQuotationsByLead(leadId: string): Promise<Quotation[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    const all = await mockSalesApi.listQuotations()
+    return all.filter((q) => q.lead_id === leadId)
+  }
+
+  const { data, error } = await supabase
+    .from('quotations')
+    .select('*, leads(brand_name)')
+    .eq('lead_id', leadId)
+    .order('updated_at', { ascending: false })
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((row) => {
+    const r = row as Record<string, unknown>
+    const leads = r.leads as { brand_name: string } | null
+    return {
+      ...(r as unknown as Quotation),
+      lead_brand_name: leads?.brand_name ?? null,
+    }
+  })
+}
+
 export async function getQuotation(id: string): Promise<Quotation | null> {
   if (!isSupabaseConfigured || !supabase) return mockSalesApi.getQuotation(id)
 

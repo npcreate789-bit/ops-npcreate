@@ -24,6 +24,8 @@ import { mergeAutoLeadStatus } from '../leadWorkflow'
 import { LeadEditorHeader } from '../components/LeadEditorHeader'
 import { LeadLineChatPanel } from '../components/LeadLineChatPanel'
 import { LeadPreferredChannelPanel } from '../components/LeadPreferredChannelPanel'
+import { LeadQuotationsSection } from '../components/LeadQuotationsSection'
+import { usePageEntityLabel } from '../../../layout/PageHeadingContext'
 import {
   LeadForm,
   formValuesToPayload,
@@ -280,6 +282,8 @@ export function LeadEditorPage() {
       ? initial.brand_name.trim()
       : null
 
+  usePageEntityLabel(isNew ? 'รายการใหม่' : initial ? leadDisplayName(initial) : null)
+
   return (
     <div className="page crm-page">
       <LeadEditorHeader
@@ -335,6 +339,16 @@ export function LeadEditorPage() {
             />
           )}
       </div>
+
+      {!isNew && id && initial ? (
+        <LeadQuotationsSection
+          leadId={id}
+          canCreate={showQuotationLink && !readOnly}
+          onCreateRequest={() =>
+            void goToCreateQuotation(id, initial.status, null)
+          }
+        />
+      ) : null}
 
       <section className="card card--wide crm-lead-form-card">
         <header className="crm-lead-form-card__head">

@@ -25,6 +25,10 @@ import { getCustomer360 } from '../api/customers'
 import { listProjectsForCustomer } from '../../projects/api/projects'
 import { projectStatusLabel } from '../../projects/constants'
 import type { Project } from '../../projects/types'
+import { listQuotationsByCustomer } from '../../sales/api/quotations'
+import { QuotationStatusBadge } from '../../sales/components/QuotationStatusBadge'
+import type { Quotation } from '../../sales/types'
+import { usePageEntityLabel } from '../../../layout/PageHeadingContext'
 import { customerStatusLabel } from '../constants'
 import {
   clientWorkspaceUrl,
@@ -58,6 +62,7 @@ export function Customer360Page() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [customerProjects, setCustomerProjects] = useState<Project[]>([])
+  const [customerQuotations, setCustomerQuotations] = useState<Quotation[]>([])
   const showProjects = canShowCustomer360Link(roles, '/app/projects') || !configured
   const showChat = canLinkCustomerChat(roles) || !configured
   const primaryProject = useMemo(
@@ -119,6 +124,27 @@ export function Customer360Page() {
       cancelled = true
     }
   }, [id, showProjects])
+
+  useEffect(() => {
+    const customerId = data?.customer?.id
+    if (!customerId) {
+      setCustomerQuotations([])
+      return
+    }
+    let cancelled = false
+    listQuotationsByCustomer(customerId, data?.customer?.lead_id ?? null)
+      .then((rows) => {
+        if (!cancelled) setCustomerQuotations(rows.slice(0, 5))
+      })
+      .catch(() => {
+        if (!cancelled) setCustomerQuotations([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [data?.customer?.id, data?.customer?.lead_id])
+
+  usePageEntityLabel(data?.customer?.brand_name ?? null)
 
   function exportSummary() {
     if (!data) return
@@ -346,6 +372,57 @@ export function Customer360Page() {
               )}
             </section>
           )}
+
+          <section className="card card--wide">
+            <header className="crm-lead-form-card__head">
+              <div>
+                <h2 className="crm-section-title">ใบเสนอราคาล่าสุด</h2>
+                <p className="crm-lead-form-card__hint">
+                  แสดง 5 รายการล่าสุด — เปิดดูรายละเอียดเต็มในหน้าใบเสนอราคา
+                </p>
+              </div>
+              <Link to="/app/sales" className="crm-btn crm-btn--ghost">
+                ดูทั้งหมด
+              </Link>
+            </header>
+            {customerQuotations.length === 0 ? (
+              <p className="muted">
+                ยังไม่มีใบเสนอราคาผูกกับลูกค้านี้ — สามารถสร้างจากหน้า{' '}
+                <Link to="/app/sales">ขาย</Link> ได้
+              </p>
+            ) : (
+              <ul className="crm-lead-quotations__list">
+                {customerQuotations.map((q) => (
+                  <li key={q.id} className="crm-lead-quotations__item">
+                    <div className="crm-lead-quotations__main">
+                      <Link
+                        to={`/app/sales/quotations/${q.id}`}
+                        className="crm-inline-link"
+                      >
+                        {q.quotation_number || `ฉบับ ${q.id.slice(0, 8)}`}
+                      </Link>
+                      <p className="muted">
+                        {q.sent_at
+                          ? new Date(q.sent_at).toLocaleDateString('th-TH', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })
+                          : '—'}{' '}
+                        ·{' '}
+                        {new Intl.NumberFormat('th-TH', {
+                          style: 'currency',
+                          currency: 'THB',
+                          maximumFractionDigits: 0,
+                        }).format(q.total ?? 0)}
+                      </p>
+                    </div>
+                    <QuotationStatusBadge status={q.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           <section className="card-grid">
             {showFinance && metricKeys.includes('finance') && (

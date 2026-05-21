@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { canOpenHelpNavLink } from '../modules/help/access'
-import { resolvePageMeta } from '../modules/quick-access/pathMeta'
+import { resolveBreadcrumbChain, resolvePageMeta } from '../modules/quick-access/pathMeta'
+import { usePageHeading } from '../layout/PageHeadingContext'
 import './breadcrumb.css'
 
 export function BreadcrumbNav() {
@@ -9,20 +10,17 @@ export function BreadcrumbNav() {
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
   const meta = resolvePageMeta(pathname)
+  const heading = usePageHeading()
 
   if (pathname === '/app' || pathname === '/app/') {
     return null
   }
 
-  const parentPath = meta.path.replace(/\/[^/]+$/, '')
-  const showParent =
-    parentPath !== meta.path &&
-    parentPath.startsWith('/app/') &&
-    parentPath.length > '/app'.length
-
+  const chain = resolveBreadcrumbChain(pathname)
   const homeLinkable = canOpenHelpNavLink(roles, '/app', configured)
-  const parentLinkable =
-    showParent && canOpenHelpNavLink(roles, parentPath, configured)
+  const currentLabel = heading.entityLabel
+    ? `${meta.title}: ${heading.entityLabel}`
+    : meta.title
 
   return (
     <nav className="breadcrumb" aria-label="ตำแหน่งปัจจุบัน">
@@ -33,25 +31,31 @@ export function BreadcrumbNav() {
       ) : (
         <span className="breadcrumb__muted">หน้าหลัก</span>
       )}
+      {chain.map((crumb) => {
+        const linkable =
+          crumb.linkable && canOpenHelpNavLink(roles, crumb.path, configured)
+        return (
+          <span key={crumb.path} className="breadcrumb__chain">
+            <span className="breadcrumb__sep" aria-hidden>
+              /
+            </span>
+            {linkable ? (
+              <Link to={crumb.path} className="breadcrumb__link">
+                {crumb.label}
+              </Link>
+            ) : (
+              <span className="breadcrumb__muted" title="ยังไม่มีหน้ารายการกลาง">
+                {crumb.label}
+              </span>
+            )}
+          </span>
+        )
+      })}
       <span className="breadcrumb__sep" aria-hidden>
         /
       </span>
-      {showParent && (
-        <>
-          {parentLinkable ? (
-            <Link to={parentPath} className="breadcrumb__link">
-              {resolvePageMeta(parentPath).title}
-            </Link>
-          ) : (
-            <span className="breadcrumb__muted">{resolvePageMeta(parentPath).title}</span>
-          )}
-          <span className="breadcrumb__sep" aria-hidden>
-            /
-          </span>
-        </>
-      )}
       <span className="breadcrumb__current" aria-current="page">
-        {meta.title}
+        {currentLabel}
       </span>
     </nav>
   )

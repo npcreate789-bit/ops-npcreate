@@ -9,7 +9,6 @@ import {
   WORK_HUB_VIEW_ROLES,
   hasNavFullAccess,
   STAFF_ASSISTANT_ROLES,
-  TIMELINE_VIEW_ROLES,
   WEEKLY_REPORT_VIEW_ROLES,
 } from '../../shared/auth/access'
 import type { AppRole } from '../../shared/types/roles'
@@ -313,18 +312,8 @@ export const NAV_ITEMS: NavItem[] = [
     phase5: true,
     ready: true,
   },
-  {
-    path: '/app/timeline',
-    label: 'Timeline',
-    labelTh: 'ไทม์ไลน์งาน',
-    icon: '⏱',
-    iconKey: 'activity',
-    roles: [...TIMELINE_VIEW_ROLES],
-    phase: 18,
-    phase6: true,
-    ready: true,
-    sidebar: false,
-  },
+  // หมายเหตุ: route /app/timeline ปัจจุบัน redirect ไป /app/work — ไม่ลงทะเบียนใน NAV เพื่อกันสับสน
+  // (อ้างอิงต่อใน customerLinks เก่าได้ผ่าน path constant)
   {
     path: '/app/settings',
     label: 'Settings',

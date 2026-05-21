@@ -21,6 +21,8 @@ import { FinanceRoleGuide } from '../components/FinanceRoleGuide'
 import { BankStatementMatchSection } from '../components/BankStatementMatchSection'
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge'
 import { serviceTypeLabel } from '../constants'
+import { EmptyState } from '../../../components/EmptyState'
+import { TableSkeleton } from '../../../components/TableSkeleton'
 import { isPaymentOverdue } from '../pipeline'
 import type { FinanceSummary, Payment, PaymentStatus } from '../types'
 import '../../crm/crm.css'
@@ -221,14 +223,33 @@ export function FinancePage() {
       <section className="card card--wide">
         <h2 className="crm-section-title">รายการชำระเงิน</h2>
         {error && <p className="crm-error">{error}</p>}
-        {loading && <p className="muted">กำลังโหลด...</p>}
+        {loading && (
+          <div className="crm-table-wrap" aria-hidden>
+            <TableSkeleton rows={5} columns={6} ariaLabel="กำลังโหลดรายการชำระเงิน" />
+          </div>
+        )}
 
         {!loading && displayedRows.length === 0 && (
-          <p className="muted">
-            {statusFilter === 'all'
-              ? 'ยังไม่มีรายการ — สร้างจาก Sales (ใบเสนอราคารอชำระ) หรือบันทึกชำระใหม่'
-              : 'ไม่มีรายการในสถานะนี้'}
-          </p>
+          statusFilter === 'all' ? (
+            <EmptyState
+              icon="wallet"
+              title="ยังไม่มีรายการชำระเงิน"
+              description="บันทึกการชำระจะเกิดขึ้นเมื่อลูกค้ายืนยันใบเสนอราคาแล้ว — เริ่มจาก Sales หรือบันทึกชำระใหม่"
+              action={
+                canManage
+                  ? { label: '+ บันทึกชำระใหม่', to: '/app/finance/payments/new' }
+                  : undefined
+              }
+              secondary={showSalesLink ? { label: 'ไปที่ Sales', to: '/app/sales' } : undefined}
+            />
+          ) : (
+            <EmptyState
+              icon="wallet"
+              title="ไม่มีรายการในสถานะนี้"
+              description="ลองเลือกสถานะอื่นเพื่อดูรายการที่เหลือ"
+              secondary={{ label: 'ดูทั้งหมด', to: '/app/finance' }}
+            />
+          )
         )}
 
         {!loading && displayedRows.length > 0 && (

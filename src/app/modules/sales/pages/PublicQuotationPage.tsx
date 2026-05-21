@@ -203,9 +203,20 @@ export function PublicQuotationPage() {
                 <p className="public-qt-card__lead" style={{ marginTop: '0.75rem' }}>
                   ขอบคุณที่ชำระเงิน — ทีมงานจะติดต่อขั้นตอนถัดไป (รับบรีฟ / เริ่มงาน) ผ่าน LINE หรือช่องทางที่คุณใช้ติดต่อเรา
                 </p>
-                <Link to="/contact" className="crm-btn" style={{ marginTop: '1rem' }}>
-                  ติดต่อทีมงาน
-                </Link>
+                <div
+                  className="public-qt-banner__actions"
+                  style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginTop: '1rem' }}
+                >
+                  <Link to="/client/login" className="crm-btn crm-btn--primary">
+                    เข้าพื้นที่ลูกค้า
+                  </Link>
+                  <Link to="/contact" className="crm-btn">
+                    ติดต่อทีมงาน
+                  </Link>
+                </div>
+                <p className="muted" style={{ marginTop: '0.55rem', fontSize: '0.78rem' }}>
+                  หากยังไม่ได้รับบัญชีพื้นที่ลูกค้า ทีมงานจะส่งรหัสเข้าใช้งานทาง LINE หลังเปิดใช้งานสัญญา
+                </p>
               </section>
             ) : data.can_accept ? (
               <section className="public-qt-card public-qt-card--accept">

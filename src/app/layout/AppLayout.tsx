@@ -17,6 +17,7 @@ import { Sidebar } from './Sidebar'
 import './AppLayout.css'
 
 import { SidebarLayoutProvider } from './SidebarLayoutContext'
+import { PageHeadingProvider } from './PageHeadingContext'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
@@ -34,28 +35,32 @@ export function AppLayout() {
 
   if (clientPortalOnly) {
     return (
-      <div className="client-portal-shell">
-        <ClientPortalHeader />
-        <main className="client-portal-shell__main">
-          <Outlet />
-        </main>
-      </div>
+      <PageHeadingProvider>
+        <div className="client-portal-shell">
+          <ClientPortalHeader />
+          <main className="client-portal-shell__main">
+            <Outlet />
+          </main>
+        </div>
+      </PageHeadingProvider>
     )
   }
 
   return (
     <NotificationRealtimeProvider userId={userId} roles={roles}>
     <SidebarLayoutProvider>
-      <div className="app-shell">
-        {trackHistory && <PageHistoryTracker userId={userId} />}
-        <Sidebar onOpenSearch={paletteEnabled ? openPalette : undefined} />
-        <main className="app-main">
-          <BreadcrumbNav />
-          <Outlet />
-        </main>
-        <CommandPalette open={open} onClose={close} />
-        <StaffAlertToasts userId={userId} roles={roles} />
-      </div>
+      <PageHeadingProvider>
+        <div className="app-shell">
+          {trackHistory && <PageHistoryTracker userId={userId} />}
+          <Sidebar onOpenSearch={paletteEnabled ? openPalette : undefined} />
+          <main className="app-main">
+            <BreadcrumbNav />
+            <Outlet />
+          </main>
+          <CommandPalette open={open} onClose={close} />
+          <StaffAlertToasts userId={userId} roles={roles} />
+        </div>
+      </PageHeadingProvider>
     </SidebarLayoutProvider>
     </NotificationRealtimeProvider>
   )

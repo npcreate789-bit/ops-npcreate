@@ -14,6 +14,8 @@ import {
 import { listCustomers } from '../api/customers'
 import { CustomersBriefFilterBar } from '../components/CustomersBriefFilterBar'
 import { CustomersRoleGuide } from '../components/CustomersRoleGuide'
+import { EmptyState } from '../../../components/EmptyState'
+import { TableSkeleton } from '../../../components/TableSkeleton'
 import { CUSTOMER_STATUS_OPTIONS, customerStatusLabel } from '../constants'
 import { clientWorkspaceUrl } from '../customerLinks'
 import {
@@ -254,14 +256,28 @@ export function CustomersListPage() {
         </div>
 
         {error && <p className="crm-error">{error}</p>}
-        {loading && <p className="muted">กำลังโหลด...</p>}
+        {loading && (
+          <div className="crm-table-wrap" aria-hidden>
+            <TableSkeleton rows={5} columns={6} ariaLabel="กำลังโหลดรายการลูกค้า" />
+          </div>
+        )}
 
         {!loading && displayedRows.length === 0 && (
-          <p className="muted">
-            {filters.search.trim() || filters.status || briefFilter !== 'all'
-              ? 'ไม่พบลูกค้าที่ตรงกับตัวกรอง'
-              : 'ยังไม่มีลูกค้าในระบบ — ลูกค้าใหม่จะปรากฏหลัง Finance ยืนยันชำระ'}
-          </p>
+          filters.search.trim() || filters.status || briefFilter !== 'all' ? (
+            <EmptyState
+              icon="users"
+              title="ไม่พบลูกค้าที่ตรงกับตัวกรอง"
+              description="ลองล้างตัวกรองหรือเปลี่ยนคำค้นหา"
+              secondary={{ label: 'ดูทั้งหมด', to: '/app/customers' }}
+            />
+          ) : (
+            <EmptyState
+              icon="users"
+              title="ยังไม่มีลูกค้าในระบบ"
+              description="ลูกค้าใหม่จะปรากฏที่นี่หลัง Finance ยืนยันการชำระ — ติดตามคิวรอชำระได้ที่ Finance"
+              secondary={showFinance ? { label: 'ไปที่การเงิน', to: '/app/finance' } : undefined}
+            />
+          )
         )}
 
         {!loading && displayedRows.length > 0 && (

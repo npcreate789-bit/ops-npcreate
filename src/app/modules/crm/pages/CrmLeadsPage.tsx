@@ -17,6 +17,8 @@ import { SalesSummary } from '../components/SalesSummary'
 import { CrmPipelineBar } from '../components/CrmPipelineBar'
 import { CrmRoleGuide } from '../components/CrmRoleGuide'
 import { leadDisplayName } from '../leadDisplay'
+import { EmptyState } from '../../../components/EmptyState'
+import { TableSkeleton } from '../../../components/TableSkeleton'
 import '../../tasks/tasks.css'
 import '../../phase2/phase2.css'
 import '../crm.css'
@@ -213,14 +215,44 @@ export function CrmLeadsPage() {
         />
 
         {error && <p className="crm-error">{error}</p>}
-        {loading && <p className="muted">กำลังโหลด...</p>}
+        {loading && (
+          <div className="crm-table-wrap" aria-hidden>
+            <TableSkeleton rows={6} columns={5} ariaLabel="กำลังโหลดรายการ Lead" />
+          </div>
+        )}
 
         {!loading && !error && displayedLeads.length === 0 && (
-          <p className="muted">
-            {dueOnly
-              ? 'ไม่มี Lead ถึงเวลาติดตามในชุดที่กรอง'
-              : 'ยังไม่มี Lead — กดเพิ่ม Lead เพื่อเริ่มต้น'}
-          </p>
+          dueOnly ? (
+            <EmptyState
+              icon="bell"
+              title="ไม่มี Lead ถึงเวลาติดตาม"
+              description="ปลดตัวกรอง “เฉพาะที่ถึงเวลาติดตาม” เพื่อดู Lead ทั้งหมด หรือกดเพิ่มลูกค้าใหม่"
+              action={
+                canCreate
+                  ? { label: '+ เพิ่ม Lead', to: '/app/crm/new' }
+                  : undefined
+              }
+              secondary={{ label: 'ดูรายการทั้งหมด', to: '/app/crm' }}
+            />
+          ) : (
+            <EmptyState
+              icon="target"
+              title="ยังไม่มี Lead ในระบบ"
+              description={
+                canCreate
+                  ? 'เริ่มต้นด้วยการบันทึก Lead ใหม่ที่ทักมาทาง LINE/แชท แล้วจัดการสถานะตามขั้นตอน'
+                  : 'รอทีม Sales บันทึก Lead เข้ามา — คุณยังไม่มีสิทธิ์สร้าง Lead เอง'
+              }
+              action={
+                canCreate
+                  ? { label: '+ เพิ่ม Lead', to: '/app/crm/new' }
+                  : undefined
+              }
+              secondary={
+                showWorkLink ? { label: 'งานของฉัน', to: '/app/work' } : undefined
+              }
+            />
+          )
         )}
 
         {!loading && displayedLeads.length > 0 && (

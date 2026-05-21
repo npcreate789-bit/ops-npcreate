@@ -26,6 +26,7 @@ import { PaymentDocumentsSection } from '../components/PaymentDocumentsSection'
 import { PaymentNextStepsPanel } from '../components/PaymentNextStepsPanel'
 import { PaymentSlipPreview } from '../components/PaymentSlipPreview'
 import { PaymentSlipVerificationPanel } from '../components/PaymentSlipVerificationPanel'
+import { usePageEntityLabel } from '../../../layout/PageHeadingContext'
 import '../../crm/crm.css'
 import '../../sales/sales.css'
 import '../finance.css'
@@ -72,6 +73,8 @@ export function PaymentEditorPage() {
   const [preset, setPreset] = useState<CustomerOption | null>(null)
   const [quotationTotal, setQuotationTotal] = useState<number | null>(null)
   const [quotationNumber, setQuotationNumber] = useState<string | null>(null)
+  const [quotationLeadId, setQuotationLeadId] = useState<string | null>(null)
+  const [quotationLeadBrand, setQuotationLeadBrand] = useState<string | null>(null)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectNote, setRejectNote] = useState('')
 
@@ -98,6 +101,8 @@ export function PaymentEditorPage() {
                 if (!cancelled && q) {
                   setQuotationTotal(q.total)
                   setQuotationNumber(q.quotation_number)
+                  setQuotationLeadId(q.lead_id ?? null)
+                  setQuotationLeadBrand(q.lead_brand_name ?? null)
                 }
               }
             }
@@ -193,10 +198,24 @@ export function PaymentEditorPage() {
     }
   }
 
+  usePageEntityLabel(
+    isNew
+      ? 'รายการใหม่'
+      : initial
+        ? `${initial.customer_brand_name ?? 'ลูกค้า'}${quotationNumber ? ` · ${quotationNumber}` : ''}`
+        : null,
+  )
+
   if (loading) {
     return (
-      <div className="page">
-        <p className="muted">กำลังโหลด...</p>
+      <div className="page finance-page">
+        <header className="page__header no-print">
+          <Link to="/app/finance" className="crm-back">
+            ← กลับการเงิน
+          </Link>
+          <h1>{isNew ? 'บันทึกการชำระเงิน' : 'รายการชำระเงิน'}</h1>
+          <p className="muted">กำลังโหลดข้อมูลการชำระเงิน — โปรดรอสักครู่</p>
+        </header>
       </div>
     )
   }
@@ -252,7 +271,13 @@ export function PaymentEditorPage() {
         </p>
       )}
 
-      {!isNew && initial && <PaymentNextStepsPanel payment={initial} />}
+      {!isNew && initial && (
+        <PaymentNextStepsPanel
+          payment={initial}
+          leadId={quotationLeadId}
+          leadBrandName={quotationLeadBrand}
+        />
+      )}
 
       <section className="card card--wide no-print">
         <PaymentForm
@@ -270,9 +295,15 @@ export function PaymentEditorPage() {
       {!isNew && initial && (
         <>
           {initial.status !== 'paid' && canConfirm && (
-            <section className="card card--wide no-print">
+            <section className="card card--wide no-print finance-confirm-bar">
+              <div className="finance-confirm-bar__main">
+                <strong className="finance-confirm-bar__title">พร้อมยืนยันการชำระ?</strong>
+                <span className="muted">
+                  ตรวจ amount, paid_at และบัญชีปลายทางจากสลิป — ยืนยันแล้วจะเปิดใช้งานลูกค้าและส่ง LINE
+                </span>
+              </div>
               {initial.slip_path && initial.verification_status === 'verifying' ? (
-                <>
+                <div className="finance-confirm-bar__actions">
                   <button
                     type="button"
                     className="crm-btn crm-btn--primary"
@@ -281,19 +312,21 @@ export function PaymentEditorPage() {
                   >
                     รอผลตรวจสลิปอัตโนมัติ…
                   </button>
-                  <p className="muted" style={{ marginTop: '0.5rem' }}>
-                    ระบบกำลังตรวจสลิป — ปุ่มยืนยันจะเปิดเมื่อ OCR เสร็จ หรือกด “สลิปไม่ผ่าน” เพื่อขออัปโหลดใหม่
-                  </p>
-                </>
+                  <span className="muted" style={{ fontSize: '0.78rem' }}>
+                    ปุ่มยืนยันจะเปิดเมื่อ OCR เสร็จ
+                  </span>
+                </div>
               ) : (
-                <button
-                  type="button"
-                  className="crm-btn crm-btn--primary"
-                  disabled={saving}
-                  onClick={() => void handleConfirm()}
-                >
-                  ยืนยันชำระเงิน (เปิดใช้งานลูกค้า)
-                </button>
+                <div className="finance-confirm-bar__actions">
+                  <button
+                    type="button"
+                    className="crm-btn crm-btn--primary"
+                    disabled={saving}
+                    onClick={() => void handleConfirm()}
+                  >
+                    ยืนยันชำระเงิน (เปิดใช้งานลูกค้า)
+                  </button>
+                </div>
               )}
             </section>
           )}
