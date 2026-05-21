@@ -14,12 +14,43 @@ import {
 } from '../../shared/auth/access'
 import type { AppRole } from '../../shared/types/roles'
 import { allowDevAuthBypass } from '../../shared/supabase/runtime'
+import type { NavIconKey } from '../layout/NavIcons'
+
+export type NavGroupId =
+  | 'daily'
+  | 'sales'
+  | 'delivery'
+  | 'retention'
+  | 'analytics'
+  | 'tools'
+  | 'system'
+
+export interface NavGroup {
+  id: NavGroupId
+  labelTh: string
+  label: string
+}
+
+export const NAV_GROUPS: readonly NavGroup[] = [
+  { id: 'daily', labelTh: 'ทำงานวันนี้', label: 'Daily' },
+  { id: 'sales', labelTh: 'ขาย → การเงิน', label: 'Sales → Finance' },
+  { id: 'delivery', labelTh: 'ส่งมอบงาน', label: 'Delivery' },
+  { id: 'retention', labelTh: 'ดูแลต่อเนื่อง', label: 'Retention' },
+  { id: 'analytics', labelTh: 'รายงาน / วิเคราะห์', label: 'Analytics' },
+  { id: 'tools', labelTh: 'เครื่องมือ / Admin', label: 'Tools' },
+  { id: 'system', labelTh: 'ระบบ', label: 'System' },
+] as const
 
 export interface NavItem {
   path: string
   label: string
   labelTh: string
+  /** Legacy unicode/emoji glyph (fallback ถ้าไม่ได้ตั้ง iconKey) */
   icon: string
+  /** Modern SVG icon name — ดึงจาก `NavIcons` */
+  iconKey?: NavIconKey
+  /** หมวดเมนูใน sidebar (sidebar จะ insert header ระหว่างกลุ่ม) */
+  group?: NavGroupId
   /** empty = all authenticated roles */
   roles: AppRole[]
   /** Sprint when module goes live */
@@ -69,6 +100,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Home',
     labelTh: 'หน้าหลัก',
     icon: '◈',
+    iconKey: 'home',
+    group: 'daily',
     roles: [],
     phase: 1,
     ready: true,
@@ -78,6 +111,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Start',
     labelTh: 'เริ่มใช้งาน',
     icon: '✦',
+    iconKey: 'sparkles',
     roles: [],
     phase: 33,
     phase17: true,
@@ -89,6 +123,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'CRM / Leads',
     labelTh: 'ลูกค้าเป้าหมาย',
     icon: '◎',
+    iconKey: 'target',
+    group: 'sales',
     roles: ['ceo', 'operations', 'sales', 'dev'],
     phase: 2,
     ready: true,
@@ -98,6 +134,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Sales & Quotation',
     labelTh: 'ขาย / ใบเสนอราคา',
     icon: '◆',
+    iconKey: 'fileText',
+    group: 'sales',
     roles: ['ceo', 'operations', 'sales', 'admin', 'dev'],
     phase: 3,
     ready: true,
@@ -107,6 +145,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Finance',
     labelTh: 'การเงิน',
     icon: '₿',
+    iconKey: 'wallet',
+    group: 'sales',
     roles: [...FINANCE_VIEW_ROLES],
     phase: 4,
     ready: true,
@@ -116,6 +156,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Brand Onboarding',
     labelTh: 'รับบรีฟลูกค้า',
     icon: '▣',
+    iconKey: 'clipboardList',
+    group: 'delivery',
     roles: ['ceo', 'operations', 'account', 'dev'],
     phase: 5,
     ready: true,
@@ -125,6 +167,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Projects',
     labelTh: 'โปรเจกต์',
     icon: '◫',
+    iconKey: 'layers',
+    group: 'delivery',
     roles: ['ceo', 'operations', 'account', 'sales', 'ads', 'senior_ads', 'content', 'dev'],
     phase: 5,
     ready: true,
@@ -134,6 +178,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Chat',
     labelTh: 'แชท',
     icon: '◇',
+    iconKey: 'chat',
+    group: 'daily',
     roles: ['ceo', 'operations', 'account', 'sales', 'ads', 'senior_ads', 'content', 'dev'],
     phase: 5,
     ready: true,
@@ -143,6 +189,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Ads Operations',
     labelTh: 'งานยิงแอด',
     icon: '▲',
+    iconKey: 'megaphone',
+    group: 'delivery',
     roles: ['ceo', 'operations', 'ads', 'senior_ads', 'account', 'dev'],
     phase: 6,
     ready: true,
@@ -152,6 +200,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Tasks',
     labelTh: 'งานภายใน',
     icon: '☑',
+    iconKey: 'checkSquare',
+    group: 'daily',
     roles: [...TASKS_VIEW_ROLES],
     phase: 7,
     ready: true,
@@ -161,6 +211,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Executive Dashboard',
     labelTh: 'ภาพรวมผู้บริหาร',
     icon: '◉',
+    iconKey: 'dashboard',
+    group: 'analytics',
     roles: ['ceo', 'operations', 'dev', 'admin'],
     phase: 8,
     ready: true,
@@ -170,6 +222,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'User Admin',
     labelTh: 'จัดการผู้ใช้',
     icon: '⚙',
+    iconKey: 'shield',
+    group: 'tools',
     roles: ['ceo', 'operations', 'dev'],
     phase: 9,
     phase2: true,
@@ -180,6 +234,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Content Ops',
     labelTh: 'งานคอนเทนต์',
     icon: '▤',
+    iconKey: 'film',
+    group: 'delivery',
     roles: ['ceo', 'operations', 'content', 'account', 'dev'],
     phase: 10,
     phase2: true,
@@ -190,6 +246,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Client Workspace',
     labelTh: 'พื้นที่ลูกค้า',
     icon: '▢',
+    iconKey: 'briefcase',
+    group: 'retention',
     roles: ['client', 'ceo', 'operations', 'dev', 'admin', 'account'],
     phase: 11,
     phase2: true,
@@ -200,6 +258,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Notifications',
     labelTh: 'แจ้งเตือน',
     icon: '◔',
+    iconKey: 'bell',
+    group: 'daily',
     roles: ['ceo', 'operations', 'sales', 'account', 'ads', 'senior_ads', 'content', 'admin', 'dev'],
     phase: 12,
     phase3: true,
@@ -210,6 +270,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Creators',
     labelTh: 'ครีเอเตอร์',
     icon: '★',
+    iconKey: 'star',
+    group: 'delivery',
     roles: ['ceo', 'operations', 'content', 'account', 'dev'],
     phase: 13,
     phase3: true,
@@ -220,6 +282,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Renewals',
     labelTh: 'ต่อสัญญา',
     icon: '↻',
+    iconKey: 'refresh',
+    group: 'retention',
     roles: ['ceo', 'operations', 'account', 'sales', 'admin', 'dev'],
     phase: 14,
     phase4: true,
@@ -230,6 +294,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Reports',
     labelTh: 'รายงานขั้นสูง',
     icon: '▦',
+    iconKey: 'barChart',
+    group: 'analytics',
     roles: ['ceo', 'operations', 'account', 'admin', 'dev'],
     phase: 15,
     phase4: true,
@@ -240,6 +306,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'AI Assistant',
     labelTh: 'ผู้ช่วย AI',
     icon: '✦',
+    iconKey: 'sparkles',
+    group: 'tools',
     roles: [...STAFF_ASSISTANT_ROLES],
     phase: 16,
     phase5: true,
@@ -250,6 +318,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Timeline',
     labelTh: 'ไทม์ไลน์งาน',
     icon: '⏱',
+    iconKey: 'activity',
     roles: [...TIMELINE_VIEW_ROLES],
     phase: 18,
     phase6: true,
@@ -261,6 +330,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Settings',
     labelTh: 'ตั้งค่า',
     icon: '⚙',
+    iconKey: 'settings',
+    group: 'system',
     roles: [],
     phase: 19,
     phase6: true,
@@ -271,6 +342,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Activity',
     labelTh: 'บันทึกกิจกรรม',
     icon: '◷',
+    iconKey: 'activity',
+    group: 'analytics',
     roles: [...ACTIVITY_LOG_VIEW_ROLES, 'dev'],
     phase: 20,
     phase7: true,
@@ -281,6 +354,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Weekly',
     labelTh: 'สรุปรายสัปดาห์',
     icon: '▥',
+    iconKey: 'calendar',
+    group: 'analytics',
     roles: [...WEEKLY_REPORT_VIEW_ROLES],
     phase: 21,
     phase7: true,
@@ -291,6 +366,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Customers 360',
     labelTh: 'ลูกค้า 360',
     icon: '◎',
+    iconKey: 'users',
+    group: 'delivery',
     roles: [...CUSTOMER_360_VIEW_ROLES],
     phase: 22,
     phase8: true,
@@ -302,6 +379,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Search',
     labelTh: 'ค้นหา',
     icon: '⌕',
+    iconKey: 'search',
     roles: [...GLOBAL_SEARCH_VIEW_ROLES],
     phase: 23,
     phase9: true,
@@ -313,6 +391,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Ops Center',
     labelTh: 'ศูนย์ Ops',
     icon: '⚙',
+    iconKey: 'cpu',
+    group: 'tools',
     roles: [...OPS_CENTER_VIEW_ROLES],
     phase: 26,
     phase11: true,
@@ -323,6 +403,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Work Hub',
     labelTh: 'งานของฉัน',
     icon: '◫',
+    iconKey: 'inbox',
+    group: 'daily',
     roles: [...WORK_HUB_VIEW_ROLES],
     phase: 27,
     phase13: true,
@@ -333,6 +415,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Help',
     labelTh: 'ช่วยเหลือ',
     icon: '?',
+    iconKey: 'help',
+    group: 'system',
     roles: [],
     phase: 28,
     phase14: true,
@@ -343,6 +427,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Keyboard',
     labelTh: 'คีย์ลัด',
     icon: '⌨',
+    iconKey: 'sparkles',
     roles: [],
     phase: 31,
     phase15: true,
@@ -354,6 +439,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Layout',
     labelTh: 'การจัดวาง',
     icon: '◧',
+    iconKey: 'dashboard',
     roles: [],
     phase: 32,
     phase16: true,
@@ -365,6 +451,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'About',
     labelTh: 'เกี่ยวกับ',
     icon: 'ℹ',
+    iconKey: 'help',
     roles: [],
     phase: 34,
     phase18: true,
@@ -376,6 +463,8 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Status',
     labelTh: 'สถานะ',
     icon: '●',
+    iconKey: 'signal',
+    group: 'system',
     roles: [...SYSTEM_STATUS_VIEW_ROLES],
     phase: 35,
     phase19: true,
@@ -484,6 +573,29 @@ export function navItemsForRoles(roles: AppRole[]): NavItem[] {
 /** เมนูในแถบข้าง — ไม่รวมโมดูลที่ยุบเข้าหน้าอื่น */
 export function sidebarNavItemsForRoles(roles: AppRole[]): NavItem[] {
   return navItemsForRoles(roles).filter((item) => item.sidebar !== false)
+}
+
+export interface NavGroupSection {
+  group: NavGroup
+  items: NavItem[]
+}
+
+/**
+ * เมนู sidebar จัดเป็นกลุ่มตาม `NAV_GROUPS` — กลุ่มไหนไม่มี item ที่ role เข้าถึงได้
+ * จะไม่ออกมาในผลลัพธ์ ส่วน item ที่ไม่ระบุ `group` จะถูกจัดไป group "system" เพื่อไม่หาย
+ */
+export function groupedSidebarNavItemsForRoles(roles: AppRole[]): NavGroupSection[] {
+  const items = sidebarNavItemsForRoles(roles)
+  const buckets = new Map<NavGroupId, NavItem[]>()
+  for (const item of items) {
+    const groupId = (item.group ?? 'system') as NavGroupId
+    const existing = buckets.get(groupId)
+    if (existing) existing.push(item)
+    else buckets.set(groupId, [item])
+  }
+  return NAV_GROUPS
+    .map((group) => ({ group, items: buckets.get(group.id) ?? [] }))
+    .filter((section) => section.items.length > 0)
 }
 
 /** ตรวจว่า role ปัจจุบันเข้า path โมดูลได้ (รวม sub-routes) */

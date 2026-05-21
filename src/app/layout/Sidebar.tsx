@@ -2,10 +2,14 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../shared/auth/AuthProvider'
 import { canUseGlobalSearch } from '../../shared/auth/access'
 import { ROLE_LABELS } from '../../shared/types/roles'
-import { effectiveRolesForNav, sidebarNavItemsForRoles } from '../config/navigation'
+import {
+  effectiveRolesForNav,
+  groupedSidebarNavItemsForRoles,
+} from '../config/navigation'
 import { useNotificationUnread } from '../modules/notifications/useNotificationUnread'
 import { COMPANY_ICON_SRC } from '../../shared/company/companyProfile'
 import { useSidebarLayout } from './SidebarLayoutContext'
+import { NavIcon } from './NavIcons'
 import './Sidebar.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
@@ -18,7 +22,7 @@ export function Sidebar({ onOpenSearch }: SidebarProps) {
   const { profile, signOut, configured } = useAuth()
   const { collapsed, toggleCollapsed } = useSidebarLayout()
   const roles = effectiveRolesForNav(profile?.roles ?? [], configured)
-  const items = sidebarNavItemsForRoles(roles)
+  const sections = groupedSidebarNavItemsForRoles(roles)
   const userId = profile?.id ?? DEV_OWNER
   const unreadNotif = useNotificationUnread(userId, roles)
   const showQuickSearch = (canUseGlobalSearch(roles) || !configured) && onOpenSearch
@@ -49,41 +53,64 @@ export function Sidebar({ onOpenSearch }: SidebarProps) {
       </div>
 
       <nav className="sidebar__nav" aria-label="เมนูหลัก">
-        {items.map((item) => {
-          const isWork = item.path === '/app/work'
-          const notifTitle =
-            isWork && unreadNotif > 0 ? `${item.labelTh} (${unreadNotif} ยังไม่อ่าน)` : item.labelTh
-          const linkTitle = item.ready ? notifTitle : `${item.labelTh} — Sprint ${item.phase}`
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.path === '/app'}
-              title={linkTitle}
-              className={({ isActive }) =>
-                `sidebar__link${isActive ? ' sidebar__link--active' : ''}${!item.ready ? ' sidebar__link--soon' : ''}`
-              }
-            >
-              <span
-                className={`sidebar__icon${isWork && unreadNotif > 0 ? ' sidebar__icon--notif' : ''}`}
-                aria-hidden
-              >
-                {item.icon}
-              </span>
-              <span className="sidebar__label">
-                {item.labelTh}
-                {isWork && unreadNotif > 0 && (
-                  <span className="sidebar__badge-count" aria-label={`${unreadNotif} ยังไม่อ่าน`}>
-                    {unreadNotif > 99 ? '99+' : unreadNotif}
+        {sections.map((section, sectionIdx) => (
+          <div
+            key={section.group.id}
+            className={`sidebar__group${sectionIdx === 0 ? ' sidebar__group--first' : ''}`}
+            data-group={section.group.id}
+          >
+            <div className="sidebar__group-header" aria-hidden>
+              <span className="sidebar__group-label">{section.group.labelTh}</span>
+              <span className="sidebar__group-line" />
+            </div>
+            {section.items.map((item) => {
+              const isWork = item.path === '/app/work'
+              const notifTitle =
+                isWork && unreadNotif > 0
+                  ? `${item.labelTh} (${unreadNotif} ยังไม่อ่าน)`
+                  : item.labelTh
+              const linkTitle = item.ready
+                ? notifTitle
+                : `${item.labelTh} — Sprint ${item.phase}`
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/app'}
+                  title={linkTitle}
+                  className={({ isActive }) =>
+                    `sidebar__link${isActive ? ' sidebar__link--active' : ''}${
+                      !item.ready ? ' sidebar__link--soon' : ''
+                    }`
+                  }
+                >
+                  <span
+                    className={`sidebar__icon${
+                      isWork && unreadNotif > 0 ? ' sidebar__icon--notif' : ''
+                    }`}
+                    aria-hidden
+                  >
+                    {item.iconKey ? <NavIcon name={item.iconKey} /> : item.icon}
                   </span>
-                )}
-                {!item.ready && (
-                  <small className="sidebar__badge">Sprint {item.phase}</small>
-                )}
-              </span>
-            </NavLink>
-          )
-        })}
+                  <span className="sidebar__label">
+                    {item.labelTh}
+                    {isWork && unreadNotif > 0 && (
+                      <span
+                        className="sidebar__badge-count"
+                        aria-label={`${unreadNotif} ยังไม่อ่าน`}
+                      >
+                        {unreadNotif > 99 ? '99+' : unreadNotif}
+                      </span>
+                    )}
+                    {!item.ready && (
+                      <small className="sidebar__badge">Sprint {item.phase}</small>
+                    )}
+                  </span>
+                </NavLink>
+              )
+            })}
+          </div>
+        ))}
       </nav>
 
       {showQuickSearch && (
@@ -94,7 +121,7 @@ export function Sidebar({ onOpenSearch }: SidebarProps) {
           onClick={onOpenSearch}
         >
           <span className="sidebar__icon" aria-hidden>
-            ⌕
+            <NavIcon name="search" />
           </span>
           <span className="sidebar__label">
             ค้นหาด่วน
