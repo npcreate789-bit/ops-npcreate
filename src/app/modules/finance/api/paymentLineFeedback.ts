@@ -23,8 +23,19 @@ export function formatPaymentLineNotifyFeedback(
   if (skip === 'no_line_recipient' || skip === 'push_failed') {
     return `${actionLabel}แล้ว — แจ้งลูกค้าทางช่องทางอื่น (ไม่มี LINE / push ไม่สำเร็จ)`
   }
-  if (skip === 'review_pending_already_sent' || skip === 'payment_confirmed_already_sent') {
+  if (
+    skip === 'review_pending_already_sent' ||
+    skip === 'payment_confirmed_already_sent' ||
+    skip === 'slip_received_already_sent' ||
+    skip === 'slip_rejected_already_sent'
+  ) {
     return `${actionLabel}แล้ว — แจ้ง LINE แล้ว`
+  }
+  if (skip === 'not_verifying') {
+    return `${actionLabel}แล้ว — ระบบประมวลผลสลิปเสร็จแล้ว ข้ามข้อความ "ได้รับสลิป"`
+  }
+  if (skip === 'payment_not_found') {
+    return `${actionLabel}แล้ว — ไม่พบรายการชำระเงินเพื่อแจ้ง LINE`
   }
   if (result.pushed || result.ok) {
     return `${actionLabel}แล้ว — แจ้งลูกค้าทาง LINE แล้ว`

@@ -80,9 +80,17 @@ export async function uploadPublicPaymentSlip(
     throw new Error('บันทึกสลิปไม่สำเร็จ')
   }
 
-  void invokeNotifyPaymentCustomerLine(row.payment_id, 'slip_received', {
-    publicToken: token,
-  })
+  // ส่งแจ้ง "ได้รับสลิป" ทาง LINE ก่อน เพื่อไม่ให้แข่ง race กับ OCR
+  // (ถ้า OCR เสร็จก่อน verification_status จะออกจาก 'verifying' → guard ใน Edge จะตัดทิ้ง)
+  // หาก notify ล้ม ก็ปล่อยให้ verify ทำงานต่อ — สลิปยังถูกบันทึกแล้ว
+  try {
+    await invokeNotifyPaymentCustomerLine(row.payment_id, 'slip_received', {
+      publicToken: token,
+    })
+  } catch {
+    // ignore — ลูกค้ายังเห็นสถานะอัปเดตจาก polling
+  }
+
   void invokeVerifyPaymentSlip(row.payment_id, { publicToken: token })
 
   return { paymentId: row.payment_id }

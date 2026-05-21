@@ -83,7 +83,7 @@ export async function notifyPaymentCustomerLine(
   const { data: payment, error: payErr } = await admin
     .from('payments')
     .select(
-      'id, total_amount, quotation_id, customer_id, verification_status, customer_slip_uploaded_at',
+      'id, total_amount, quotation_id, customer_id, verification_status, customer_slip_uploaded_at, slip_rejected_at',
     )
     .eq('id', paymentId)
     .maybeSingle()
@@ -156,12 +156,7 @@ export async function notifyPaymentCustomerLine(
     }
   }
 
-  if (
-    (event === 'review_pending' ||
-      event === 'payment_confirmed' ||
-      event === 'slip_received') &&
-    leadId
-  ) {
+  if (leadId) {
     const source = `payment_line_${event}`
     let query = admin
       .from('lead_line_messages')
@@ -179,6 +174,14 @@ export async function notifyPaymentCustomerLine(
       query = query.gte('created_at', payment.customer_slip_uploaded_at)
     }
 
+    // slip_rejected: dedupe ตาม slip_rejected_at ปัจจุบัน — กัน double-click / retry
+    //   แต่หลังลูกค้า upload ใหม่ slip_rejected_at จะถูก clear → reject รอบใหม่ส่งได้ปกติ
+    if (event === 'slip_rejected' && payment.slip_rejected_at) {
+      query = query.gte('created_at', payment.slip_rejected_at)
+    }
+
+    // review_pending / payment_confirmed: dedupe ตลอดอายุ payment row นั้น
+    // (จะส่งซ้ำเฉพาะตอนสร้าง payment ใหม่ ซึ่งจะเปลี่ยน lead_line_messages baseline)
     const { data: prior } = await query
 
     if (prior?.length) {
