@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   COMPANY_BRAND_NAME,
@@ -13,6 +13,15 @@ import {
   publicQuotationToPrintModel,
 } from '../api/publicQuotation'
 import type { PublicQuotation } from '../types'
+import { PaymentInstructionsCard } from '../components/PaymentInstructionsCard'
+import { PublicPaymentSlipUpload } from '../components/PublicPaymentSlipUpload'
+import { fetchCompanyPaymentSettings } from '../../../../shared/payment/companyPaymentSettings'
+import {
+  formatPublicItemsSummary,
+  showPublicAcceptedPendingInstructions,
+  showPublicPaidConfirmation,
+  showPublicPaymentInstructions,
+} from '../publicQuotationPayment'
 import '../public-quotation.css'
 import '../sales.css'
 
@@ -24,7 +33,14 @@ export function PublicQuotationPage() {
   const [acceptName, setAcceptName] = useState('')
   const [accepting, setAccepting] = useState(false)
   const [acceptError, setAcceptError] = useState<string | null>(null)
-  const [accepted, setAccepted] = useState(false)
+  const showPayment = data != null && showPublicPaymentInstructions(data.status)
+  const showAcceptedPending =
+    data != null && showPublicAcceptedPendingInstructions(data.status)
+  const showPaid = data != null && showPublicPaidConfirmation(data.status)
+  const itemsSummary = useMemo(
+    () => (data ? formatPublicItemsSummary(data.items) : null),
+    [data],
+  )
 
   useEffect(() => {
     if (!token) {
@@ -39,11 +55,11 @@ export function PublicQuotationPage() {
 
     async function load() {
       try {
+        await fetchCompanyPaymentSettings()
         const viewed = await markPublicQuotationViewed(linkToken)
         if (!cancelled) {
           if (viewed) {
             setData(viewed)
-            if (viewed.status === 'accepted') setAccepted(true)
           } else {
             const fallback = await fetchPublicQuotation(linkToken)
             if (!fallback) setError('ไม่พบใบเสนอราคาหรือลิงก์หมดอายุ')
@@ -77,7 +93,6 @@ export function PublicQuotationPage() {
         return
       }
       setData(result)
-      setAccepted(true)
     } catch (err) {
       setAcceptError(err instanceof Error ? err.message : 'ยอมรับไม่สำเร็จ')
     } finally {
@@ -111,15 +126,79 @@ export function PublicQuotationPage() {
 
         {!loading && data && (
           <>
-            {accepted || data.status === 'accepted' ? (
+            {showAcceptedPending ? (
               <section className="public-qt-banner public-qt-banner--success">
                 <h2>ขอบคุณที่ยอมรับใบเสนอราคา</h2>
                 <p>
-                  เลขที่ {data.quotation_number} — ทีม Sales จะติดต่อเรื่องชำระเงินและเริ่มงานต่อไป
+                  เลขที่ {data.quotation_number}
+                  {data.brand_name ? ` · ${data.brand_name}` : ''}
                 </p>
-                {data.accepted_at && (
+                {data.accepted_at ? (
                   <p className="muted">ยืนยันเมื่อ {formatBangkokDateTime(data.accepted_at)}</p>
-                )}
+                ) : null}
+                <p className="public-qt-card__lead" style={{ marginTop: '0.75rem' }}>
+                  ทีมงานจะส่งเลขบัญชีและ QR ชำระเงินให้ทาง LINE หรือช่องทางที่ติดต่อ — กรุณารอสักครู่
+                </p>
+              </section>
+            ) : null}
+
+            {showPayment ? (
+              <>
+                <section className="public-qt-banner public-qt-banner--success">
+                  <h2>ชำระเงินตามใบเสนอราคา</h2>
+                  <p>
+                    เลขที่ {data.quotation_number}
+                    {data.brand_name ? ` · ${data.brand_name}` : ''}
+                  </p>
+                </section>
+                <section
+                  className="public-qt-card public-qt-card--payment"
+                  aria-labelledby="public-qt-payment-heading"
+                >
+                  <h2 id="public-qt-payment-heading">ชำระเงิน</h2>
+                  <p className="muted public-qt-card__lead">
+                    โอนตามยอดด้านล่าง หรือสแกน QR แล้วอัปโหลดสลิป — ทีมงานจะยืนยันเมื่อตรวจสอบแล้ว
+                  </p>
+                  <PaymentInstructionsCard
+                    variant="public"
+                    brandName={data.brand_name?.trim() || 'ลูกค้า'}
+                    quotationNumber={data.quotation_number}
+                    total={data.total}
+                    itemsSummary={itemsSummary}
+                    contractMonths={data.contract_months}
+                  />
+                  {data.slip_submitted ? (
+                    <p className="crm-banner crm-banner--ok" role="status">
+                      ส่งสลิปแล้ว — รอทีมงานยืนยันการชำระเงิน
+                    </p>
+                  ) : data.can_upload_slip && token ? (
+                    <PublicPaymentSlipUpload
+                      token={token}
+                      onSubmitted={() => {
+                        void fetchPublicQuotation(token).then((next) => {
+                          if (next) setData(next)
+                        })
+                      }}
+                    />
+                  ) : null}
+                </section>
+              </>
+            ) : showPaid ? (
+              <section className="public-qt-banner public-qt-banner--success">
+                <h2>รับชำระเงินแล้ว</h2>
+                <p>
+                  เลขที่ {data.quotation_number}
+                  {data.brand_name ? ` · ${data.brand_name}` : ''}
+                </p>
+                {data.paid_at ? (
+                  <p className="muted">ยืนยันการชำระเมื่อ {formatBangkokDateTime(data.paid_at)}</p>
+                ) : null}
+                <p className="public-qt-card__lead" style={{ marginTop: '0.75rem' }}>
+                  ขอบคุณที่ชำระเงิน — ทีมงานจะติดต่อขั้นตอนถัดไป (รับบรีฟ / เริ่มงาน) ผ่าน LINE หรือช่องทางที่คุณใช้ติดต่อเรา
+                </p>
+                <Link to="/contact" className="crm-btn" style={{ marginTop: '1rem' }}>
+                  ติดต่อทีมงาน
+                </Link>
               </section>
             ) : data.can_accept ? (
               <section className="public-qt-card public-qt-card--accept">

@@ -733,3 +733,193 @@
   font-size: 0.62rem;
   margin-top: 0.1rem;
 }
+
+.qt-payment-cta__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.qt-payment-cta__inner h2 {
+  margin: 0 0 0.35rem;
+}
+
+.qt-payment-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .qt-payment-panel {
+    align-items: center;
+  }
+}
+
+.qt-payment-panel__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.qt-payment-panel__sheet {
+  position: relative;
+  width: min(100%, 42rem);
+  max-height: min(92vh, 900px);
+  overflow: auto;
+  padding: 1.15rem 1.25rem 1.35rem;
+  border-radius: 16px 16px 0 0;
+  border: 1px solid var(--npc-glass-border);
+  background: var(--npc-bg-deep, #0f172a);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 640px) {
+  .qt-payment-panel__sheet {
+    border-radius: 16px;
+  }
+}
+
+.qt-payment-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.qt-payment-panel__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fcd34d;
+}
+
+.qt-payment-panel__head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.qt-payment-panel__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 520px) {
+  .qt-payment-panel__grid {
+    grid-template-columns: 1fr auto;
+    align-items: start;
+  }
+}
+
+.qt-payment-bank {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--npc-glass-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.qt-payment-bank h3,
+.qt-payment-qr h3 {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+}
+
+.qt-payment-bank dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.qt-payment-bank dt {
+  margin: 0;
+  color: var(--npc-text-muted);
+}
+
+.qt-payment-bank dd {
+  margin: 0;
+}
+
+.qt-payment-bank__amount {
+  font-weight: 600;
+  color: var(--npc-accent);
+}
+
+.qt-payment-copyable {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.qt-payment-copyable:hover {
+  color: var(--npc-accent);
+}
+
+.qt-payment-qr {
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(6, 199, 85, 0.35);
+  background: rgba(6, 199, 85, 0.06);
+}
+
+.qt-payment-qr__img {
+  display: block;
+  margin: 0 auto;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.qt-payment-panel__message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+}
+
+.qt-payment-panel__message textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.qt-payment-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.qt-payment-card__hint {
+  margin: 0.85rem 0 0;
+  font-size: 0.85rem;
+  color: var(--npc-text-muted);
+  line-height: 1.45;
+}
+
+.qt-payment-card__copy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.qt-payment-card__feedback {
+  margin: 0.65rem 0 0;
+}

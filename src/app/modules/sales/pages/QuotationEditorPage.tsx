@@ -5,6 +5,7 @@ import { defaultAppHome } from '../../../../shared/auth/postLoginPath'
 import {
   canCreateSalesQuotation,
   canEditSalesQuotation,
+  canSendPaymentInstructions,
   hasDbPrivilegedRole,
 } from '../../../../shared/auth/access'
 import { getLead } from '../../crm/api/leads'
@@ -32,6 +33,8 @@ import { QuotationPrintDocument } from '../components/QuotationPrintDocument'
 import { QuotationPublicLink } from '../components/QuotationPublicLink'
 import { QuotationNextStepsPanel } from '../components/QuotationNextStepsPanel'
 import { QuotationEditorHeader } from '../components/QuotationEditorHeader'
+import { PaymentInstructionsPanel } from '../components/PaymentInstructionsPanel'
+import { cancelQuotationAfterAccept } from '../api/quotationCancel'
 import '../../crm/crm.css'
 import '../../phase2/phase2.css'
 import '../sales.css'
@@ -75,6 +78,7 @@ export function QuotationEditorPage() {
   const location = useLocation()
   const leadIdParam = searchParams.get('leadId')
   const fromLeadSave = searchParams.get('fromLead') === '1'
+  const openPaymentFromUrl = searchParams.get('action') === 'payment'
   const navState =
     location.state as {
       leadSaveNotice?: string
@@ -104,6 +108,7 @@ export function QuotationEditorPage() {
   const [sendLineAfterSave, setSendLineAfterSave] = useState(false)
   const [lineSendFeedback, setLineSendFeedback] =
     useState<QuotationLineSendFeedbackState | null>(null)
+  const [paymentPanelOpen, setPaymentPanelOpen] = useState(false)
 
   const lineIdsForSend = useMemo(
     () =>
@@ -150,6 +155,23 @@ export function QuotationEditorPage() {
       ? canCreate
       : canEditSalesQuotation(roles, initial?.owner_id, ownerId)) || !configured
   const readOnly = !canEdit && configured
+
+  const showPaymentAction =
+    !isNew &&
+    initial?.status === 'accepted' &&
+    canSendPaymentInstructions(roles, initial.owner_id, ownerId)
+
+  const showCancelAfterAccept =
+    !isNew &&
+    initial &&
+    (initial.status === 'accepted' || initial.status === 'awaiting_payment') &&
+    canEdit
+
+  useEffect(() => {
+    if (openPaymentFromUrl && showPaymentAction && id) {
+      setPaymentPanelOpen(true)
+    }
+  }, [openPaymentFromUrl, showPaymentAction, id])
 
   useEffect(() => {
     let cancelled = false
@@ -390,6 +412,24 @@ export function QuotationEditorPage() {
     printDocument()
   }
 
+  async function handleCancelAfterAccept() {
+    if (!id || isNew || !initial) return
+    const reason = window.prompt('เหตุผลการยกเลิก (ไม่บังคับ)') ?? ''
+    if (!window.confirm('ยกเลิกใบเสนอราคาหลังลูกค้ายอมรับแล้ว? รายการชำระที่ค้างจะถูกยกเลิก')) {
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      await cancelQuotationAfterAccept(id, reason)
+      navigate('/app/sales')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'ยกเลิกไม่สำเร็จ')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="page">
@@ -482,6 +522,44 @@ export function QuotationEditorPage() {
         </p>
       )}
 
+      {showCancelAfterAccept ? (
+        <section className="card card--wide no-print">
+          <h2 className="crm-section-title">ยกเลิกหลังยอมรับ</h2>
+          <p className="muted">
+            ใช้เมื่อลูกค้าถอนความหรือเปลี่ยนแพ็กเกจ — ยกเลิกใบและรายการชำระที่ค้าง
+          </p>
+          <button
+            type="button"
+            className="crm-btn crm-btn--ghost"
+            disabled={saving}
+            onClick={() => void handleCancelAfterAccept()}
+          >
+            ยกเลิกใบเสนอราคา
+          </button>
+        </section>
+      ) : null}
+
+      {showPaymentAction ? (
+        <section className="card card--wide no-print qt-payment-cta">
+          <div className="qt-payment-cta__inner">
+            <div>
+              <h2 className="crm-section-title">ลูกค้ายอมรับแล้ว — ส่งข้อมูลชำระเงิน</h2>
+              <p className="muted">
+                โอน กสิกรไทย 158-3-652430 · ยอด {initial!.total.toLocaleString('th-TH')} บาท · มี QR
+                PromptPay
+              </p>
+            </div>
+            <button
+              type="button"
+              className="crm-btn crm-btn--primary"
+              onClick={() => setPaymentPanelOpen(true)}
+            >
+              ส่งข้อมูลชำระเงิน
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       {!isNew && initial && <QuotationNextStepsPanel quotation={initial} />}
 
       {!isNew && initial && (
@@ -562,6 +640,16 @@ export function QuotationEditorPage() {
           </button>
         </section>
       )}
+
+      {paymentPanelOpen && id && !isNew ? (
+        <PaymentInstructionsPanel
+          quotationId={id}
+          onClose={() => setPaymentPanelOpen(false)}
+          onCompleted={() => {
+            void getQuotation(id).then((qt) => qt && setInitial(qt))
+          }}
+        />
+      ) : null}
     </div>
   )
 }

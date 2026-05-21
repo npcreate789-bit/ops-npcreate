@@ -79,6 +79,8 @@ export interface Quotation {
   sent_at: string | null
   viewed_at: string | null
   accepted_at: string | null
+  payment_instructions_sent_at?: string | null
+  payment_instructions_sent_by?: string | null
   paid_at: string | null
   public_token: string | null
   created_at: string
@@ -119,10 +121,13 @@ export interface PublicQuotation {
   sent_at: string | null
   viewed_at: string | null
   accepted_at: string | null
+  paid_at: string | null
   created_at: string
   brand_name: string | null
   items: PublicQuotationItem[]
   can_accept: boolean
+  can_upload_slip?: boolean
+  slip_submitted?: boolean
 }
 
 export interface QuotationInput {

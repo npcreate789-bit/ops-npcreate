@@ -280,3 +280,57 @@
 .qt-public-link__hint {
   margin: 0;
 }
+
+.public-qt-card--payment {
+  border-color: rgba(6, 199, 85, 0.4);
+  background: rgba(12, 20, 32, 0.88);
+}
+
+.public-qt-card--payment h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+}
+
+.public-qt-card__lead {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.public-qt-card--payment .qt-payment-card {
+  margin: 0;
+}
+
+.public-qt-card--payment .qt-payment-card__copy-actions .crm-btn {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.public-qt-slip__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.public-qt-slip {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 640px) {
+  .public-qt-card--payment .qt-payment-panel__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-qt-card--payment .qt-payment-qr__img {
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+}

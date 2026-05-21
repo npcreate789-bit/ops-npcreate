@@ -6,6 +6,8 @@ import {
   canAccessNotifications,
   canUseGlobalSearch,
   canUseQuickAccess,
+  canViewPaymentInstructionQueue,
+  canViewPaymentSlipReviewQueue,
   canViewSystemStatus,
   canViewWorkHub,
 } from '../../shared/auth/access'
@@ -24,6 +26,11 @@ import {
 import { HOME_MODULE_HINTS } from './home/constants'
 import { HomeContactInquiries } from './home/HomeContactInquiries'
 import { HomeWorkPreview } from './home/HomeWorkPreview'
+import { HomePaymentQueuePanel } from './home/HomePaymentQueuePanel'
+import { HomeSlipReviewPanel } from './home/HomeSlipReviewPanel'
+import { PaymentInstructionsPanel } from '../modules/sales/components/PaymentInstructionsPanel'
+import { useHomePaymentQueue } from './home/useHomePaymentQueue'
+import { useHomeSlipReviewQueue } from './home/useHomeSlipReviewQueue'
 import { canViewHomeContactInquiries } from './home/access'
 import { useHomeContactInquiries } from './home/useHomeContactInquiries'
 import { useHomeDashboard } from './home/useHomeDashboard'
@@ -39,6 +46,7 @@ export function HomePage() {
   const { configured, profile, profileLoadError } = useAuth()
   const roles = profile?.roles ?? []
   const [homeNotice, setHomeNotice] = useState<string | null>(null)
+  const [paymentPanelId, setPaymentPanelId] = useState<string | null>(null)
 
   useEffect(() => {
     const notice = readHomeNoticeFromState(location.state)
@@ -78,6 +86,11 @@ export function HomePage() {
     error: contactError,
     total: contactTotal,
   } = useHomeContactInquiries(roles, configured)
+
+  const showPaymentQueue = canViewPaymentInstructionQueue(roles) || !configured
+  const paymentQueue = useHomePaymentQueue(roles, configured)
+  const showSlipReviewQueue = canViewPaymentSlipReviewQueue(roles) || !configured
+  const slipReviewQueue = useHomeSlipReviewQueue(roles, configured)
 
   const unreadNotif = useNotificationUnread(userId, roles)
   const priorityActions = homePriorityActions(navRoles, clientOnly)
@@ -138,6 +151,61 @@ export function HomePage() {
         </p>
       ) : null}
 
+      {showPaymentQueue && paymentQueue.count > 0 ? (
+        <section
+          className="home-panel home-panel--payment-queue"
+          id="payment-queue"
+          aria-labelledby="home-payment-heading"
+        >
+          <header className="home-panel__head">
+            <div>
+              <h2 id="home-payment-heading">ด่วน · รอส่งข้อมูลชำระเงิน</h2>
+              <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
+                ลูกค้ายอมรับใบเสนอราคาแล้ว — ส่งเลขบัญชีและ QR PromptPay
+              </p>
+            </div>
+            {canOpenHomePath(roles, '/app/sales') ? (
+              <Link to="/app/sales" className="muted">
+                Sales →
+              </Link>
+            ) : null}
+          </header>
+          <HomePaymentQueuePanel
+            items={paymentQueue.items}
+            loading={paymentQueue.loading}
+            error={paymentQueue.error}
+            onSendPayment={setPaymentPanelId}
+          />
+        </section>
+      ) : null}
+
+      {showSlipReviewQueue && slipReviewQueue.count > 0 ? (
+        <section
+          className="home-panel home-panel--slip-queue"
+          id="slip-review-queue"
+          aria-labelledby="home-slip-heading"
+        >
+          <header className="home-panel__head">
+            <div>
+              <h2 id="home-slip-heading">ด่วน · รอตรวจสลิปชำระเงิน</h2>
+              <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
+                ลูกค้าอัปโหลดสลิปจากลิงก์ใบเสนอราคา — Finance ยืนยันรายการ
+              </p>
+            </div>
+            {canOpenHomePath(roles, '/app/finance') ? (
+              <Link to="/app/finance" className="muted">
+                Finance →
+              </Link>
+            ) : null}
+          </header>
+          <HomeSlipReviewPanel
+            items={slipReviewQueue.items}
+            loading={slipReviewQueue.loading}
+            error={slipReviewQueue.error}
+          />
+        </section>
+      ) : null}
+
       {!configured && (
         <p className="crm-banner crm-banner--warn">โหมดพัฒนา — ข้อมูลตัวอย่างและเมนูครบสำหรับทดสอบ</p>
       )}
@@ -177,6 +245,22 @@ export function HomePage() {
 
       {workEnabled && (
         <section className="home-kpi-grid" aria-label="สรุปงาน">
+          {showSlipReviewQueue && slipReviewQueue.count > 0 ? (
+            <a href="#slip-review-queue" className="home-kpi home-kpi--warn">
+              <span className="home-kpi__label">รอตรวจสลิป</span>
+              <span className="home-kpi__value">
+                {slipReviewQueue.loading ? '…' : slipReviewQueue.count}
+              </span>
+              <span className="home-kpi__hint">ลูกค้าอัปโหลดจากลิงก์</span>
+            </a>
+          ) : null}
+          {showPaymentQueue && paymentQueue.count > 0 ? (
+            <a href="#payment-queue" className="home-kpi home-kpi--warn">
+              <span className="home-kpi__label">รอส่งชำระเงิน</span>
+              <span className="home-kpi__value">{paymentQueue.loading ? '…' : paymentQueue.count}</span>
+              <span className="home-kpi__hint">ยอมรับใบเสนอราคาแล้ว</span>
+            </a>
+          ) : null}
           <Link to="/app/work" className={`home-kpi${summary.overdue > 0 ? ' home-kpi--warn' : ''}`}>
             <span className="home-kpi__label">เกินกำหนด</span>
             <span className="home-kpi__value">{workLoading ? '…' : summary.overdue}</span>
@@ -316,6 +400,14 @@ export function HomePage() {
           </ul>
         </section>
       )}
+
+      {paymentPanelId ? (
+        <PaymentInstructionsPanel
+          quotationId={paymentPanelId}
+          onClose={() => setPaymentPanelId(null)}
+          onCompleted={() => paymentQueue.reload()}
+        />
+      ) : null}
 
       <footer className="home-footer-links">
         <Link to="/app/help">ช่วยเหลือ</Link>

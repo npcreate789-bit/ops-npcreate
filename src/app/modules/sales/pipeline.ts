@@ -1,5 +1,4 @@
 import type { Quotation, QuotationStatus } from './types'
-import { isQuotationSentLike } from './constants'
 
 export interface SalesNextStep {
   label: string
@@ -45,9 +44,9 @@ export function buildQuotationNextSteps(q: Quotation): SalesNextStep[] {
       })
       if (q.status === 'accepted') {
         steps.push({
-          label: 'ตั้งรอชำระเงิน',
-          path: `/app/sales/quotations/${q.id}`,
-          detail: 'Sales — ก่อนส่ง Finance',
+          label: 'ส่งข้อมูลชำระเงิน',
+          path: `/app/sales/quotations/${q.id}?action=payment`,
+          detail: 'ส่งเลขบัญชีและ QR ให้ลูกค้า',
           primary: true,
         })
       }
@@ -63,6 +62,13 @@ export function buildQuotationNextSteps(q: Quotation): SalesNextStep[] {
       })
       break
     case 'paid':
+      if (q.lead_id) {
+        steps.push({
+          label: 'Lead ปิดการขาย',
+          path: `/app/crm/${q.lead_id}`,
+          detail: 'สถานะ Won — sync อัตโนมัติเมื่อยืนยันชำระ',
+        })
+      }
       if (q.customer_id) {
         steps.push({
           label: 'รับบรีฟลูกค้า',
@@ -98,14 +104,6 @@ export function buildQuotationNextSteps(q: Quotation): SalesNextStep[] {
       label: 'งานของฉัน',
       path: '/app/work',
       detail: 'Lead reminder และงานอื่น',
-    })
-  }
-
-  if (isQuotationSentLike(q.status) && q.status !== 'paid' && q.lead_id) {
-    steps.push({
-      label: 'อัปเดต Lead เป็นรอชำระ',
-      path: `/app/crm/${q.lead_id}`,
-      detail: 'ตั้งสถานะ Lead ให้สอดคล้อง',
     })
   }
 

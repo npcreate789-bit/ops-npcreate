@@ -533,3 +533,48 @@ export const FINANCE_MANAGE_ROLES: AppRole[] = ['ceo', 'admin', 'dev']
 export function canManageFinance(roles: AppRole[]): boolean {
   return roles.some((r) => FINANCE_MANAGE_ROLES.includes(r))
 }
+
+/** คิวส่งข้อมูลชำระเงินหลังลูกค้ายอมรับใบเสนอราคา */
+export const PAYMENT_INSTRUCTION_QUEUE_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'dev',
+  'admin',
+  'sales',
+  'account',
+]
+
+export function canViewPaymentInstructionQueue(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.every((r) => r === 'client')) return false
+  return roles.some((r) => PAYMENT_INSTRUCTION_QUEUE_ROLES.includes(r))
+}
+
+export function canSendPaymentInstructions(
+  roles: AppRole[],
+  quotationOwnerId: string | undefined,
+  userId: string,
+): boolean {
+  if (hasDbPrivilegedRole(roles) || roles.includes('admin') || roles.includes('account')) {
+    return true
+  }
+  if (quotationOwnerId && quotationOwnerId === userId && roles.includes('sales')) {
+    return true
+  }
+  return false
+}
+
+/** คิวตรวจสลิปที่ลูกค้าอัปโหลดจากลิงก์สาธารณะ */
+export const PAYMENT_SLIP_REVIEW_QUEUE_ROLES: AppRole[] = [
+  'ceo',
+  'operations',
+  'dev',
+  'admin',
+  'account',
+]
+
+export function canViewPaymentSlipReviewQueue(roles: AppRole[]): boolean {
+  if (roles.length === 0) return true
+  if (roles.every((r) => r === 'client')) return false
+  return roles.some((r) => PAYMENT_SLIP_REVIEW_QUEUE_ROLES.includes(r))
+}

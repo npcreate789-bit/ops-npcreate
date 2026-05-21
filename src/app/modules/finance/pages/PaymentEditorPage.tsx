@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { canManageFinance } from '../../../../shared/auth/access'
+import { getLead } from '../../crm/api/leads'
+import { getQuotation, quotationPublicUrl } from '../../sales/api/quotations'
+import { sendPaymentConfirmedViaLine } from '../../sales/sendPaymentConfirmedViaLine'
+import { sendSlipRejectedViaLine } from '../../sales/sendSlipRejectedViaLine'
+import { rejectPaymentCustomerSlip } from '../api/paymentSlipOps'
 import {
   confirmPayment,
   createPayment,
@@ -38,6 +43,8 @@ export function PaymentEditorPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [rejecting, setRejecting] = useState(false)
+  const [lineFeedback, setLineFeedback] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [initial, setInitial] = useState<Payment | null>(null)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
@@ -97,15 +104,102 @@ export function PaymentEditorPage() {
   }
 
   async function handleConfirm() {
-    if (!id || isNew) return
+    if (!id || isNew || !initial) return
     setSaving(true)
+    setLineFeedback(null)
+    setError(null)
     try {
       await confirmPayment(id)
-      setInitial(await getPayment(id))
+      const pay = await getPayment(id)
+      setInitial(pay)
+
+      if (pay?.quotation_id) {
+        const q = await getQuotation(pay.quotation_id)
+        if (q?.lead_id) {
+          const lead = await getLead(q.lead_id)
+          const r = await sendPaymentConfirmedViaLine({
+            leadId: q.lead_id,
+            brandName: lead?.brand_name?.trim() || pay.customer_brand_name || 'ลูกค้า',
+            quotationNumber: q.quotation_number,
+            total: pay.total_amount,
+            paymentId: pay.id,
+            lineIds: lead
+              ? {
+                  line_user_id: lead.line_user_id,
+                  line_oa_chat_user_id: lead.line_oa_chat_user_id,
+                }
+              : null,
+          })
+          if (r.ok) {
+            setLineFeedback(
+              r.mode === 'push'
+                ? 'ยืนยันชำระแล้ว — แจ้งลูกค้าทาง LINE แล้ว'
+                : 'ยืนยันชำระแล้ว — เปิด LINE / คัดลอกแจ้งลูกค้า',
+            )
+          } else {
+            setLineFeedback(`ยืนยันชำระแล้ว — ${r.error}`)
+          }
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ยืนยันไม่สำเร็จ')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleRejectSlip() {
+    if (!id || isNew || !initial?.slip_path) return
+    const note = window.prompt('เหตุผลที่สลิปไม่ผ่าน (ไม่บังคับ)') ?? ''
+    if (!window.confirm('ปฏิเสินสลิปและให้ลูกค้าอัปโหลดใหม่?')) return
+
+    setRejecting(true)
+    setLineFeedback(null)
+    setError(null)
+    try {
+      const result = await rejectPaymentCustomerSlip(id, note)
+      setInitial(await getPayment(id))
+
+      if (result.lead_id) {
+        const lead = await getLead(result.lead_id)
+        const publicUrl = result.public_token
+          ? quotationPublicUrl(result.public_token)
+          : null
+        let qnum: string | null = null
+        if (result.quotation_id) {
+          const q = await getQuotation(result.quotation_id)
+          qnum = q?.quotation_number ?? null
+        }
+        const r = await sendSlipRejectedViaLine({
+          leadId: result.lead_id,
+          brandName: lead?.brand_name?.trim() || initial.customer_brand_name || 'ลูกค้า',
+          quotationNumber: qnum,
+          publicUrl,
+          note,
+          paymentId: id,
+          lineIds: lead
+            ? {
+                line_user_id: lead.line_user_id,
+                line_oa_chat_user_id: lead.line_oa_chat_user_id,
+              }
+            : null,
+        })
+        if (r.ok) {
+          setLineFeedback(
+            r.mode === 'push'
+              ? 'ปฏิเสินสลิปแล้ว — แจ้งลูกค้าทาง LINE แล้ว'
+              : 'ปฏิเสินสลิปแล้ว — เปิด LINE / คัดลอกแจ้งลูกค้า',
+          )
+        } else {
+          setLineFeedback(`ปฏิเสินสลิปแล้ว — ${r.error}`)
+        }
+      } else {
+        setLineFeedback('ปฏิเสินสลิปแล้ว — ลูกค้าสามารถอัปโหลดใหม่จากลิงก์ใบเสนอราคา')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'ปฏิเสินสลิปไม่สำเร็จ')
+    } finally {
+      setRejecting(false)
     }
   }
 
@@ -142,6 +236,11 @@ export function PaymentEditorPage() {
       </header>
 
       {error && <p className="crm-error no-print">{error}</p>}
+      {lineFeedback ? (
+        <p className="crm-banner crm-banner--ok no-print" role="status">
+          {lineFeedback}
+        </p>
+      ) : null}
 
       {readOnly && (
         <p className="crm-banner crm-banner--warn no-print">
@@ -151,7 +250,9 @@ export function PaymentEditorPage() {
 
       {initial?.confirmed_at && (
         <p className="crm-banner no-print">
-          ยืนยันชำระแล้ว — ลูกค้า Active แล้ว ไปที่{' '}
+          ยืนยันชำระแล้ว — ลูกค้า Active
+          {initial.quotation_id ? ' · ใบเสนอราคาและ Lead อัปเดตเป็นปิดการขายแล้ว' : ''}{' '}
+          ไปที่{' '}
           <Link to={`/app/onboarding/${initial.customer_id}`}>รับบรีฟลูกค้า</Link>
           {' · '}
           <Link to="/app/client">Client Workspace</Link>
@@ -193,6 +294,18 @@ export function PaymentEditorPage() {
           <section className="card card--wide no-print">
             <h2 className="crm-section-title">สลิปชำระเงิน</h2>
             <PaymentSlipPreview slipPath={initial.slip_path} />
+            {canEdit && initial.status === 'pending' && initial.slip_path ? (
+              <div className="finance-slip-actions" style={{ marginTop: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="crm-btn crm-btn--ghost"
+                  disabled={rejecting || saving}
+                  onClick={() => void handleRejectSlip()}
+                >
+                  {rejecting ? 'กำลังดำเนินการ…' : 'สลิปไม่ผ่าน — ขออัปโหลดใหม่'}
+                </button>
+              </div>
+            ) : null}
             {canEdit && (
               <>
                 <p className="muted finance-slip-upload-label">

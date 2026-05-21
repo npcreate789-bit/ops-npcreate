@@ -382,6 +382,7 @@ export const mockSalesApi = {
       sent_at: q.sent_at,
       viewed_at: q.viewed_at,
       accepted_at: q.accepted_at,
+      paid_at: q.paid_at,
       created_at: q.created_at,
       brand_name: q.lead_brand_name ?? null,
       items: (q.items ?? []).map((item) => ({

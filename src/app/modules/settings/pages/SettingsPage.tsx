@@ -9,6 +9,7 @@ import { settingsRelatedLinksForRoles } from '../access'
 import { SettingsNextActionBanner } from '../components/SettingsNextActionBanner'
 import { SettingsRelatedToolbar } from '../components/SettingsRelatedToolbar'
 import { SettingsRoleGuide } from '../components/SettingsRoleGuide'
+import { CompanyPaymentSettingsSection } from '../components/CompanyPaymentSettingsSection'
 import {
   labelAccountBackend,
   labelDisplayName,
@@ -166,6 +167,8 @@ export function SettingsPage() {
           </p>
         )}
       </section>
+
+      <CompanyPaymentSettingsSection roles={roles} configured={configured} />
 
       <section id="layout" className="card card--wide">
         <h2>การจัดวางหน้าจอ</h2>

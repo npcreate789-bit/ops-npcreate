@@ -74,7 +74,7 @@ export function publicQuotationToPrintModel(payload: PublicQuotation): Quotation
     sent_at: payload.sent_at,
     viewed_at: payload.viewed_at,
     accepted_at: payload.accepted_at,
-    paid_at: null,
+    paid_at: payload.paid_at,
     public_token: null,
     created_at: payload.created_at,
     updated_at: payload.created_at,
