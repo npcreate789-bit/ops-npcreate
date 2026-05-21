@@ -204,7 +204,6 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 12,
     phase3: true,
     ready: true,
-    sidebar: false,
   },
   {
     path: '/app/creators',
@@ -286,7 +285,6 @@ export const NAV_ITEMS: NavItem[] = [
     phase: 21,
     phase7: true,
     ready: true,
-    sidebar: false,
   },
   {
     path: '/app/customers',
@@ -405,30 +403,46 @@ export const PHASE19_NAV_ITEMS = NAV_ITEMS.filter((i) => i.phase19)
 
 /**
  * ลำดับแสดงในแถบเมนู (เฉพาะรายการที่ sidebar !== false)
- * งานประจำวัน → ขาย → ดำเนินงาน → ลูกค้า/รายงาน → ภาพรวม → ระบบ
+ * 7 กลุ่มตาม flow งานจริงของทีม:
+ *   Daily → Sales/Finance → Delivery → Retention → Analytics → Tools/Admin → Settings
  */
 export const NAV_DISPLAY_ORDER: readonly string[] = [
+  // 1) Daily — งานประจำวันทุก role
   '/app',
   '/app/work',
+  '/app/chat',
+  '/app/notifications',
+  '/app/tasks',
+
+  // 2) Sales → Finance — flow ปิดดีลและรับเงิน
   '/app/crm',
   '/app/sales',
   '/app/finance',
+
+  // 3) Delivery — หลังปิดดีล (Onboarding → Production)
   '/app/onboarding',
   '/app/projects',
-  '/app/chat',
-  '/app/customers',
   '/app/ads',
   '/app/content',
-  '/app/tasks',
   '/app/creators',
+  '/app/customers',
+
+  // 4) Retention — ลูกค้าเดิม
   '/app/renewals',
   '/app/client',
-  '/app/reports',
+
+  // 5) Analytics — รายงาน/สรุป
   '/app/dashboard',
+  '/app/weekly',
+  '/app/reports',
   '/app/activity',
+
+  // 6) Tools / Admin
   '/app/assistant',
   '/app/admin',
   '/app/ops',
+
+  // 7) Settings
   '/app/settings',
   '/app/help',
   '/app/status',
