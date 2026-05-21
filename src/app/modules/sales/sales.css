@@ -597,9 +597,20 @@
     display: none !important;
   }
 
-  .finance-page .finance-docs-section,
+  /* ซ่อนเฉพาะหัวข้อ/intro/ปุ่ม — เก็บกล่องเอกสารไว้ให้พิมพ์จริง */
+  .finance-page .finance-docs-section > h2,
+  .finance-page .finance-docs-section > .finance-docs-intro,
   .finance-page .finance-doc-block .no-print {
     display: none !important;
+  }
+
+  /* ตัด card styling ของ section ห่อตอนพิมพ์ ไม่ให้กรอบ/พื้นหลัง/padding มาแทรก */
+  .finance-page .finance-docs-section {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   .finance-page .finance-doc-block {
