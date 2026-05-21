@@ -7,7 +7,6 @@ import {
   OPS_CENTER_VIEW_ROLES,
   TASKS_VIEW_ROLES,
   WORK_HUB_VIEW_ROLES,
-  hasNavFullAccess,
   STAFF_ASSISTANT_ROLES,
   WEEKLY_REPORT_VIEW_ROLES,
 } from '../../shared/auth/access'
@@ -124,7 +123,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '◎',
     iconKey: 'target',
     group: 'sales',
-    roles: ['ceo', 'operations', 'sales', 'dev'],
+    roles: ['ceo', 'operations', 'sales', 'admin', 'dev'],
     phase: 2,
     ready: true,
   },
@@ -146,7 +145,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: '₿',
     iconKey: 'wallet',
     group: 'sales',
-    roles: [...FINANCE_VIEW_ROLES],
+    roles: [...FINANCE_VIEW_ROLES, 'operations'],
     phase: 4,
     ready: true,
   },
@@ -537,9 +536,6 @@ function compareNavDisplayOrder(a: NavItem, b: NavItem): number {
   return a.labelTh.localeCompare(b.labelTh, 'th')
 }
 
-/** เมนูที่ full-access ยังต้องเช็ก roles ตามรายการ (ไม่ให้ admin เห็น Ops โดยไม่ตั้งใจ) */
-const NAV_ROLE_STRICT_PATHS = new Set<string>(['/app/ops'])
-
 /** โหมด dev — จำลอง ceo เมื่อยังไม่มีบทบาทจาก backend */
 export function effectiveRolesForNav(roles: AppRole[], configured: boolean): AppRole[] {
   if (roles.length > 0) return roles
@@ -547,12 +543,20 @@ export function effectiveRolesForNav(roles: AppRole[], configured: boolean): App
   return []
 }
 
+/**
+ * เมนูแสดงตามสิทธิ์ตรง ๆ จาก `item.roles`:
+ *   - `path === '/app'` → ใครก็เข้าถึงหน้า Home ได้
+ *   - `roles.length === 0` → เปิดทุก role ที่ login ได้ (Settings / Help / Start ฯลฯ)
+ *   - ตรง role ใดใน `item.roles` → เห็น
+ *   - ไม่ตรง → ไม่เห็น (ไม่มี cross-module fallback)
+ *
+ * ถ้าต้องการให้ Admin / Operations / Dev เห็นเมนูใหม่ ให้เพิ่ม role
+ * ลง `item.roles` โดยตรงเพื่อความชัดเจน — ห้ามพึ่ง `hasNavFullAccess`
+ */
 export function canAccessNavItem(roles: AppRole[], item: NavItem): boolean {
   if (item.path === '/app') return true
   if (item.roles.length === 0) return true
-  if (item.roles.some((r) => roles.includes(r))) return true
-  if (hasNavFullAccess(roles) && !NAV_ROLE_STRICT_PATHS.has(item.path)) return true
-  return false
+  return item.roles.some((r) => roles.includes(r))
 }
 
 export function navItemsForRoles(roles: AppRole[]): NavItem[] {
