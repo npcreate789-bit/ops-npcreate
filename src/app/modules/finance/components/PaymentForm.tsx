@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  FINANCE_MANAGE_ROLES,
+  formatRoleList,
+} from '../../../../shared/auth/access'
 import type { CustomerOption, Payment, PaymentInput } from '../types'
 import {
   PAYMENT_STATUS_OPTIONS,
@@ -72,6 +76,19 @@ export function PaymentForm({
     return calcPaymentTotals(amount, rate)
   }, [state.amount, state.vat_rate])
 
+  const blockPaidStatus =
+    Boolean(
+      initial?.quotation_id &&
+        initial.status === 'pending' &&
+        initial.slip_path &&
+        initial.verification_status !== 'none',
+    )
+
+  const lockMoneyFields =
+    initial != null &&
+    (initial.verification_status === 'verifying' ||
+      initial.verification_status === 'review_required')
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!state.customer_id) return
@@ -96,7 +113,14 @@ export function PaymentForm({
   return (
     <form className="crm-form" onSubmit={handleSubmit}>
       {readOnly && (
-        <p className="crm-banner crm-banner--warn">โหมดดูอย่างเดียว — แก้ไขได้เฉพาะ Admin / CEO</p>
+        <p className="crm-banner crm-banner--warn">
+          โหมดดูอย่างเดียว — แก้ไขฟอร์มได้เฉพาะ {formatRoleList(FINANCE_MANAGE_ROLES)}
+        </p>
+      )}
+      {!readOnly && lockMoneyFields && (
+        <p className="crm-banner crm-banner--warn">
+          กำลังตรวจสลิป — ล็อกยอด/วันที่ชำระจนกว่าจะยืนยันหรือปฏิเสธสลิป
+        </p>
       )}
       {preset && (
         <p className="crm-banner">
@@ -151,7 +175,7 @@ export function PaymentForm({
             value={state.amount}
             onChange={(e) => setState({ ...state, amount: e.target.value })}
             className="crm-input"
-            disabled={readOnly}
+            disabled={readOnly || lockMoneyFields}
           />
         </label>
         <label>
@@ -162,7 +186,7 @@ export function PaymentForm({
             value={state.vat_rate}
             onChange={(e) => setState({ ...state, vat_rate: e.target.value })}
             className="crm-input"
-            disabled={readOnly}
+            disabled={readOnly || lockMoneyFields}
           />
         </label>
         <label>
@@ -175,7 +199,9 @@ export function PaymentForm({
             className="crm-select"
             disabled={readOnly}
           >
-            {PAYMENT_STATUS_OPTIONS.map((o) => (
+            {PAYMENT_STATUS_OPTIONS.filter(
+              (o) => !(blockPaidStatus && o.value === 'paid'),
+            ).map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -189,7 +215,7 @@ export function PaymentForm({
             value={state.payment_date}
             onChange={(e) => setState({ ...state, payment_date: e.target.value })}
             className="crm-input"
-            disabled={readOnly}
+            disabled={readOnly || lockMoneyFields}
           />
         </label>
         <label>
@@ -247,7 +273,12 @@ export function PaymentForm({
         <button type="button" className="crm-btn crm-btn--ghost" onClick={onCancel}>
           ยกเลิก
         </button>
-        <button type="submit" className="crm-btn crm-btn--primary" disabled={saving || readOnly}>
+        <button
+          type="submit"
+          className="crm-btn crm-btn--primary"
+          disabled={saving || readOnly || lockMoneyFields}
+          title={lockMoneyFields ? 'รอผลตรวจสลิปก่อนแก้ยอด/วันที่' : undefined}
+        >
           {saving ? 'กำลังบันทึก...' : 'บันทึก'}
         </button>
       </div>

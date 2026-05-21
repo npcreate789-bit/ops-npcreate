@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
-import { canManageFinance } from '../../../../shared/auth/access'
-import { getLead } from '../../crm/api/leads'
-import { getQuotation, quotationPublicUrl } from '../../sales/api/quotations'
-import { sendPaymentConfirmedViaLine } from '../../sales/sendPaymentConfirmedViaLine'
-import { sendSlipRejectedViaLine } from '../../sales/sendSlipRejectedViaLine'
+import {
+  canConfirmFinancePayment,
+  canManageFinance,
+  FINANCE_MANAGE_ROLES,
+  formatRoleList,
+} from '../../../../shared/auth/access'
+import { getQuotation } from '../../sales/api/quotations'
+import { formatPaymentLineNotifyFeedback } from '../api/paymentLineFeedback'
+import { invokeNotifyPaymentCustomerLine } from '../api/notifyPaymentCustomerLine'
 import { rejectPaymentCustomerSlip } from '../api/paymentSlipOps'
 import {
   confirmPayment,
@@ -21,11 +25,27 @@ import { PaymentForm } from '../components/PaymentForm'
 import { PaymentDocumentsSection } from '../components/PaymentDocumentsSection'
 import { PaymentNextStepsPanel } from '../components/PaymentNextStepsPanel'
 import { PaymentSlipPreview } from '../components/PaymentSlipPreview'
+import { PaymentSlipVerificationPanel } from '../components/PaymentSlipVerificationPanel'
 import '../../crm/crm.css'
 import '../../sales/sales.css'
 import '../finance.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
+
+function paymentVerificationLabel(
+  status: string | null | undefined,
+): string | null {
+  switch (status) {
+    case 'verifying':
+      return 'กำลังตรวจสอบสลิปอัตโนมัติ'
+    case 'review_required':
+      return 'ตรวจอัตโนมัติเสร็จ — รอยืนยันจาก Finance'
+    case 'confirmed':
+      return 'ยืนยันการชำระแล้ว'
+    default:
+      return null
+  }
+}
 
 export function PaymentEditorPage() {
   const { id } = useParams<{ id: string }>()
@@ -38,6 +58,7 @@ export function PaymentEditorPage() {
   const roles = profile?.roles ?? []
   const ownerId = profile?.id ?? DEV_OWNER
   const canEdit = canManageFinance(roles) || !configured
+  const canConfirm = canConfirmFinancePayment(roles) || !configured
   const readOnly = !canEdit && configured
 
   const [loading, setLoading] = useState(true)
@@ -49,6 +70,10 @@ export function PaymentEditorPage() {
   const [initial, setInitial] = useState<Payment | null>(null)
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [preset, setPreset] = useState<CustomerOption | null>(null)
+  const [quotationTotal, setQuotationTotal] = useState<number | null>(null)
+  const [quotationNumber, setQuotationNumber] = useState<string | null>(null)
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const [rejectNote, setRejectNote] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -66,7 +91,16 @@ export function PaymentEditorPage() {
           const pay = await getPayment(id)
           if (!cancelled) {
             if (!pay) setError('ไม่พบรายการ')
-            else setInitial(pay)
+            else {
+              setInitial(pay)
+              if (pay.quotation_id) {
+                const q = await getQuotation(pay.quotation_id)
+                if (!cancelled && q) {
+                  setQuotationTotal(q.total)
+                  setQuotationNumber(q.quotation_number)
+                }
+              }
+            }
           }
         }
       } catch (e) {
@@ -83,7 +117,7 @@ export function PaymentEditorPage() {
 
   async function handleSubmit(input: PaymentInput) {
     if (!canEdit) {
-      setError('ไม่มีสิทธิ์บันทึก — ต้องเป็น Admin')
+      setError(`ไม่มีสิทธิ์บันทึก — ต้องเป็น ${formatRoleList(FINANCE_MANAGE_ROLES)}`)
       return
     }
     setSaving(true)
@@ -110,37 +144,10 @@ export function PaymentEditorPage() {
     setError(null)
     try {
       await confirmPayment(id)
-      const pay = await getPayment(id)
-      setInitial(pay)
+      setInitial(await getPayment(id))
 
-      if (pay?.quotation_id) {
-        const q = await getQuotation(pay.quotation_id)
-        if (q?.lead_id) {
-          const lead = await getLead(q.lead_id)
-          const r = await sendPaymentConfirmedViaLine({
-            leadId: q.lead_id,
-            brandName: lead?.brand_name?.trim() || pay.customer_brand_name || 'ลูกค้า',
-            quotationNumber: q.quotation_number,
-            total: pay.total_amount,
-            paymentId: pay.id,
-            lineIds: lead
-              ? {
-                  line_user_id: lead.line_user_id,
-                  line_oa_chat_user_id: lead.line_oa_chat_user_id,
-                }
-              : null,
-          })
-          if (r.ok) {
-            setLineFeedback(
-              r.mode === 'push'
-                ? 'ยืนยันชำระแล้ว — แจ้งลูกค้าทาง LINE แล้ว'
-                : 'ยืนยันชำระแล้ว — เปิด LINE / คัดลอกแจ้งลูกค้า',
-            )
-          } else {
-            setLineFeedback(`ยืนยันชำระแล้ว — ${r.error}`)
-          }
-        }
-      }
+      const line = await invokeNotifyPaymentCustomerLine(id, 'payment_confirmed')
+      setLineFeedback(formatPaymentLineNotifyFeedback('ยืนยันชำระ', line))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'ยืนยันไม่สำเร็จ')
     } finally {
@@ -150,54 +157,22 @@ export function PaymentEditorPage() {
 
   async function handleRejectSlip() {
     if (!id || isNew || !initial?.slip_path) return
-    const note = window.prompt('เหตุผลที่สลิปไม่ผ่าน (ไม่บังคับ)') ?? ''
-    if (!window.confirm('ปฏิเสินสลิปและให้ลูกค้าอัปโหลดใหม่?')) return
-
+    const note = rejectNote.trim()
     setRejecting(true)
     setLineFeedback(null)
     setError(null)
     try {
-      const result = await rejectPaymentCustomerSlip(id, note)
+      await rejectPaymentCustomerSlip(id, note)
       setInitial(await getPayment(id))
 
-      if (result.lead_id) {
-        const lead = await getLead(result.lead_id)
-        const publicUrl = result.public_token
-          ? quotationPublicUrl(result.public_token)
-          : null
-        let qnum: string | null = null
-        if (result.quotation_id) {
-          const q = await getQuotation(result.quotation_id)
-          qnum = q?.quotation_number ?? null
-        }
-        const r = await sendSlipRejectedViaLine({
-          leadId: result.lead_id,
-          brandName: lead?.brand_name?.trim() || initial.customer_brand_name || 'ลูกค้า',
-          quotationNumber: qnum,
-          publicUrl,
-          note,
-          paymentId: id,
-          lineIds: lead
-            ? {
-                line_user_id: lead.line_user_id,
-                line_oa_chat_user_id: lead.line_oa_chat_user_id,
-              }
-            : null,
-        })
-        if (r.ok) {
-          setLineFeedback(
-            r.mode === 'push'
-              ? 'ปฏิเสินสลิปแล้ว — แจ้งลูกค้าทาง LINE แล้ว'
-              : 'ปฏิเสินสลิปแล้ว — เปิด LINE / คัดลอกแจ้งลูกค้า',
-          )
-        } else {
-          setLineFeedback(`ปฏิเสินสลิปแล้ว — ${r.error}`)
-        }
-      } else {
-        setLineFeedback('ปฏิเสินสลิปแล้ว — ลูกค้าสามารถอัปโหลดใหม่จากลิงก์ใบเสนอราคา')
-      }
+      const line = await invokeNotifyPaymentCustomerLine(id, 'slip_rejected', {
+        rejectNote: note,
+      })
+      setLineFeedback(formatPaymentLineNotifyFeedback('ปฏิเสธสลิป', line))
+      setRejectOpen(false)
+      setRejectNote('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'ปฏิเสินสลิปไม่สำเร็จ')
+      setError(e instanceof Error ? e.message : 'ปฏิเสธสลิปไม่สำเร็จ')
     } finally {
       setRejecting(false)
     }
@@ -242,11 +217,27 @@ export function PaymentEditorPage() {
         </p>
       ) : null}
 
-      {readOnly && (
+      {readOnly && canConfirm && (
+        <p className="crm-banner no-print">
+          บัญชี / การเงิน — ยืนยันชำระและตรวจสลิปได้ แต่แก้ไขฟอร์มหลักต้องเป็น {formatRoleList(FINANCE_MANAGE_ROLES)}
+        </p>
+      )}
+      {readOnly && !canConfirm && (
         <p className="crm-banner crm-banner--warn no-print">
           โหมดดูอย่างเดียว — คุณไม่มีสิทธิ์แก้ไขรายการชำระเงิน
         </p>
       )}
+
+      {initial?.verification_status && !initial.confirmed_at ? (
+        <p
+          className={`crm-banner no-print${
+            initial.verification_status === 'verifying' ? ' crm-banner--warn' : ''
+          }`}
+          role="status"
+        >
+          {paymentVerificationLabel(initial.verification_status)}
+        </p>
+      ) : null}
 
       {initial?.confirmed_at && (
         <p className="crm-banner no-print">
@@ -278,35 +269,103 @@ export function PaymentEditorPage() {
 
       {!isNew && initial && (
         <>
-          {initial.status !== 'paid' && canEdit && (
+          {initial.status !== 'paid' && canConfirm && (
             <section className="card card--wide no-print">
-              <button
-                type="button"
-                className="crm-btn crm-btn--primary"
-                disabled={saving}
-                onClick={() => void handleConfirm()}
-              >
-                ยืนยันชำระเงิน (เปิดใช้งานลูกค้า)
-              </button>
+              {initial.slip_path && initial.verification_status === 'verifying' ? (
+                <>
+                  <button
+                    type="button"
+                    className="crm-btn crm-btn--primary"
+                    disabled
+                    title="รอผลตรวจสลิปอัตโนมัติก่อนยืนยัน"
+                  >
+                    รอผลตรวจสลิปอัตโนมัติ…
+                  </button>
+                  <p className="muted" style={{ marginTop: '0.5rem' }}>
+                    ระบบกำลังตรวจสลิป — ปุ่มยืนยันจะเปิดเมื่อ OCR เสร็จ หรือกด “สลิปไม่ผ่าน” เพื่อขออัปโหลดใหม่
+                  </p>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className="crm-btn crm-btn--primary"
+                  disabled={saving}
+                  onClick={() => void handleConfirm()}
+                >
+                  ยืนยันชำระเงิน (เปิดใช้งานลูกค้า)
+                </button>
+              )}
             </section>
           )}
+
+          {initial.slip_path || initial.verification_status !== 'none' ? (
+            <PaymentSlipVerificationPanel
+              payment={initial}
+              quotationTotal={quotationTotal}
+              quotationNumber={quotationNumber}
+              canManage={canConfirm}
+              onUpdated={async () => {
+                if (!id) return
+                setInitial(await getPayment(id))
+              }}
+            />
+          ) : null}
 
           <section className="card card--wide no-print">
             <h2 className="crm-section-title">สลิปชำระเงิน</h2>
             <PaymentSlipPreview slipPath={initial.slip_path} />
-            {canEdit && initial.status === 'pending' && initial.slip_path ? (
+            {canConfirm && initial.status === 'pending' && initial.slip_path ? (
               <div className="finance-slip-actions" style={{ marginTop: '0.75rem' }}>
                 <button
                   type="button"
                   className="crm-btn crm-btn--ghost"
-                  disabled={rejecting || saving}
-                  onClick={() => void handleRejectSlip()}
+                  disabled={rejecting || saving || rejectOpen}
+                  onClick={() => setRejectOpen(true)}
                 >
-                  {rejecting ? 'กำลังดำเนินการ…' : 'สลิปไม่ผ่าน — ขออัปโหลดใหม่'}
+                  สลิปไม่ผ่าน — ขออัปโหลดใหม่
                 </button>
+                {rejectOpen ? (
+                  <div className="finance-reject-modal" role="dialog" aria-label="ปฏิเสธสลิป">
+                    <h3 className="finance-reject-modal__title">ปฏิเสธสลิปและขออัปโหลดใหม่</h3>
+                    <label className="finance-reject-modal__label" htmlFor="reject-note">
+                      เหตุผล (ไม่บังคับ) — ส่งทาง LINE ให้ลูกค้า
+                    </label>
+                    <textarea
+                      id="reject-note"
+                      className="finance-reject-modal__textarea"
+                      value={rejectNote}
+                      onChange={(e) => setRejectNote(e.target.value)}
+                      rows={3}
+                      placeholder="เช่น ยอดไม่ตรง / รูปไม่ชัด / ผิดบัญชี"
+                      disabled={rejecting}
+                      autoFocus
+                    />
+                    <div className="finance-reject-modal__actions">
+                      <button
+                        type="button"
+                        className="crm-btn crm-btn--primary"
+                        disabled={rejecting}
+                        onClick={() => void handleRejectSlip()}
+                      >
+                        {rejecting ? 'กำลังดำเนินการ…' : 'ยืนยันปฏิเสธสลิป'}
+                      </button>
+                      <button
+                        type="button"
+                        className="crm-btn crm-btn--ghost"
+                        disabled={rejecting}
+                        onClick={() => {
+                          setRejectOpen(false)
+                          setRejectNote('')
+                        }}
+                      >
+                        ยกเลิก
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             ) : null}
-            {canEdit && (
+            {canConfirm && (
               <>
                 <p className="muted finance-slip-upload-label">
                   {initial.slip_path ? 'อัปโหลดสลิปใหม่ (แทนที่ของเดิม)' : 'แนบสลิป'}

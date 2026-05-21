@@ -6,7 +6,7 @@ import { NOTIFICATION_PUSH_EVENT } from '../../modules/notifications/leadNotific
 import { listPaymentsPendingSlipReview } from '../../modules/finance/api/paymentSlipReview'
 import type { PaymentSlipReviewItem } from '../../modules/finance/types/paymentSlipQueue'
 
-const SLIP_QUEUE_POLL_MS = 45_000
+const SLIP_QUEUE_POLL_MS = 15_000
 
 export function useHomeSlipReviewQueue(roles: AppRole[], configured: boolean) {
   const enabled = canViewPaymentSlipReviewQueue(roles) || !configured
@@ -50,7 +50,9 @@ export function useHomeSlipReviewQueue(roles: AppRole[], configured: boolean) {
       realtime?.subscribeStaffAlertInsert((row) => {
         if (
           row.dedupe_key.includes('payment-slip-pending') ||
-          row.dedupe_key.includes('payment-confirmed')
+          row.dedupe_key.includes('payment-slip-verifying') ||
+          row.dedupe_key.includes('payment-confirmed') ||
+          row.dedupe_key.includes('payment-auto-confirmed')
         ) {
           onRefresh()
         }

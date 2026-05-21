@@ -102,14 +102,20 @@ export function PaymentInstructionsCard({
 
         <section className="qt-payment-qr" aria-label="QR PromptPay">
           <h3>สแกนจ่าย (PromptPay)</h3>
-          <img src={qrUrl} alt="" width={220} height={220} className="qt-payment-qr__img" />
+          <img
+            src={qrUrl}
+            alt={`QR PromptPay ยอด ${formatThaiBaht(total)} อ้างอิง ${quotationNumber}`}
+            width={220}
+            height={220}
+            className="qt-payment-qr__img"
+          />
           <p className="crm-sub">ตรวจยอดก่อนยืนยัน — ระบุเลขที่ใบเสนอราคาเมื่อโอน</p>
         </section>
       </div>
 
       {variant === 'public' ? (
         <p className="qt-payment-card__hint">
-          โอนแล้วแจ้งสลิปทางแชท LINE กับทีม NP Create หรือติดต่อทีมงาน — ทีมจะยืนยันการชำระและเริ่มงานต่อ
+          โอนแล้วอัปโหลดสลิปด้านล่าง — หรือส่งสลิปทางแชท LINE กับทีม NP Create ทีมจะยืนยันการชำระและเริ่มงานต่อ
         </p>
       ) : null}
 

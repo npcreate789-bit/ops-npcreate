@@ -1,4 +1,4 @@
-import type { AppRole } from '../types/roles'
+import { ROLE_LABELS, type AppRole } from '../types/roles'
 
 /** ตรงกับ `public.is_privileged()` ใน Supabase */
 export const DB_PRIVILEGED_ROLES: AppRole[] = ['ceo', 'operations', 'dev']
@@ -284,7 +284,7 @@ export function canViewFinanceDocuments(roles: AppRole[]): boolean {
 
 /** บันทึก/แก้ไขการเงิน — ตรง payments_insert/update */
 export function isFinanceReadOnly(roles: AppRole[]): boolean {
-  return canViewFinance(roles) && !canManageFinance(roles)
+  return canViewFinance(roles) && !canManageFinance(roles) && !canConfirmFinancePayment(roles)
 }
 
 /** ตั้งค่าโปรไฟล์ — ทุกบทบาทที่ login ได้ */
@@ -530,8 +530,44 @@ export function canManageSalesPackages(roles: AppRole[]): boolean {
 
 export const FINANCE_MANAGE_ROLES: AppRole[] = ['ceo', 'admin', 'dev']
 
+/** ยืนยันชำระ / ปฏิเสธสลิป / จับคู่ธนาคาร — ตรง confirm_payment + bank RPC */
+export const FINANCE_CONFIRM_ROLES: AppRole[] = [
+  'ceo',
+  'admin',
+  'dev',
+  'account',
+  'operations',
+]
+
+const ROLE_SHORT_LABEL: Partial<Record<AppRole, string>> = {
+  ceo: 'CEO',
+  admin: 'Admin',
+  dev: 'Dev',
+  account: 'Account',
+  operations: 'Operations',
+  sales: 'Sales',
+  ads: 'Ads',
+  senior_ads: 'Senior Ads',
+  content: 'Content',
+  client: 'Client',
+}
+
+export function formatRoleList(list: AppRole[]): string {
+  return list
+    .map((r) => ROLE_SHORT_LABEL[r] ?? ROLE_LABELS[r] ?? r)
+    .filter(Boolean)
+    .join(' / ')
+}
+
 export function canManageFinance(roles: AppRole[]): boolean {
   return roles.some((r) => FINANCE_MANAGE_ROLES.includes(r))
+}
+
+export function canConfirmFinancePayment(roles: AppRole[]): boolean {
+  return (
+    hasDbPrivilegedRole(roles) ||
+    roles.some((r) => FINANCE_CONFIRM_ROLES.includes(r))
+  )
 }
 
 /** คิวส่งข้อมูลชำระเงินหลังลูกค้ายอมรับใบเสนอราคา */

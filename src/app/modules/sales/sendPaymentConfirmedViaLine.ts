@@ -5,6 +5,7 @@ import {
   type LineDeliveryMode,
 } from '../../../shared/line/staffLineMessaging'
 import { formatThaiBaht } from '../../../shared/payment/buildPaymentInstructionsMessage'
+import { shouldSendPaymentLineNotify } from '../../../shared/payment/paymentLineNotifyPolicy'
 
 export type PaymentConfirmedLineResult =
   | { ok: true; mode: LineDeliveryMode }
@@ -35,6 +36,11 @@ export async function sendPaymentConfirmedViaLine(opts: {
   paymentId: string
   lineIds: LeadLineIds | null
 }): Promise<PaymentConfirmedLineResult> {
+  const enabled = await shouldSendPaymentLineNotify('payment_confirmed')
+  if (!enabled) {
+    return { ok: false, error: 'ปิดการแจ้ง LINE ใน Settings — ข้ามการส่ง' }
+  }
+
   const message = buildPaymentConfirmedMessage({
     brandName: opts.brandName,
     quotationNumber: opts.quotationNumber,

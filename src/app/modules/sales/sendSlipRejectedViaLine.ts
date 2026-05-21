@@ -4,6 +4,7 @@ import {
   deliverLineMessageToCustomer,
   type LineDeliveryMode,
 } from '../../../shared/line/staffLineMessaging'
+import { shouldSendPaymentLineNotify } from '../../../shared/payment/paymentLineNotifyPolicy'
 
 export type SlipRejectedLineResult =
   | { ok: true; mode: LineDeliveryMode }
@@ -45,6 +46,11 @@ export async function sendSlipRejectedViaLine(opts: {
   paymentId: string
   lineIds: LeadLineIds | null
 }): Promise<SlipRejectedLineResult> {
+  const enabled = await shouldSendPaymentLineNotify('slip_rejected')
+  if (!enabled) {
+    return { ok: false, error: 'ปิดการแจ้ง LINE ใน Settings — ข้ามการส่ง' }
+  }
+
   const message = buildSlipRejectedMessage({
     brandName: opts.brandName,
     quotationNumber: opts.quotationNumber,

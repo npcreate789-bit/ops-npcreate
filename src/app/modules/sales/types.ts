@@ -128,6 +128,15 @@ export interface PublicQuotation {
   can_accept: boolean
   can_upload_slip?: boolean
   slip_submitted?: boolean
+  payment_verification_status?: 'none' | 'verifying' | 'review_required' | 'confirmed'
+  payment_status_message?: string | null
+  pending_payment_id?: string | null
+  /** มีค่าเมื่อ OCR/ auto-pass ตัดสินแล้ว — client ไม่ส่ง review_pending ซ้ำ */
+  payment_verification_decision?: string | null
+  /** เวลาที่สลิปล่าสุดถูก reject (สำหรับแสดง banner บน /q) */
+  slip_rejected_at?: string | null
+  /** เหตุผลที่ทีมระบุตอน reject สลิป */
+  slip_rejected_note?: string | null
 }
 
 export interface QuotationInput {

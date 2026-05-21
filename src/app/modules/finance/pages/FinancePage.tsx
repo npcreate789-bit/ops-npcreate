@@ -3,10 +3,14 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canCreateSalesQuotation,
+  canConfirmFinancePayment,
   canManageFinance,
   canViewFinance,
   canViewFinanceDocuments,
   canViewWorkHub,
+  FINANCE_CONFIRM_ROLES,
+  FINANCE_MANAGE_ROLES,
+  formatRoleList,
   hasCrmTeamView,
   isFinanceReadOnly,
 } from '../../../../shared/auth/access'
@@ -14,6 +18,7 @@ import { formatBangkokDate } from '../../../../shared/dates/bangkok'
 import { getFinanceSummary, listFinanceDocuments, listPayments } from '../api/payments'
 import { FinancePipelineBar } from '../components/FinancePipelineBar'
 import { FinanceRoleGuide } from '../components/FinanceRoleGuide'
+import { BankStatementMatchSection } from '../components/BankStatementMatchSection'
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge'
 import { serviceTypeLabel } from '../constants'
 import { isPaymentOverdue } from '../pipeline'
@@ -29,6 +34,7 @@ export function FinancePage() {
   const roles = profile?.roles ?? []
   const canView = canViewFinance(roles) || !configured
   const canManage = canManageFinance(roles) || !configured
+  const canConfirm = canConfirmFinancePayment(roles) || !configured
   const readOnly = isFinanceReadOnly(roles) && configured
   const canViewDocs = canViewFinanceDocuments(roles) || !configured
   const showCrmLink = hasCrmTeamView(roles) || !configured
@@ -142,6 +148,8 @@ export function FinancePage() {
 
       <FinanceRoleGuide />
 
+      <BankStatementMatchSection canManage={canConfirm} />
+
       {!configured && (
         <p className="crm-banner crm-banner--warn">
           โหมดพัฒนา — ข้อมูลเก็บในเครื่อง (localStorage)
@@ -150,7 +158,8 @@ export function FinancePage() {
 
       {readOnly && (
         <p className="crm-banner crm-banner--warn phase2-scope-banner">
-          โหมดดูอย่างเดียว — บันทึกและยืนยันชำระเงินได้เฉพาะ Admin / CEO
+          โหมดดูอย่างเดียว — บันทึกฟอร์มเฉพาะ {formatRoleList(FINANCE_MANAGE_ROLES)}
+          {' '}· ยืนยันชำระ {formatRoleList(FINANCE_CONFIRM_ROLES)}
         </p>
       )}
 

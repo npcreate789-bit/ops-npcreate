@@ -15,7 +15,11 @@ import {
 import type { PublicQuotation } from '../types'
 import { PaymentInstructionsCard } from '../components/PaymentInstructionsCard'
 import { PublicPaymentSlipUpload } from '../components/PublicPaymentSlipUpload'
+import { PublicPaymentStatusCard } from '../components/PublicPaymentStatusCard'
+import { PublicQuotationProgressStepper } from '../components/PublicQuotationProgressStepper'
+import { usePublicQuotationPoll } from '../hooks/usePublicQuotationPoll'
 import { fetchCompanyPaymentSettings } from '../../../../shared/payment/companyPaymentSettings'
+import { showPublicProgressStepper } from '../publicPaymentFlow'
 import {
   formatPublicItemsSummary,
   showPublicAcceptedPendingInstructions,
@@ -41,6 +45,8 @@ export function PublicQuotationPage() {
     () => (data ? formatPublicItemsSummary(data.items) : null),
     [data],
   )
+
+  usePublicQuotationPoll(token, data, setData)
 
   useEffect(() => {
     if (!token) {
@@ -124,6 +130,10 @@ export function PublicQuotationPage() {
           </section>
         )}
 
+        {!loading && data && showPublicProgressStepper(data) ? (
+          <PublicQuotationProgressStepper data={data} />
+        ) : null}
+
         {!loading && data && (
           <>
             {showAcceptedPending ? (
@@ -167,11 +177,8 @@ export function PublicQuotationPage() {
                     itemsSummary={itemsSummary}
                     contractMonths={data.contract_months}
                   />
-                  {data.slip_submitted ? (
-                    <p className="crm-banner crm-banner--ok" role="status">
-                      ส่งสลิปแล้ว — รอทีมงานยืนยันการชำระเงิน
-                    </p>
-                  ) : data.can_upload_slip && token ? (
+                  <PublicPaymentStatusCard data={data} />
+                  {data.can_upload_slip && token ? (
                     <PublicPaymentSlipUpload
                       token={token}
                       onSubmitted={() => {

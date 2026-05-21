@@ -2,6 +2,7 @@ import { logAudit } from '../../../../shared/audit/logAudit'
 import { bangkokTodayIsoDate, bangkokYearMonthPrefix } from '../../../../shared/dates/bangkok'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import type { CustomerOption, FinanceSummary, Payment, PaymentInput } from '../types'
+import { invokeVerifyPaymentSlip } from './paymentSlipVerify'
 import { mockFinanceApi } from './mockStore'
 
 export async function listPayments(): Promise<Payment[]> {
@@ -155,6 +156,8 @@ export async function createPayment(input: PaymentInput): Promise<Payment> {
     tax_invoice_number = data as string
   }
 
+  const insertStatus = input.status === 'paid' ? 'pending' : input.status
+
   const { data, error } = await supabase
     .from('payments')
     .insert({
@@ -165,13 +168,13 @@ export async function createPayment(input: PaymentInput): Promise<Payment> {
       amount: input.amount,
       vat_amount: input.vat_amount,
       total_amount: input.total_amount,
-      status: input.status,
+      status: insertStatus,
       payment_date: input.payment_date,
       due_date: input.due_date,
       notes: input.notes,
       receipt_number,
       tax_invoice_number,
-      confirmed_at: input.status === 'paid' ? new Date().toISOString() : null,
+      confirmed_at: null,
     })
     .select()
     .single()
@@ -179,7 +182,10 @@ export async function createPayment(input: PaymentInput): Promise<Payment> {
   if (error) throw new Error(error.message)
 
   if (input.status === 'paid') {
-    await supabase.rpc('confirm_payment', { p_payment_id: data.id })
+    const { error: confirmErr } = await supabase.rpc('confirm_payment', {
+      p_payment_id: data.id,
+    })
+    if (confirmErr) throw new Error(confirmErr.message)
   }
 
   const paymentId = data.id as string
@@ -213,6 +219,8 @@ export async function updatePayment(id: string, input: PaymentInput): Promise<Pa
     tax_invoice_number = data as string
   }
 
+  const becomingPaid = input.status === 'paid' && existing?.status !== 'paid'
+
   const { error } = await supabase
     .from('payments')
     .update({
@@ -220,7 +228,7 @@ export async function updatePayment(id: string, input: PaymentInput): Promise<Pa
       amount: input.amount,
       vat_amount: input.vat_amount,
       total_amount: input.total_amount,
-      status: input.status,
+      status: becomingPaid ? existing?.status ?? 'pending' : input.status,
       payment_date: input.payment_date,
       due_date: input.due_date,
       notes: input.notes,
@@ -231,8 +239,11 @@ export async function updatePayment(id: string, input: PaymentInput): Promise<Pa
 
   if (error) throw new Error(error.message)
 
-  if (input.status === 'paid' && existing?.status !== 'paid') {
-    await supabase.rpc('confirm_payment', { p_payment_id: id })
+  if (becomingPaid) {
+    const { error: confirmErr } = await supabase.rpc('confirm_payment', {
+      p_payment_id: id,
+    })
+    if (confirmErr) throw new Error(confirmErr.message)
   }
 
   await logAudit('payment.update', 'payment', id, {
@@ -281,8 +292,14 @@ export async function uploadPaymentSlip(
   const path = `${recordedBy}/${customerId}/${paymentId}/${Date.now()}_${file.name}`
   const { error: upError } = await supabase.storage.from('payments').upload(path, file)
   if (upError) throw new Error(upError.message)
-  const { error } = await supabase.from('payments').update({ slip_path: path }).eq('id', paymentId)
+
+  const { error } = await supabase.rpc('register_staff_payment_slip', {
+    p_payment_id: paymentId,
+    p_storage_path: path,
+  })
   if (error) throw new Error(error.message)
+
+  void invokeVerifyPaymentSlip(paymentId)
   await logAudit('payment.slip_upload', 'payment', paymentId, { file_name: file.name })
   return path
 }

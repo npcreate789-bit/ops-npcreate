@@ -28,9 +28,11 @@ import { HomeContactInquiries } from './home/HomeContactInquiries'
 import { HomeWorkPreview } from './home/HomeWorkPreview'
 import { HomePaymentQueuePanel } from './home/HomePaymentQueuePanel'
 import { HomeSlipReviewPanel } from './home/HomeSlipReviewPanel'
+import { HomeSlipVerifyingPanel } from './home/HomeSlipVerifyingPanel'
 import { PaymentInstructionsPanel } from '../modules/sales/components/PaymentInstructionsPanel'
 import { useHomePaymentQueue } from './home/useHomePaymentQueue'
 import { useHomeSlipReviewQueue } from './home/useHomeSlipReviewQueue'
+import { useHomeSlipVerifyingQueue } from './home/useHomeSlipVerifyingQueue'
 import { canViewHomeContactInquiries } from './home/access'
 import { useHomeContactInquiries } from './home/useHomeContactInquiries'
 import { useHomeDashboard } from './home/useHomeDashboard'
@@ -91,6 +93,7 @@ export function HomePage() {
   const paymentQueue = useHomePaymentQueue(roles, configured)
   const showSlipReviewQueue = canViewPaymentSlipReviewQueue(roles) || !configured
   const slipReviewQueue = useHomeSlipReviewQueue(roles, configured)
+  const slipVerifyingQueue = useHomeSlipVerifyingQueue(roles, configured)
 
   const unreadNotif = useNotificationUnread(userId, roles)
   const priorityActions = homePriorityActions(navRoles, clientOnly)
@@ -179,6 +182,28 @@ export function HomePage() {
         </section>
       ) : null}
 
+      {showSlipReviewQueue && slipVerifyingQueue.count > 0 ? (
+        <section
+          className="home-panel home-panel--slip-verifying"
+          id="slip-verifying-queue"
+          aria-labelledby="home-slip-verifying-heading"
+        >
+          <header className="home-panel__head">
+            <div>
+              <h2 id="home-slip-verifying-heading">สลิปกำลังตรวจสอบอัตโนมัติ</h2>
+              <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
+                ระบบกำลังตรวจ — รายการจะเข้าคิวตรวจมือเมื่อเสร็จ
+              </p>
+            </div>
+          </header>
+          <HomeSlipVerifyingPanel
+            items={slipVerifyingQueue.items}
+            loading={slipVerifyingQueue.loading}
+            error={slipVerifyingQueue.error}
+          />
+        </section>
+      ) : null}
+
       {showSlipReviewQueue && slipReviewQueue.count > 0 ? (
         <section
           className="home-panel home-panel--slip-queue"
@@ -187,9 +212,9 @@ export function HomePage() {
         >
           <header className="home-panel__head">
             <div>
-              <h2 id="home-slip-heading">ด่วน · รอตรวจสลิปชำระเงิน</h2>
+              <h2 id="home-slip-heading">ด่วน · รอตรวจสลิป (มือ)</h2>
               <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
-                ลูกค้าอัปโหลดสลิปจากลิงก์ใบเสนอราคา — Finance ยืนยันรายการ
+                ตรวจสอบอัตโนมัติเสร็จแล้ว — Finance ยืนยันรายการ
               </p>
             </div>
             {canOpenHomePath(roles, '/app/finance') ? (

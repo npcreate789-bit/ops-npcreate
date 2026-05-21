@@ -17,6 +17,13 @@ export interface Payment {
   tax_invoice_number: string | null
   notes: string | null
   confirmed_at: string | null
+  verification_status?: 'none' | 'verifying' | 'review_required' | 'confirmed' | null
+  verification_started_at?: string | null
+  verification_decision?: string | null
+  slip_detected_amount?: number | null
+  verification_confidence?: number | null
+  verification_result?: Record<string, unknown> | null
+  customer_slip_uploaded_at?: string | null
   created_at: string
   updated_at: string
   customer_brand_name?: string | null

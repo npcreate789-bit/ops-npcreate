@@ -367,6 +367,19 @@ export const mockSalesApi = {
   },
 
   toPublicPayload(q: Quotation): PublicQuotation {
+    const awaitingPay = q.status === 'awaiting_payment'
+    const paid = q.status === 'paid'
+    const verification = paid
+      ? ('confirmed' as const)
+      : awaitingPay
+        ? ('none' as const)
+        : undefined
+    const paymentStatusMessage = paid
+      ? 'ยืนยันการชำระเงินแล้ว'
+      : awaitingPay
+        ? null
+        : null
+
     return {
       id: q.id,
       quotation_number: q.quotation_number,
@@ -394,6 +407,10 @@ export const mockSalesApi = {
         sort_order: item.sort_order,
       })),
       can_accept: q.status === 'sent' || q.status === 'viewed',
+      can_upload_slip: awaitingPay && verification === 'none',
+      slip_submitted: false,
+      payment_verification_status: verification,
+      payment_status_message: paymentStatusMessage,
     }
   },
 
