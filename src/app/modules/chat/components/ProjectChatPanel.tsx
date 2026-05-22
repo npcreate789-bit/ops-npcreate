@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import { hasTasksTeamView } from '../../../../shared/auth/access'
 import { createTask } from '../../tasks/api/tasks'
@@ -33,6 +34,7 @@ import { ChatPinnedBar } from './ChatPinnedBar'
 import { ChatNotesPopover } from './ChatNotesPopover'
 import { ChatRoomHeader } from './ChatRoomHeader'
 import { useChatRoomSocial } from '../hooks/useChatRoomSocial'
+import { useCustomerLineActivity } from '../hooks/useCustomerLineActivity'
 import { useProjectChat } from '../hooks/useProjectChat'
 import '../chat.css'
 
@@ -93,6 +95,27 @@ export function ProjectChatPanel({
     useProjectChat(projectId, userId, activeChannel)
 
   const { social, reload: reloadSocial, setSocial } = useChatRoomSocial(roomId, messages.length)
+
+  /*
+   * ลูกค้ายังคุยทาง LINE OA ต่อได้แม้หลังปิดการขาย — ตรวจ activity ของ lead
+   * ต้นทาง เพื่อแจ้งทีมโปรเจกต์ว่ามีข้อความเข้าใหม่ (กัน miss แชทเพราะทีม
+   * สลับมาทำ Project Chat แทน CRM)
+   * Client-only เท่านั้นที่ไม่ต้องโชว์ (พวกเขาส่งข้อความตรงในห้องลูกค้าได้อยู่แล้ว)
+   */
+  const lineActivity = useCustomerLineActivity(isClientOnly ? null : customerId)
+  const lineLastInboundText = useMemo(() => {
+    if (!lineActivity.latestInboundAt) return null
+    const now = Date.now()
+    const ts = new Date(lineActivity.latestInboundAt).getTime()
+    if (!Number.isFinite(ts)) return null
+    const diffMin = Math.max(0, Math.round((now - ts) / 60000))
+    if (diffMin < 1) return 'เมื่อสักครู่'
+    if (diffMin < 60) return `เมื่อ ${diffMin} นาทีที่แล้ว`
+    const diffHr = Math.round(diffMin / 60)
+    if (diffHr < 24) return `เมื่อ ${diffHr} ชม. ที่แล้ว`
+    const diffDay = Math.round(diffHr / 24)
+    return `เมื่อ ${diffDay} วันที่แล้ว`
+  }, [lineActivity.latestInboundAt])
 
   useEffect(() => {
     if (lockedChannel) {
@@ -395,6 +418,36 @@ export function ProjectChatPanel({
         onOpenNotedMessage={openNotedFromTopBar}
         activeNotedMessageId={openNotesMessageId}
       />
+
+      {/*
+        แบนเนอร์ LINE OA awareness — ขึ้นเฉพาะเมื่อ lead มีร่องรอย LINE จริง
+        ๆ lineLastInboundText จะมีค่าก็ต่อเมื่อมี inbound message ในกรอบ 7 วัน
+        → ทำให้เด่นเฉพาะตอนที่ทีมต้องสนใจจริง (ไม่ noise ทุก lead)
+      */}
+      {lineActivity.hasLineEvidence && lineActivity.leadId && (
+        <div
+          className={`chat-line-awareness${
+            lineLastInboundText ? ' chat-line-awareness--active' : ''
+          }`}
+          role={lineLastInboundText ? 'status' : undefined}
+        >
+          <div className="chat-line-awareness__copy">
+            <strong>LINE OA — ลูกค้ายังทักเข้ามาได้</strong>
+            {lineLastInboundText ? (
+              <span>ลูกค้าทักล่าสุด {lineLastInboundText}</span>
+            ) : (
+              <span className="muted">ห้องนี้สำหรับทีม — ตอบลูกค้าทาง LINE ที่ CRM</span>
+            )}
+          </div>
+          <Link
+            to={`/app/crm/${lineActivity.leadId}`}
+            state={{ focusLineChat: true }}
+            className="crm-btn crm-btn--ghost crm-btn--sm chat-line-awareness__cta"
+          >
+            {lineLastInboundText ? 'เปิดแชท LINE OA →' : 'ดูแชท LINE OA'}
+          </Link>
+        </div>
+      )}
 
       {openNotesMessageId && notesTarget && openNotesAnchor && (
         <ChatNotesPopover

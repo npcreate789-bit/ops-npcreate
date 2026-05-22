@@ -622,6 +622,64 @@
   margin: 0 1rem;
 }
 
+/* LINE OA awareness strip — ขึ้นเฉพาะเมื่อ lead ต้นทางมี LINE evidence */
+.chat-line-awareness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0 1rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  background: rgba(99, 102, 241, 0.08);
+  font-size: 0.82rem;
+}
+
+.chat-line-awareness--active {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.chat-line-awareness__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1 1 14rem;
+}
+
+.chat-line-awareness__copy strong {
+  color: #e0e7ff;
+  font-size: 0.85rem;
+}
+
+.chat-line-awareness--active .chat-line-awareness__copy strong {
+  color: #bbf7d0;
+}
+
+.chat-line-awareness__copy span {
+  color: rgba(226, 232, 240, 0.75);
+  line-height: 1.4;
+}
+
+.chat-line-awareness__cta {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 540px) {
+  .chat-line-awareness {
+    margin: 0 0.6rem;
+    padding: 0.5rem 0.65rem;
+  }
+  .chat-line-awareness__cta {
+    width: 100%;
+    text-align: center;
+  }
+}
+
 .chat-room-header {
   display: flex;
   flex-wrap: wrap;
