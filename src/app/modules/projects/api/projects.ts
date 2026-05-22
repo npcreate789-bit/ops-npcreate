@@ -2,6 +2,10 @@ import { logAudit } from '../../../../shared/audit/logAudit'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import type { Project, ProjectInsert, ProjectUpdate } from '../types'
 import type { ProjectTaskOption } from '../../tasks/types'
+import {
+  invokeNotifyProjectStatusLine,
+  isProjectStatusLineEvent,
+} from './notifyProjectStatusLine'
 
 const MOCK_KEY = 'npcreate_projects_dev'
 
@@ -108,6 +112,20 @@ export async function updateProject(id: string, payload: ProjectUpdate): Promise
     return rows[idx]
   }
 
+  /*
+   * จับสถานะเดิมก่อน update เพื่อทราบว่าเปลี่ยน status ในรอบนี้จริงไหม
+   * (ลด noise / กันยิง LINE ซ้ำเมื่อแค่แก้ progress / owner)
+   */
+  let priorStatus: Project['status'] | null = null
+  if (typeof payload.status === 'string') {
+    const { data: prior } = await supabase
+      .from('projects')
+      .select('status')
+      .eq('id', id)
+      .maybeSingle()
+    priorStatus = (prior?.status as Project['status'] | undefined) ?? null
+  }
+
   const { data, error } = await supabase
     .from('projects')
     .update(payload)
@@ -117,5 +135,23 @@ export async function updateProject(id: string, payload: ProjectUpdate): Promise
 
   if (error) throw new Error(error.message)
   await logAudit('project.update', 'project', id, payload as Record<string, unknown>)
+
+  /*
+   * แจ้งลูกค้าทาง LINE OA เมื่อสถานะเปลี่ยนเข้า event ที่อยู่ใน allowlist
+   * (in_progress / waiting_approval / completed)
+   *
+   * - Fire-and-forget — ความผิดพลาดของ edge ไม่ขัด UX การ save
+   * - Server-side dedupe ตาม project.updated_at (กัน double-fire เมื่อทีม
+   *   กดบันทึกซ้ำใน window สั้น ๆ)
+   */
+  const nextStatus = (data as Project)?.status
+  if (
+    payload.status &&
+    isProjectStatusLineEvent(nextStatus) &&
+    priorStatus !== nextStatus
+  ) {
+    void invokeNotifyProjectStatusLine(id, nextStatus).catch(() => undefined)
+  }
+
   return data as Project
 }
