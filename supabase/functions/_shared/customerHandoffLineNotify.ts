@@ -77,10 +77,26 @@ async function linePushText(to: string, text: string): Promise<boolean> {
   return true
 }
 
+async function loadHandoffEnabled(admin: SupabaseClient): Promise<boolean> {
+  const { data, error } = await admin.rpc('get_company_payment_settings')
+  if (error || !data || typeof data !== 'object') {
+    // ดีฟอลต์เปิดไว้ถ้าโหลด setting ไม่ได้ — เป็นพฤติกรรมเดิมก่อนมี toggle
+    return true
+  }
+  const r = data as Record<string, unknown>
+  // ใช้ `!== false` แทน `=== true` เพื่อให้ legacy row (ไม่มี column) ถือว่าเปิด
+  return r.line_notify_customer_handoff !== false
+}
+
 export async function notifyCustomerHandoffLine(
   admin: SupabaseClient,
   customerId: string,
 ): Promise<{ ok: boolean; skipped?: string; pushed?: boolean }> {
+  const enabled = await loadHandoffEnabled(admin)
+  if (!enabled) {
+    return { ok: true, skipped: 'disabled_in_settings' }
+  }
+
   const { data: customer, error: cErr } = await admin
     .from('customers')
     .select('id, brand_name, lead_id')

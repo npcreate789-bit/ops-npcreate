@@ -22,6 +22,11 @@ export interface CompanyPaymentSettings {
   line_notify_payment_confirmed: boolean
   line_notify_slip_rejected: boolean
   line_notify_review_pending: boolean
+  /**
+   * ส่งข้อความ "Customer Handoff" ทาง LINE OA หนึ่งครั้งเมื่อ Lead กลายเป็น Customer
+   * (ดู `supabase/functions/_shared/customerHandoffLineNotify.ts`)
+   */
+  line_notify_customer_handoff: boolean
   bank_match_auto_confirm_enabled: boolean
   bank_match_amount_tolerance_baht: number
   bank_match_lookback_days: number
@@ -44,6 +49,7 @@ export const DEFAULT_COMPANY_PAYMENT_SETTINGS: CompanyPaymentSettings = {
   line_notify_payment_confirmed: true,
   line_notify_slip_rejected: true,
   line_notify_review_pending: true,
+  line_notify_customer_handoff: true,
   bank_match_auto_confirm_enabled: false,
   bank_match_amount_tolerance_baht: 1,
   bank_match_lookback_days: 14,
@@ -75,6 +81,7 @@ function parseSettings(data: unknown): CompanyPaymentSettings | null {
     line_notify_payment_confirmed: r.line_notify_payment_confirmed !== false,
     line_notify_slip_rejected: r.line_notify_slip_rejected !== false,
     line_notify_review_pending: r.line_notify_review_pending !== false,
+    line_notify_customer_handoff: r.line_notify_customer_handoff !== false,
     bank_match_auto_confirm_enabled: Boolean(r.bank_match_auto_confirm_enabled),
     bank_match_amount_tolerance_baht: Number(r.bank_match_amount_tolerance_baht) ?? 1,
     bank_match_lookback_days: Number(r.bank_match_lookback_days) || 14,

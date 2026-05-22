@@ -41,6 +41,7 @@ export function CompanyPaymentSettingsSection({
   const [lineConfirmed, setLineConfirmed] = useState(true)
   const [lineRejected, setLineRejected] = useState(true)
   const [lineReviewPending, setLineReviewPending] = useState(true)
+  const [lineCustomerHandoff, setLineCustomerHandoff] = useState(true)
   const [bankMatchAuto, setBankMatchAuto] = useState(false)
   const [bankMatchTolerance, setBankMatchTolerance] = useState('1')
   const [bankMatchLookback, setBankMatchLookback] = useState('14')
@@ -66,6 +67,7 @@ export function CompanyPaymentSettingsSection({
         setLineConfirmed(s.line_notify_payment_confirmed)
         setLineRejected(s.line_notify_slip_rejected)
         setLineReviewPending(s.line_notify_review_pending)
+        setLineCustomerHandoff(s.line_notify_customer_handoff)
         setBankMatchAuto(s.bank_match_auto_confirm_enabled)
         setBankMatchTolerance(String(s.bank_match_amount_tolerance_baht))
         setBankMatchLookback(String(s.bank_match_lookback_days))
@@ -133,6 +135,7 @@ export function CompanyPaymentSettingsSection({
         line_notify_payment_confirmed: lineConfirmed,
         line_notify_slip_rejected: lineRejected,
         line_notify_review_pending: lineReviewPending,
+        line_notify_customer_handoff: lineCustomerHandoff,
         bank_match_auto_confirm_enabled: bankMatchAuto,
         bank_match_amount_tolerance_baht: bankTol,
         bank_match_lookback_days: Math.round(bankLook),
@@ -426,6 +429,22 @@ export function CompanyPaymentSettingsSection({
               }}
             />
             <span>เมื่อปฏิเสธสลิป (ขออัปโหลดใหม่)</span>
+          </label>
+          <label className="task-field task-field--full settings-checkbox-row">
+            <input
+              type="checkbox"
+              checked={lineCustomerHandoff}
+              onChange={(e) => {
+                setLineCustomerHandoff(e.target.checked)
+                setSaved(false)
+              }}
+            />
+            <span>
+              เมื่อปิดการขาย (Lead → Customer) — ส่งข้อความขอบคุณ + ลิงก์ Client Workspace
+            </span>
+            <span className="muted settings-field-hint">
+              ยิงครั้งเดียวต่อ Customer (ระบบ dedupe ฝั่งเซิร์ฟเวอร์) — ปิดถ้าจะคุยมือเอง
+            </span>
           </label>
 
           {error ? <p className="crm-error">{error}</p> : null}
