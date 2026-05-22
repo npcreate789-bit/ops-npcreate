@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
   canAccessNotifications,
@@ -334,9 +334,26 @@ export function LeadEditorPage() {
       )}
 
       {initial?.customer_id && (
-        <p className="crm-banner crm-banner--ok">
-          ปิดการขายแล้ว — มี Customer ในระบบ · ลูกค้าเข้า Client Workspace ได้หลังได้บัญชี
-        </p>
+        <div className="crm-banner crm-banner--ok crm-lead-handoff-banner" role="status">
+          <div className="crm-lead-handoff-banner__copy">
+            <strong>ปิดการขายแล้ว — Lead กลายเป็น Customer ในระบบ</strong>
+            <span>
+              ติดตามงานต่อในโปรเจกต์ / Client Workspace — แชทกับลูกค้าจะย้ายไปที่ห้อง
+              โปรเจกต์ (LINE OA ยังใช้คุยทักทาย/แจ้งเตือนได้)
+            </span>
+          </div>
+          <div className="crm-lead-handoff-banner__cta">
+            <Link
+              to={`/app/customers/${initial.customer_id}`}
+              className="crm-btn crm-btn--primary crm-btn--sm"
+            >
+              ดูข้อมูลลูกค้า 360°
+            </Link>
+            <Link to="/app/chat" className="crm-btn crm-btn--ghost crm-btn--sm">
+              ไปแชททีมโปรเจกต์
+            </Link>
+          </div>
+        </div>
       )}
 
       <div className="crm-lead-workspace">

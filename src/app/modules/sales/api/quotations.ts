@@ -1,6 +1,7 @@
 import { logAudit } from '../../../../shared/audit/logAudit'
 import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/client'
 import { updateLead } from '../../crm/api/leads'
+import { invokeNotifyCustomerHandoffLine } from '../../customers/api/notifyCustomerHandoffLine'
 import type { LeadStatus } from '../../crm/types'
 import type { Quotation, QuotationInput, QuotationStatus } from '../types'
 import { appUrl } from '../../../../shared/config/appUrl'
@@ -252,6 +253,18 @@ async function linkCustomerForQuotation(quotationId: string, input: QuotationInp
 
   if (isSupabaseConfigured && supabase) {
     await supabase.from('quotations').update({ customer_id: customerId }).eq('id', quotationId)
+  }
+
+  /*
+   * เมื่อ Quotation เปลี่ยนเป็น `paid` → Lead กลายเป็น `won` + Customer พร้อม
+   * ส่งข้อความ "ขอบคุณ + ลิงก์ Client Workspace" ทาง LINE OA ครั้งเดียว
+   * (server dedupe ตาม customer_id — fire-and-forget ปลอดภัย)
+   *
+   * NOTE: cascade เดียวกันยังถูกเรียกฝั่ง Edge หลัง `payment_confirmed` ด้วย
+   * เพื่อครอบคลุมเส้นทาง auto bank-match ที่ไม่ผ่าน save flow นี้
+   */
+  if (input.status === 'paid' && customerId) {
+    void invokeNotifyCustomerHandoffLine(customerId).catch(() => undefined)
   }
 }
 

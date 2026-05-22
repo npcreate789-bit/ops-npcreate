@@ -1,5 +1,6 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 import { buildLinePushCandidateIds } from './linePushRecipient.ts'
+import { notifyCustomerHandoffLine } from './customerHandoffLineNotify.ts'
 import {
   buildPaymentLineMessage,
   publicQuotationUrl,
@@ -215,14 +216,35 @@ export async function notifyPaymentCustomerLine(
       if (leadId) {
         await admin.from('lead_line_messages').insert({
           lead_id: leadId,
+          line_user_id: to,
           direction: 'outbound',
           body: text,
+          message_type: 'text',
           metadata: {
             payment_id: paymentId,
             source: `payment_line_${event}`,
           },
         })
       }
+
+      /*
+       * Cascade: หลังยืนยันชำระเงินสำเร็จ → ลูกค้าเข้าสู่เฟส Customer
+       * ส่งข้อความ Handoff (ครั้งเดียวต่อ customer) ผ่าน LINE OA ทันที
+       * server-side dedupe ใน notifyCustomerHandoffLine จะกันซ้ำ
+       * ถ้า frontend `linkCustomerForQuotation` ส่งไปแล้ว
+       */
+      if (event === 'payment_confirmed' && payment.customer_id) {
+        try {
+          await notifyCustomerHandoffLine(admin, payment.customer_id)
+        } catch (handoffErr) {
+          console.warn(
+            'customer-handoff cascade failed',
+            payment.customer_id,
+            handoffErr instanceof Error ? handoffErr.message : handoffErr,
+          )
+        }
+      }
+
       return { ok: true, pushed: true }
     }
   }
