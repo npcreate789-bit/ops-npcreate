@@ -420,6 +420,34 @@ export function ProjectChatPanel({
       />
 
       {/*
+        Phase 2E fallback — ลูกค้ามี Lead ต้นทาง แต่ "ไม่มี" LINE OA / LINE ID
+        → ทีมต้องรู้ว่าระบบจะส่งข้อความ handoff / project-status อัตโนมัติไม่ได้
+        และต้องสื่อสารผ่านช่องทางอื่น (โทร / Facebook / อีเมล)
+      */}
+      {!isClientOnly &&
+        lineActivity.loaded &&
+        lineActivity.leadId &&
+        !lineActivity.hasLineEvidence && (
+          <div className="chat-line-awareness chat-line-awareness--fallback" role="status">
+            <div className="chat-line-awareness__row">
+              <div className="chat-line-awareness__copy">
+                <strong>ลูกค้านี้ไม่มี LINE OA</strong>
+                <span>
+                  ระบบจะส่งข้อความอัตโนมัติทาง LINE ไม่ได้ — โปรดติดต่อทางโทรศัพท์/Messenger/อีเมล
+                  หรือชวนลูกค้าทักหา OA หนึ่งครั้งเพื่อเปิดช่องทาง
+                </span>
+              </div>
+              <Link
+                to={`/app/crm/${lineActivity.leadId}`}
+                className="crm-btn crm-btn--ghost crm-btn--sm chat-line-awareness__cta"
+              >
+                เปิด CRM Lead
+              </Link>
+            </div>
+          </div>
+        )}
+
+      {/*
         แบนเนอร์ LINE OA awareness — ขึ้นเฉพาะเมื่อ lead มีร่องรอย LINE จริง
         ๆ lineLastInboundText จะมีค่าก็ต่อเมื่อมี inbound message ในกรอบ 7 วัน
         → ทำให้เด่นเฉพาะตอนที่ทีมต้องสนใจจริง (ไม่ noise ทุก lead)

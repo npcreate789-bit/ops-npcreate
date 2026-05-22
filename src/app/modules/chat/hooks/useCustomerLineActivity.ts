@@ -21,6 +21,7 @@ export function useCustomerLineActivity(customerId: string | null | undefined) {
     hasLineEvidence: false,
     latestInboundAt: null,
     preview: [],
+    loaded: false,
   })
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export function useCustomerLineActivity(customerId: string | null | undefined) {
         hasLineEvidence: false,
         latestInboundAt: null,
         preview: [],
+        loaded: false,
       })
       return
     }

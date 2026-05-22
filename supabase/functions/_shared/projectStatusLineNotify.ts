@@ -1,10 +1,17 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 import { buildLinePushCandidateIds } from './linePushRecipient.ts'
+import { recordCustomerLineFallback } from './customerLineFallbackNotify.ts'
 import {
   buildProjectStatusLineMessage,
   clientWorkspaceProjectUrl,
   type ProjectStatusLineEvent,
 } from './projectStatusLineMessages.ts'
+
+const PROJECT_STATUS_EVENT_LABEL: Record<ProjectStatusLineEvent, string> = {
+  in_progress: 'อัปเดตสถานะโปรเจกต์: เริ่มงาน',
+  waiting_approval: 'อัปเดตสถานะโปรเจกต์: รออนุมัติ',
+  completed: 'อัปเดตสถานะโปรเจกต์: เสร็จสิ้น',
+}
 
 /**
  * ส่งข้อความ "Project Status" ผ่าน LINE OA ให้ลูกค้า
@@ -82,21 +89,27 @@ export async function notifyProjectStatusLine(
     return { ok: true, skipped: 'customer_not_found' }
   }
 
+  const brandFromCustomer = (customer.brand_name as string | null)?.trim() || 'ลูกค้า'
   const leadId = (customer.lead_id as string | null) ?? null
   if (!leadId) {
+    await recordCustomerLineFallback(admin, {
+      customerId,
+      brandName: brandFromCustomer,
+      eventLabel: PROJECT_STATUS_EVENT_LABEL[event],
+      reason: 'ไม่มี Lead ต้นทาง',
+    })
     return { ok: true, skipped: 'no_lead_link' }
   }
 
   const { data: lead } = await admin
     .from('leads')
-    .select('brand_name, line_user_id, line_oa_chat_user_id')
+    .select('brand_name, line_user_id, line_oa_chat_user_id, owner_id')
     .eq('id', leadId)
     .maybeSingle()
 
   const brandName =
-    lead?.brand_name?.trim() ||
-    (customer.brand_name as string | null)?.trim() ||
-    'ลูกค้า'
+    lead?.brand_name?.trim() || brandFromCustomer || 'ลูกค้า'
+  const leadOwnerId: string | null = (lead?.owner_id as string | null) ?? null
   const lineUserId = lead?.line_user_id ?? null
   const lineOaChatUserId = lead?.line_oa_chat_user_id ?? null
 
@@ -124,6 +137,13 @@ export async function notifyProjectStatusLine(
 
   const candidates = buildLinePushCandidateIds({ lineUserId, lineOaChatUserId })
   if (candidates.length === 0) {
+    await recordCustomerLineFallback(admin, {
+      customerId,
+      leadOwnerId,
+      brandName,
+      eventLabel: PROJECT_STATUS_EVENT_LABEL[event],
+      reason: 'ไม่มี LINE ID ของลูกค้า',
+    })
     return { ok: true, skipped: 'no_line_recipient' }
   }
 
@@ -152,5 +172,12 @@ export async function notifyProjectStatusLine(
     }
   }
 
+  await recordCustomerLineFallback(admin, {
+    customerId,
+    leadOwnerId,
+    brandName,
+    eventLabel: PROJECT_STATUS_EVENT_LABEL[event],
+    reason: 'LINE push ล้มเหลว',
+  })
   return { ok: true, skipped: 'push_failed' }
 }

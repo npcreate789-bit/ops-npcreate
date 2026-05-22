@@ -27,6 +27,12 @@ export interface CustomerLineActivity {
   latestInboundAt: string | null
   /** ข้อความล่าสุด (สลับเรียงเก่า → ใหม่) สำหรับแสดง read-only preview */
   preview: CustomerLineMessagePreview[]
+  /**
+   * ทราบว่าโหลด activity เสร็จแล้ว — ใช้แยกสถานะ
+   * "ยังไม่เคยโหลด" จาก "โหลดแล้วและไม่มี LINE evidence"
+   * (สำคัญสำหรับ Phase 2E fallback banner ที่ต้องรอจน loaded ก่อน)
+   */
+  loaded: boolean
 }
 
 const EMPTY: CustomerLineActivity = {
@@ -34,6 +40,7 @@ const EMPTY: CustomerLineActivity = {
   hasLineEvidence: false,
   latestInboundAt: null,
   preview: [],
+  loaded: false,
 }
 
 const RECENT_INBOUND_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
@@ -52,7 +59,9 @@ export async function getCustomerLineActivity(
     .maybeSingle()
 
   const leadId = (customer?.lead_id as string | null) ?? null
-  if (!leadId) return EMPTY
+  if (!leadId) {
+    return { ...EMPTY, loaded: true }
+  }
 
   const { data: lead } = await supabase
     .from('leads')
@@ -67,7 +76,13 @@ export async function getCustomerLineActivity(
   )
 
   if (!hasLineEvidence) {
-    return { leadId, hasLineEvidence: false, latestInboundAt: null, preview: [] }
+    return {
+      leadId,
+      hasLineEvidence: false,
+      latestInboundAt: null,
+      preview: [],
+      loaded: true,
+    }
   }
 
   /*
@@ -97,5 +112,6 @@ export async function getCustomerLineActivity(
     hasLineEvidence: true,
     latestInboundAt: latestInbound?.created_at ?? null,
     preview,
+    loaded: true,
   }
 }

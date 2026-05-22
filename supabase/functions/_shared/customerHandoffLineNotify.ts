@@ -1,5 +1,6 @@
 import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
 import { buildLinePushCandidateIds } from './linePushRecipient.ts'
+import { recordCustomerLineFallback } from './customerLineFallbackNotify.ts'
 
 /**
  * ข้อความ "Customer Handoff" — ส่งหนึ่งครั้งตอน Lead กลายเป็น Customer
@@ -111,16 +112,23 @@ export async function notifyCustomerHandoffLine(
 
   if (!leadId) {
     // ลูกค้าที่ไม่ผูก lead (เช่น manual insert) — ไม่มี LINE ID ใช้ส่ง
+    await recordCustomerLineFallback(admin, {
+      customerId,
+      brandName: customer.brand_name?.trim() || 'ลูกค้า',
+      eventLabel: 'ส่งข้อความ Handoff ตอนปิดการขาย',
+      reason: 'ไม่มี Lead ต้นทาง',
+    })
     return { ok: true, skipped: 'no_lead_link' }
   }
 
   const { data: lead } = await admin
     .from('leads')
-    .select('brand_name, line_user_id, line_oa_chat_user_id')
+    .select('brand_name, line_user_id, line_oa_chat_user_id, owner_id')
     .eq('id', leadId)
     .maybeSingle()
 
   const brandName = lead?.brand_name?.trim() || customer.brand_name?.trim() || 'ลูกค้า'
+  const leadOwnerId: string | null = (lead?.owner_id as string | null) ?? null
   const lineUserId = lead?.line_user_id ?? null
   const lineOaChatUserId = lead?.line_oa_chat_user_id ?? null
 
@@ -139,6 +147,13 @@ export async function notifyCustomerHandoffLine(
 
   const candidates = buildLinePushCandidateIds({ lineUserId, lineOaChatUserId })
   if (candidates.length === 0) {
+    await recordCustomerLineFallback(admin, {
+      customerId,
+      leadOwnerId,
+      brandName,
+      eventLabel: 'ส่งข้อความ Handoff ตอนปิดการขาย',
+      reason: 'ไม่มี LINE ID ของลูกค้า',
+    })
     return { ok: true, skipped: 'no_line_recipient' }
   }
 
@@ -162,5 +177,12 @@ export async function notifyCustomerHandoffLine(
     }
   }
 
+  await recordCustomerLineFallback(admin, {
+    customerId,
+    leadOwnerId,
+    brandName,
+    eventLabel: 'ส่งข้อความ Handoff ตอนปิดการขาย',
+    reason: 'LINE push ล้มเหลว',
+  })
   return { ok: true, skipped: 'push_failed' }
 }
