@@ -10,19 +10,34 @@ import { isSupabaseConfigured, supabase } from '../../../../shared/supabase/clie
  * จะได้ผลลัพธ์ `hasLineEvidence=false` (ไม่ขึ้น banner) ซึ่งโอเค เพราะคนนั้น
  * เปิด CRM lead เห็นแชทไม่ได้อยู่แล้ว
  */
+
+export type CustomerLineMessageDirection = 'inbound' | 'outbound'
+
+export interface CustomerLineMessagePreview {
+  id: string
+  direction: CustomerLineMessageDirection
+  body: string
+  message_type: string
+  created_at: string
+}
+
 export interface CustomerLineActivity {
   leadId: string | null
   hasLineEvidence: boolean
   latestInboundAt: string | null
+  /** ข้อความล่าสุด (สลับเรียงเก่า → ใหม่) สำหรับแสดง read-only preview */
+  preview: CustomerLineMessagePreview[]
 }
 
 const EMPTY: CustomerLineActivity = {
   leadId: null,
   hasLineEvidence: false,
   latestInboundAt: null,
+  preview: [],
 }
 
 const RECENT_INBOUND_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+const PREVIEW_LIMIT = 5
 
 export async function getCustomerLineActivity(
   customerId: string,
@@ -52,20 +67,35 @@ export async function getCustomerLineActivity(
   )
 
   if (!hasLineEvidence) {
-    return { leadId, hasLineEvidence: false, latestInboundAt: null }
+    return { leadId, hasLineEvidence: false, latestInboundAt: null, preview: [] }
   }
 
-  const cutoff = new Date(Date.now() - RECENT_INBOUND_WINDOW_MS).toISOString()
-  const { data: latest } = await supabase
+  /*
+   * ดึงทั้ง preview list + latest inbound time พร้อมกัน 1 รอบ
+   * (เรียงใหม่→เก่า แล้วค่อย reverse ฝั่ง client ให้แสดงเก่า→ใหม่)
+   */
+  const { data: rows } = await supabase
     .from('lead_line_messages')
-    .select('created_at')
+    .select('id, direction, body, message_type, created_at')
     .eq('lead_id', leadId)
-    .eq('direction', 'inbound')
     .is('deleted_at', null)
-    .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
-    .limit(1)
+    .limit(PREVIEW_LIMIT)
 
-  const latestInboundAt = (latest?.[0]?.created_at as string | null) ?? null
-  return { leadId, hasLineEvidence: true, latestInboundAt }
+  const newestFirst = (rows ?? []) as CustomerLineMessagePreview[]
+  const preview = [...newestFirst].reverse()
+
+  const cutoffMs = Date.now() - RECENT_INBOUND_WINDOW_MS
+  const latestInbound = newestFirst.find((m) => {
+    if (m.direction !== 'inbound') return false
+    const ts = new Date(m.created_at).getTime()
+    return Number.isFinite(ts) && ts >= cutoffMs
+  })
+
+  return {
+    leadId,
+    hasLineEvidence: true,
+    latestInboundAt: latestInbound?.created_at ?? null,
+    preview,
+  }
 }

@@ -20,12 +20,18 @@ export function useCustomerLineActivity(customerId: string | null | undefined) {
     leadId: null,
     hasLineEvidence: false,
     latestInboundAt: null,
+    preview: [],
   })
 
   useEffect(() => {
     const id = customerId?.trim()
     if (!id) {
-      setState({ leadId: null, hasLineEvidence: false, latestInboundAt: null })
+      setState({
+        leadId: null,
+        hasLineEvidence: false,
+        latestInboundAt: null,
+        preview: [],
+      })
       return
     }
     let cancelled = false

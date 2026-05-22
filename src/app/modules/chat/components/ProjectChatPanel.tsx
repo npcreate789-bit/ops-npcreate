@@ -431,21 +431,82 @@ export function ProjectChatPanel({
           }`}
           role={lineLastInboundText ? 'status' : undefined}
         >
-          <div className="chat-line-awareness__copy">
-            <strong>LINE OA — ลูกค้ายังทักเข้ามาได้</strong>
-            {lineLastInboundText ? (
-              <span>ลูกค้าทักล่าสุด {lineLastInboundText}</span>
-            ) : (
-              <span className="muted">ห้องนี้สำหรับทีม — ตอบลูกค้าทาง LINE ที่ CRM</span>
-            )}
+          <div className="chat-line-awareness__row">
+            <div className="chat-line-awareness__copy">
+              <strong>LINE OA — ลูกค้ายังทักเข้ามาได้</strong>
+              {lineLastInboundText ? (
+                <span>ลูกค้าทักล่าสุด {lineLastInboundText}</span>
+              ) : (
+                <span className="muted">ห้องนี้สำหรับทีม — ตอบลูกค้าทาง LINE ที่ CRM</span>
+              )}
+            </div>
+            <Link
+              to={`/app/crm/${lineActivity.leadId}`}
+              state={{ focusLineChat: true }}
+              className="crm-btn crm-btn--ghost crm-btn--sm chat-line-awareness__cta"
+            >
+              {lineLastInboundText ? 'เปิดแชท LINE OA →' : 'ดูแชท LINE OA'}
+            </Link>
           </div>
-          <Link
-            to={`/app/crm/${lineActivity.leadId}`}
-            state={{ focusLineChat: true }}
-            className="crm-btn crm-btn--ghost crm-btn--sm chat-line-awareness__cta"
-          >
-            {lineLastInboundText ? 'เปิดแชท LINE OA →' : 'ดูแชท LINE OA'}
-          </Link>
+
+          {lineActivity.preview.length > 0 && (
+            <details className="chat-line-awareness__preview">
+              <summary>
+                ดูข้อความ LINE OA ล่าสุด ({lineActivity.preview.length})
+              </summary>
+              <ul className="chat-line-awareness__messages">
+                {lineActivity.preview.map((m) => {
+                  const previewBody =
+                    m.message_type === 'image'
+                      ? '🖼 รูปภาพ'
+                      : m.message_type === 'sticker'
+                        ? '😊 สติกเกอร์'
+                        : m.message_type === 'video'
+                          ? '🎥 วิดีโอ'
+                          : m.message_type === 'audio'
+                            ? '🎙 เสียง'
+                            : m.message_type === 'file'
+                              ? '📎 ไฟล์'
+                              : m.body.length > 140
+                                ? `${m.body.slice(0, 140)}…`
+                                : m.body
+                  const timeText = (() => {
+                    try {
+                      return new Date(m.created_at).toLocaleString('th-TH', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    } catch {
+                      return ''
+                    }
+                  })()
+                  return (
+                    <li
+                      key={m.id}
+                      className={`chat-line-awareness__msg chat-line-awareness__msg--${m.direction}`}
+                    >
+                      <span className="chat-line-awareness__msg-dir">
+                        {m.direction === 'inbound' ? 'ลูกค้า' : 'ทีม'}
+                      </span>
+                      <p className="chat-line-awareness__msg-body">{previewBody}</p>
+                      <span className="chat-line-awareness__msg-time">{timeText}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+              <p className="chat-line-awareness__preview-foot">
+                ตอบกลับ LINE OA ได้ที่{' '}
+                <Link
+                  to={`/app/crm/${lineActivity.leadId}`}
+                  state={{ focusLineChat: true }}
+                >
+                  หน้า CRM Lead
+                </Link>
+              </p>
+            </details>
+          )}
         </div>
       )}
 
