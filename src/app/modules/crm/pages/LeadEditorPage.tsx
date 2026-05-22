@@ -267,6 +267,14 @@ export function LeadEditorPage() {
     }
   }
 
+  /*
+   * Hook ต้องอยู่ก่อน early-return เสมอ ไม่งั้น React จะนับ hook ไม่ตรง
+   * ระหว่างเรนเดอร์ (loading=true → 0 hook, loading=false → 2 hooks ใน
+   * usePageEntityLabel) — ใน production จะทำให้ state mapping เพี้ยน
+   * และอาจ render ออกมาเป็นจอว่าง / ดำ
+   */
+  usePageEntityLabel(isNew ? 'รายการใหม่' : initial ? leadDisplayName(initial) : null)
+
   if (loading) {
     return (
       <div className="page crm-page">
@@ -301,8 +309,6 @@ export function LeadEditorPage() {
     !isNew && initial?.brand_name?.trim() && initial.contact_name?.trim()
       ? initial.brand_name.trim()
       : null
-
-  usePageEntityLabel(isNew ? 'รายการใหม่' : initial ? leadDisplayName(initial) : null)
 
   return (
     <div className="page crm-page">
