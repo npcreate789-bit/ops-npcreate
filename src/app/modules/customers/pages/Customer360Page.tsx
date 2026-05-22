@@ -284,6 +284,20 @@ export function Customer360Page() {
                       แชทลูกค้า
                     </Link>
                   )}
+                  {/*
+                    แชท LINE OA ยังเป็นช่องทางหลักที่ลูกค้าจะทักเข้ามาแม้หลังปิดการขาย
+                    (line-webhook ลง message ที่ lead row เดิมไม่ตัดที่ status)
+                    เปิดด้วย focusLineChat=true เพื่อ scroll/focus ไปที่แผงแชท LINE เลย
+                  */}
+                  {canLinkCustomerCrm(roles) && c.lead_id && (
+                    <Link
+                      to={`/app/crm/${c.lead_id}`}
+                      state={{ focusLineChat: true }}
+                      className="crm-btn crm-btn--ghost"
+                    >
+                      แชท LINE OA
+                    </Link>
+                  )}
                   {canShowCustomer360Link(roles, '/app/tasks') && (
                     <Link
                       to={tasksUrlForCustomer(primaryProject?.id, c.id)}
