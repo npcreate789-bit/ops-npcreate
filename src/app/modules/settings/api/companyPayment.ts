@@ -38,29 +38,11 @@ export async function saveCompanyPaymentSettings(
   if (error) throw new Error(error.message)
 
   clearCompanyPaymentSettingsCache()
-  await fetchCompanyPaymentSettings(true)
-  const row = data as Record<string, unknown> | null
-  if (!row) throw new Error('บันทึกไม่สำเร็จ')
-  return {
-    bank_name: String(row.bank_name),
-    account_number: String(row.account_number),
-    account_name: String(row.account_name),
-    promptpay_id: String(row.promptpay_id),
-    payment_instructions_sla_hours: Number(row.payment_instructions_sla_hours) || 48,
-    payment_verification_seconds: Number(row.payment_verification_seconds) || 90,
-    auto_confirm_enabled: Boolean(row.auto_confirm_enabled),
-    auto_confirm_max_amount: Number(row.auto_confirm_max_amount) || 50000,
-    amount_tolerance_baht: Number(row.amount_tolerance_baht) ?? 1,
-    require_reference_match: row.require_reference_match !== false,
-    manual_review_min_amount: Number(row.manual_review_min_amount) || 100000,
-    line_notify_slip_received: row.line_notify_slip_received !== false,
-    line_notify_payment_confirmed: row.line_notify_payment_confirmed !== false,
-    line_notify_slip_rejected: row.line_notify_slip_rejected !== false,
-    line_notify_review_pending: row.line_notify_review_pending !== false,
-    line_notify_customer_handoff: row.line_notify_customer_handoff !== false,
-    bank_match_auto_confirm_enabled: Boolean(row.bank_match_auto_confirm_enabled),
-    bank_match_amount_tolerance_baht: Number(row.bank_match_amount_tolerance_baht) ?? 1,
-    bank_match_lookback_days: Number(row.bank_match_lookback_days) || 14,
-    updated_at: (row.updated_at as string) ?? null,
-  }
+  /*
+   * RPC คืนข้อมูลใหม่กลับมาในรูป JSONB อยู่แล้ว แต่เพื่อหลีกเลี่ยง
+   * code duplicate (parseSettings + Number()-?? bug pattern) อาศัย
+   * fetchCompanyPaymentSettings ซึ่งจัดการ schema/fallback ครบในที่เดียว
+   */
+  if (!data) throw new Error('บันทึกไม่สำเร็จ')
+  return await fetchCompanyPaymentSettings(true)
 }

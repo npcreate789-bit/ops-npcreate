@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../../shared/auth/AuthProvider'
 import {
@@ -65,7 +65,12 @@ export function LeadEditorPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { profile, configured } = useAuth()
-  const focusLineChatOnMount = useRef(readFocusLineChatFromState(location.state)).current
+  /*
+   * จับค่า focusLineChat จาก location.state ตอน mount เท่านั้น
+   * ใช้ lazy initial state ของ useState (เรียกครั้งเดียว) แทน
+   * useRef(...).current ที่ React Compiler ห้ามอ่านระหว่าง render
+   */
+  const [focusLineChatOnMount] = useState(() => readFocusLineChatFromState(location.state))
   const roles = profile?.roles ?? []
   const userId = profile?.id ?? DEV_OWNER
   const canDelete = hasDbPrivilegedRole(roles)

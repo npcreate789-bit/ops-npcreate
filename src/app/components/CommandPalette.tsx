@@ -217,11 +217,23 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     }
   }
 
-  let rowIndex = -1
+  /*
+   * คำนวณ index ของแต่ละแถวจาก flat list ที่สร้างไว้ก่อน render
+   * (เลี่ยง mutation ของ closure variable ระหว่าง render — React Compiler ห้าม)
+   */
+  const rowIndexMap = new Map<PaletteEntry, number>()
+  {
+    let i = 0
+    for (const item of navResults) rowIndexMap.set(item, i++)
+    for (const kind of SEARCH_KIND_ORDER) {
+      const items = groupedData.get(kind)
+      if (!items?.length) continue
+      for (const item of items) rowIndexMap.set(item, i++)
+    }
+  }
 
   function renderRow(item: PaletteEntry) {
-    rowIndex += 1
-    const index = rowIndex
+    const index = rowIndexMap.get(item) ?? 0
     const linkable = canOpenEntry(roles, configured, item)
     const active = index === activeIndex
 
@@ -268,8 +280,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       </li>
     )
   }
-
-  rowIndex = -1
 
   return (
     <div className="command-palette-backdrop" role="presentation" onClick={onClose}>

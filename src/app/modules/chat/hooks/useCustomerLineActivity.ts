@@ -6,6 +6,14 @@ import {
 
 const POLL_INTERVAL_MS = 60_000
 
+const EMPTY_STATE: CustomerLineActivity = {
+  leadId: null,
+  hasLineEvidence: false,
+  latestInboundAt: null,
+  preview: [],
+  loaded: false,
+}
+
 /**
  * Polling ทุก 60 วินาที เพื่อให้แบนเนอร์ "ลูกค้ามี LINE OA — ดู/ตอบที่ CRM"
  * อัปเดต latest inbound timestamp โดยไม่ต้องสมัคร realtime
@@ -16,24 +24,16 @@ const POLL_INTERVAL_MS = 60_000
  *     (ตารางนี้ subscribe อยู่ใน CRM lead page แล้ว — กันการสมัครซ้ำ)
  */
 export function useCustomerLineActivity(customerId: string | null | undefined) {
-  const [state, setState] = useState<CustomerLineActivity>({
-    leadId: null,
-    hasLineEvidence: false,
-    latestInboundAt: null,
-    preview: [],
-    loaded: false,
-  })
+  const [state, setState] = useState<CustomerLineActivity>(EMPTY_STATE)
 
   useEffect(() => {
     const id = customerId?.trim()
     if (!id) {
-      setState({
-        leadId: null,
-        hasLineEvidence: false,
-        latestInboundAt: null,
-        preview: [],
-        loaded: false,
-      })
+      /*
+       * Functional updater + identity check — กัน cascading render กรณีที่
+       * customerId เปลี่ยนแต่ state ยังเป็น empty อยู่แล้ว
+       */
+      setState((prev) => (prev === EMPTY_STATE ? prev : EMPTY_STATE))
       return
     }
     let cancelled = false

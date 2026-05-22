@@ -80,7 +80,12 @@ export function ContactPage() {
   const [searchParams] = useSearchParams()
   const formRef = useRef<HTMLFormElement>(null)
   const contactNameRef = useRef<HTMLInputElement>(null)
-  const formReadyAtRef = useRef(Date.now())
+  /*
+   * เก็บ "เวลาที่ฟอร์มพร้อม" สำหรับ anti-flood / honeypot โดยใช้ lazy init
+   * ของ useState (React เรียก initializer ครั้งเดียวเท่านั้น) แทน
+   * `useRef(Date.now())` ที่ React Compiler ห้ามเพราะ impure ตอน render
+   */
+  const [formReadyAtMs] = useState(() => Date.now())
 
   const [companyWebsite, setCompanyWebsite] = useState('')
   const [contactName, setContactName] = useState('')
@@ -345,7 +350,7 @@ export function ContactPage() {
       return
     }
 
-    if (Date.now() - formReadyAtRef.current < CONTACT_MIN_FORM_MS) {
+    if (Date.now() - formReadyAtMs < CONTACT_MIN_FORM_MS) {
       setFormError(contactFormTooFastMessage())
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       return

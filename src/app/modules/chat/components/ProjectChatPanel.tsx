@@ -103,19 +103,28 @@ export function ProjectChatPanel({
    * Client-only เท่านั้นที่ไม่ต้องโชว์ (พวกเขาส่งข้อความตรงในห้องลูกค้าได้อยู่แล้ว)
    */
   const lineActivity = useCustomerLineActivity(isClientOnly ? null : customerId)
+  /*
+   * จับเวลาปัจจุบันผ่าน state + interval แทนที่จะเรียก Date.now() ระหว่าง
+   * render โดยตรง (React Compiler ห้ามเพราะ impure) — นาทีละครั้ง พอ
+   * สำหรับ relative-time text "เมื่อ X นาทีที่แล้ว"
+   */
+  const [nowMs, setNowMs] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
   const lineLastInboundText = useMemo(() => {
     if (!lineActivity.latestInboundAt) return null
-    const now = Date.now()
     const ts = new Date(lineActivity.latestInboundAt).getTime()
     if (!Number.isFinite(ts)) return null
-    const diffMin = Math.max(0, Math.round((now - ts) / 60000))
+    const diffMin = Math.max(0, Math.round((nowMs - ts) / 60_000))
     if (diffMin < 1) return 'เมื่อสักครู่'
     if (diffMin < 60) return `เมื่อ ${diffMin} นาทีที่แล้ว`
     const diffHr = Math.round(diffMin / 60)
     if (diffHr < 24) return `เมื่อ ${diffHr} ชม. ที่แล้ว`
     const diffDay = Math.round(diffHr / 24)
     return `เมื่อ ${diffDay} วันที่แล้ว`
-  }, [lineActivity.latestInboundAt])
+  }, [lineActivity.latestInboundAt, nowMs])
 
   useEffect(() => {
     if (lockedChannel) {

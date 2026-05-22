@@ -20,9 +20,16 @@ export function useAppNotificationRealtime(
   const onStaffAlertInsertRef = useRef(onStaffAlertInsert)
   const onStaffAlertUpdateRef = useRef(onStaffAlertUpdate)
 
-  onUnreadRef.current = onUnreadChange
-  onStaffAlertInsertRef.current = onStaffAlertInsert
-  onStaffAlertUpdateRef.current = onStaffAlertUpdate
+  /*
+   * sync callback refs ใน useEffect แทน assign ระหว่าง render — React
+   * Compiler ห้าม mutate ref.current ระหว่าง render เพราะอาจถูก memoized
+   * จนการ assign ถูกข้าม → callback ใน channel จะเป็นเวอร์ชันค้าง
+   */
+  useEffect(() => {
+    onUnreadRef.current = onUnreadChange
+    onStaffAlertInsertRef.current = onStaffAlertInsert
+    onStaffAlertUpdateRef.current = onStaffAlertUpdate
+  })
 
   useEffect(() => {
     if (!userId || !enabled || !isSupabaseConfigured || !supabase) return
