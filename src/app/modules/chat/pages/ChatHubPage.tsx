@@ -34,6 +34,10 @@ export function ChatHubPage() {
     navigate(`/app/chat?project=${projectId}&channel=${channel}`)
   }
 
+  function backToInbox() {
+    navigate('/app/chat')
+  }
+
   if (!canAccess) {
     return (
       <div className="page">
@@ -64,7 +68,12 @@ export function ChatHubPage() {
 
       {error && <p className="crm-error">{error}</p>}
 
-      <div className="chat-hub-shell">
+      <div
+        className={`chat-hub-shell${
+          selectedProjectId ? ' chat-hub-shell--room-active' : ''
+        }`}
+        data-active-pane={selectedProjectId ? 'room' : 'inbox'}
+      >
         <ChatInboxList
           items={items}
           loading={loading}
@@ -99,6 +108,7 @@ export function ChatHubPage() {
               canCreateTask={canCreateTask}
               channel={selectedChannel}
               onChannelChange={(ch) => openRoom(projectMeta.project_id, ch)}
+              onBack={backToInbox}
             />
           )}
 

@@ -49,6 +49,11 @@ interface ProjectChatPanelProps {
   channel?: ChatChannelKey
   onChannelChange?: (channel: ChatChannelKey) => void
   lockedChannel?: ChatChannelKey
+  /**
+   * เมื่อตั้งค่า — จะส่งต่อให้ ChatRoomHeader แสดงปุ่ม "กลับ"
+   * (ใช้กับเลย์เอาต์ list-or-room บนจอแคบ)
+   */
+  onBack?: () => void
 }
 
 export function ProjectChatPanel({
@@ -62,6 +67,7 @@ export function ProjectChatPanel({
   channel: channelProp,
   onChannelChange,
   lockedChannel,
+  onBack,
 }: ProjectChatPanelProps) {
   const { profile, configured } = useAuth()
   const roles = profile?.roles ?? []
@@ -366,6 +372,7 @@ export function ProjectChatPanel({
           void reloadSocial()
         }}
         refreshing={loading}
+        onBack={onBack}
       />
 
       <ChatRoomTopBar

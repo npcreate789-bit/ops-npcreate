@@ -124,7 +124,12 @@ export function ClientChatPage() {
 
       {customerId && chatEnabled && (
         <div className="client-chat-page__stage">
-          <div className="chat-hub-shell client-chat-shell">
+          <div
+            className={`chat-hub-shell client-chat-shell${
+              projectId ? ' chat-hub-shell--room-active' : ''
+            }`}
+            data-active-pane={projectId ? 'room' : 'inbox'}
+          >
             <ChatInboxList
               items={clientInboxItems}
               loading={projectsLoading}
@@ -150,6 +155,7 @@ export function ClientChatPage() {
                   userId={userId}
                   canCreateTask={canCreateTask}
                   lockedChannel="client"
+                  onBack={() => setProjectId('')}
                 />
               )}
             </div>

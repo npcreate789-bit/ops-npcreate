@@ -12,6 +12,11 @@ interface ChatRoomHeaderProps {
   onSearchChange: (value: string) => void
   onRefresh?: () => void
   refreshing?: boolean
+  /**
+   * เมื่อตั้งค่า — จะแสดงปุ่ม "กลับ" ที่ส่วนหัวห้อง (โผล่เฉพาะจอแคบ)
+   * เพื่อให้บนมือถือ/แท็บเล็ตสามารถสลับกลับไปดูรายการห้องสนทนาได้
+   */
+  onBack?: () => void
 }
 
 export function ChatRoomHeader({
@@ -24,10 +29,30 @@ export function ChatRoomHeader({
   onSearchChange,
   onRefresh,
   refreshing,
+  onBack,
 }: ChatRoomHeaderProps) {
   return (
     <header className="chat-room-header">
       <div className="chat-room-header__identity">
+        {onBack && (
+          <button
+            type="button"
+            className="chat-room-header__back"
+            onClick={onBack}
+            aria-label="กลับไปรายการห้องสนทนา"
+            title="กลับไปรายการห้องสนทนา"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M15 6l-6 6 6 6"
+                stroke="currentColor"
+                strokeWidth="1.85"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        )}
         <ChatAvatar name={title} seed={projectId ?? title} size="lg" />
         <div className="chat-room-header__titles">
           <h2 className="chat-room-header__title">{title}</h2>
