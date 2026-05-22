@@ -39,6 +39,26 @@ import '../crm.css'
 
 const DEV_OWNER = '00000000-0000-4000-8000-000000000001'
 
+/**
+ * แชท LINE ต้องโผล่ถ้า:
+ *   1) ลูกค้าเลือก LINE เป็นช่องทางติดต่อกลับ
+ *   2) lead มี LINE identifier ใด ๆ (line_id จากฟอร์ม, line_user_id จาก LINE Login,
+ *      line_oa_chat_user_id จาก URL chat.line.biz) — รวมถึงเคสที่ทีมเพิ่ม ID ภายหลัง
+ *   3) lead มาจากช่องทาง LINE โดยตรง (channel === 'line')
+ *
+ * ก่อนหน้านี้แชทถูก gate เฉพาะ (1) — leads ที่ preferred เป็น facebook/null
+ * แต่มีประวัติแชทหรือ LINE ID จึงไม่เห็นแชท ทำให้ทีมพลาดข้อความและ
+ * ลูกค้าทักมาแต่ไม่ตอบ
+ */
+function shouldShowLineChatForLead(lead: Lead): boolean {
+  if (lead.preferred_contact_channel === 'line') return true
+  if (lead.channel === 'line') return true
+  if (lead.line_id?.trim()) return true
+  if (lead.line_user_id?.trim()) return true
+  if (lead.line_oa_chat_user_id?.trim()) return true
+  return false
+}
+
 export function LeadEditorPage() {
   const { id } = useParams<{ id: string }>()
   const isNew = !id || id === 'new'
@@ -314,7 +334,7 @@ export function LeadEditorPage() {
       )}
 
       <div className="crm-lead-workspace">
-        {!isNew && initial && initial.preferred_contact_channel === 'line' ? (
+        {!isNew && initial && shouldShowLineChatForLead(initial) ? (
           <LeadLineChatPanel
             key={`line-chat-${initial.id}-${initial.line_oa_chat_user_id ?? ''}-${initial.updated_at}`}
             lead={initial}
@@ -329,8 +349,14 @@ export function LeadEditorPage() {
           />
         ) : null}
 
+        {/*
+          แสดง Preferred Channel Panel เมื่อช่องทางหลักไม่ใช่ LINE — เพื่อไม่ให้เสียปุ่ม
+          "เปิด Messenger" เมื่อ lead เลือก Facebook (อาจมีทั้ง LINE chat + Facebook
+          strip คู่กันได้ ถ้า lead เลือก Facebook แต่มี LINE ID ในระบบด้วย)
+        */}
         {!isNew &&
           initial &&
+          initial.preferred_contact_channel &&
           initial.preferred_contact_channel !== 'line' && (
             <LeadPreferredChannelPanel
               lead={initial}
